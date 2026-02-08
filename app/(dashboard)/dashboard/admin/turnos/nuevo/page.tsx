@@ -341,11 +341,19 @@ export default function NuevoTurnoAdminPage() {
               >
                 {loading ? "Creando..." : "Crear Turno"}
               </Button>
-              <Link href="/dashboard/admin/turnos">
-                <Button type="button" variant="outline" className="border-[#E2E8F0] hover:bg-[#F8FAFC] px-6 py-2">
-                  Cancelar
-                </Button>
-              </Link>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="border-[#E2E8F0] hover:bg-[#F8FAFC] px-6 py-2"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  router.push("/dashboard/admin")
+                }}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
             </div>
           </form>
         </CardContent>

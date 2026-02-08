@@ -15,9 +15,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const formData = await request.formData()
-    const turnoId = formData.get("turnoId") as string
-    const motivoCancelacion = formData.get("motivoCancelacion") as string || "Cancelado por el usuario"
+    const body = await request.json().catch(() => {
+      // Fallback para FormData si viene de algún lugar antiguo
+      return {}
+    })
+    const turnoId = body.turnoId || (await request.formData()).get("turnoId") as string
+    const motivoCancelacion = body.motivoCancelacion || "Cancelado por el usuario"
+    
+    console.log("Cancelando turno:", turnoId, "Motivo:", motivoCancelacion)
 
     if (!turnoId) {
       return NextResponse.json(
@@ -26,15 +31,25 @@ export async function POST(request: Request) {
       )
     }
 
+    console.log("Obteniendo turno con ID:", turnoId)
+    
     // Obtener turno usando helper
     const turno = await getTurnoById(turnoId)
 
     if (!turno) {
+      console.error("Turno no encontrado:", turnoId)
       return NextResponse.json(
         { error: "Turno no encontrado" },
         { status: 404 }
       )
     }
+    
+    console.log("Turno encontrado:", {
+      id: turno.id,
+      estado: turno.estado,
+      pacienteId: turno.pacienteId,
+      profesionalId: turno.profesionalId,
+    })
 
     // Verificar permisos (paciente solo puede cancelar sus propios turnos)
     if (session.user.role === "PACIENTE" && turno.pacienteId !== session.user.id) {
@@ -44,15 +59,51 @@ export async function POST(request: Request) {
       )
     }
 
-    // Actualizar turno
-    const turnoCancelado = await prisma.turno.update({
-      where: { id: turnoId },
-      data: {
-        estado: "CANCELADO",
-        canceladoAt: new Date(),
+    // Actualizar turno usando SQL raw para evitar problemas con schema
+    const ahora = new Date()
+    const ahoraISO = ahora.toISOString()
+    
+    console.log("Actualizando turno en base de datos...")
+    try {
+      // Actualizar turno usando SQL raw
+      const result = await prisma.$executeRawUnsafe(
+        `UPDATE Turno 
+         SET estado = ?, canceladoAt = ?, motivoCancelacion = ?, updatedAt = ?
+         WHERE id = ?`,
+        "CANCELADO",
+        ahoraISO,
         motivoCancelacion,
-      },
-    })
+        ahoraISO,
+        turnoId
+      )
+      console.log("Turno actualizado exitosamente. Filas afectadas:", result)
+    } catch (error: any) {
+      console.error("Error en UPDATE de turno:", error)
+      console.error("Detalles:", {
+        message: error.message,
+        code: error.code,
+        meta: error.meta,
+      })
+      throw new Error(`Error al actualizar turno: ${error.message || String(error)}`)
+    }
+    
+    // Obtener el turno actualizado
+    const turnoCanceladoRaw = await prisma.$queryRawUnsafe<Array<{
+      id: string
+      estado: string
+      canceladoAt: string | null
+      motivoCancelacion: string | null
+    }>>(
+      `SELECT id, estado, canceladoAt, motivoCancelacion FROM Turno WHERE id = ? LIMIT 1`,
+      turnoId
+    )
+    
+    const turnoCancelado = turnoCanceladoRaw.length > 0 ? {
+      id: turnoCanceladoRaw[0].id,
+      estado: turnoCanceladoRaw[0].estado,
+      canceladoAt: turnoCanceladoRaw[0].canceladoAt ? new Date(turnoCanceladoRaw[0].canceladoAt) : null,
+      motivoCancelacion: turnoCanceladoRaw[0].motivoCancelacion,
+    } : null
 
     const fechaFormateada = new Date(turno.fecha).toLocaleDateString("es-AR", {
       weekday: "long",
@@ -78,8 +129,16 @@ export async function POST(request: Request) {
       })
     }
 
-    // WhatsApp al paciente
-    if (turno.paciente.telefono) {
+    // WhatsApp al paciente (obtener teléfono desde la base de datos)
+    const pacienteRaw = await prisma.$queryRawUnsafe<Array<{
+      telefono: string | null
+    }>>(
+      `SELECT telefono FROM User WHERE id = ? LIMIT 1`,
+      turno.pacienteId
+    )
+    const telefonoPaciente = pacienteRaw.length > 0 ? pacienteRaw[0].telefono : null
+    
+    if (telefonoPaciente) {
       const whatsappMessage = generateTurnoCancellationWhatsApp(
         turno.paciente.nombre,
         turno.profesional.user.nombre,
@@ -87,7 +146,7 @@ export async function POST(request: Request) {
         turno.hora
       )
       await sendWhatsAppMessage({
-        to: turno.paciente.telefono,
+        to: telefonoPaciente,
         message: whatsappMessage,
       })
     }
@@ -164,8 +223,17 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error("Error cancelando turno:", error)
+    console.error("Detalles del error:", {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack,
+    })
     return NextResponse.json(
-      { error: "Error al cancelar turno" },
+      { 
+        error: "Error al cancelar turno",
+        details: error.message || String(error)
+      },
       { status: 500 }
     )
   }

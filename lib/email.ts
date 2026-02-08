@@ -1,7 +1,21 @@
-import { Resend } from "resend"
+/**
+ * Wrapper para compatibilidad con código existente
+ * 
+ * Esta función ahora usa EmailService internamente.
+ * Se mantiene para no romper código existente que llama a sendEmail directamente.
+ * 
+ * Para nuevo código, usar sendSystemEmail de services/email/email-templates.ts
+ */
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { sendEmail as emailServiceSendEmail } from "@/services/email/email.service"
+import { EmailOptions } from "@/services/email/types"
 
+/**
+ * Función principal para enviar emails
+ * 
+ * @deprecated Usar sendSystemEmail de services/email/email-templates.ts para nuevos desarrollos
+ * Esta función se mantiene para compatibilidad con código existente
+ */
 export async function sendEmail({
   to,
   subject,
@@ -12,25 +26,48 @@ export async function sendEmail({
   html: string
 }) {
   try {
-    const { data, error } = await resend.emails.send({
-      from: "Agenda Profesional <noreply@agendaprofesional.com>",
+    const options: EmailOptions = {
       to,
       subject,
       html,
-    })
-
-    if (error) {
-      console.error("Error enviando email:", error)
-      return { success: false, error }
     }
 
-    return { success: true, data }
-  } catch (error) {
-    console.error("Error enviando email:", error)
-    return { success: false, error }
+    const result = await emailServiceSendEmail(options)
+
+    // Convertir resultado al formato esperado por código legacy
+    if (result.success) {
+      return {
+        success: true,
+        data: {
+          messageId: result.messageId,
+        },
+      }
+    } else {
+      return {
+        success: false,
+        error: result.error,
+      }
+    }
+  } catch (error: any) {
+    console.error("Error enviando email:", error.message)
+    return {
+      success: false,
+      error: error.message || "Error al enviar email",
+    }
   }
 }
 
+/**
+ * Funciones de generación de templates (mantenidas para compatibilidad)
+ * 
+ * @deprecated Usar sendSystemEmail de services/email/email-templates.ts para nuevos desarrollos
+ * Estas funciones se mantienen para compatibilidad con código existente
+ */
+
+// Re-exportar desde el nuevo módulo de templates
+export { sendSystemEmail } from "@/services/email/email-templates"
+
+// Mantener funciones de generación para compatibilidad
 export function generateTurnoConfirmationEmail(
   pacienteNombre: string,
   profesionalNombre: string,

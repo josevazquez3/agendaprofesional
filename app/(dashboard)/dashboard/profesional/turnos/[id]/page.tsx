@@ -282,6 +282,11 @@ export default async function DetalleTurnoProfesionalPage({
               turno.estado !== "ELIMINADO" && (
                 <CancelTurnoButton turnoId={turno.id} />
               )}
+            <Link href={`/dashboard/paciente/turnos/${turno.id}/imprimir`}>
+              <Button variant="outline">
+                Imprimir con QR
+              </Button>
+            </Link>
             <Link href={`/dashboard/profesional/historia-clinica/${turno.pacienteId}`}>
               <Button variant="outline">
                 Ver Historia Clínica

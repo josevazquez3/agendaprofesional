@@ -56,16 +56,31 @@ export function CalendarWithAvailability({
         ),
       ])
 
+      if (!resActual.ok || !resSiguiente.ok) {
+        throw new Error(`Error en la respuesta: ${resActual.status} o ${resSiguiente.status}`)
+      }
+
       const dataActual = await resActual.json()
       const dataSiguiente = await resSiguiente.json()
 
+      // Verificar si hay errores en las respuestas
+      if (dataActual.error || dataSiguiente.error) {
+        console.error("Error en API:", dataActual.error || dataSiguiente.error)
+        return
+      }
+
       // Combinar los días disponibles de ambos meses
-      setDiasDisponibles({
+      const diasCombinados = {
         ...(dataActual.diasDisponibles || {}),
         ...(dataSiguiente.diasDisponibles || {}),
-      })
+      }
+      
+      console.log("Días disponibles cargados:", Object.keys(diasCombinados).length, "días")
+      setDiasDisponibles(diasCombinados)
     } catch (error) {
       console.error("Error cargando días disponibles:", error)
+      // No establecer días disponibles si hay error, pero no bloquear la UI
+      setDiasDisponibles({})
     } finally {
       setLoading(false)
     }
@@ -304,8 +319,8 @@ export function CalendarWithAvailability({
                       !day.isCurrentMonth && "text-gray-300 cursor-default",
                       day.isCurrentMonth && isPastDate && "text-gray-400 cursor-not-allowed",
                       day.isCurrentMonth && !isPastDate && !day.isAvailable && !isSelectedDate && "text-gray-600 hover:bg-gray-100 cursor-pointer",
-                      day.isCurrentMonth && !isPastDate && day.isAvailable && !isSelectedDate && "bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer",
-                      isSelectedDate && "bg-blue-600 text-white font-semibold cursor-pointer",
+                      day.isCurrentMonth && !isPastDate && day.isAvailable && !isSelectedDate && "bg-blue-100 text-blue-800 font-medium border-2 border-blue-300 hover:bg-blue-200 cursor-pointer",
+                      isSelectedDate && "bg-blue-600 text-white font-semibold cursor-pointer border-2 border-blue-700",
                       isTodayDate && !isSelectedDate && day.isCurrentMonth && !isPastDate && "ring-2 ring-blue-400"
                     )}
                     onClick={(e) => {
@@ -392,12 +407,12 @@ export function CalendarWithAvailability({
             {/* Leyenda */}
             <div className="mt-4 pt-4 border-t border-gray-200 flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1">
-                <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded"></div>
-                <span>Disponible</span>
+                <div className="w-4 h-4 bg-blue-100 border-2 border-blue-300 rounded"></div>
+                <span className="text-blue-800 font-medium">Disponible</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-4 h-4 bg-blue-600 rounded"></div>
-                <span>Seleccionado</span>
+                <div className="w-4 h-4 bg-blue-600 border-2 border-blue-700 rounded"></div>
+                <span className="text-blue-600 font-medium">Seleccionado</span>
               </div>
             </div>
 

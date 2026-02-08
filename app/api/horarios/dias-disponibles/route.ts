@@ -48,19 +48,38 @@ export async function GET(request: Request) {
       )
     }
 
-    // Obtener horarios disponibles del profesional
-    const horariosDisponibles = await prisma.horarioDisponible.findMany({
-      where: {
-        profesionalId,
-        activo: true,
-      },
-    })
+    // Obtener horarios disponibles del profesional usando SQL raw
+    const horariosDisponiblesRaw = await prisma.$queryRawUnsafe<Array<{
+      id: string
+      profesionalId: string
+      diaSemana: string
+      horaInicio: string
+      horaFin: string
+      duracionTurno: number
+      activo: boolean
+    }>>(
+      `SELECT id, profesionalId, diaSemana, horaInicio, horaFin, duracionTurno, activo
+       FROM HorarioDisponible
+       WHERE profesionalId = ? AND activo = 1`,
+      profesionalId
+    )
 
-    if (horariosDisponibles.length === 0) {
+    if (horariosDisponiblesRaw.length === 0) {
       return NextResponse.json({
         diasDisponibles: {},
       })
     }
+
+    // Convertir a formato esperado
+    const horariosDisponibles = horariosDisponiblesRaw.map(h => ({
+      id: h.id,
+      profesionalId: h.profesionalId,
+      diaSemana: h.diaSemana,
+      horaInicio: h.horaInicio,
+      horaFin: h.horaFin,
+      duracionTurno: Number(h.duracionTurno),
+      activo: Boolean(h.activo),
+    }))
 
     // Determinar el rango de fechas a verificar
     const hoy = new Date()
@@ -102,12 +121,21 @@ export async function GET(request: Request) {
     // Crear un mapa de turnos ocupados por fecha
     const turnosOcupadosPorFecha = new Map<string, Set<string>>()
     turnosOcupadosRaw.forEach((t) => {
-      const fechaKey = t.fecha.toString().split('T')[0]
+      // Normalizar la fecha (puede venir como string o Date)
+      let fechaKey = t.fecha.toString()
+      if (fechaKey.includes('T')) {
+        fechaKey = fechaKey.split('T')[0]
+      } else if (fechaKey.includes(' ')) {
+        fechaKey = fechaKey.split(' ')[0]
+      }
+      
       if (!turnosOcupadosPorFecha.has(fechaKey)) {
         turnosOcupadosPorFecha.set(fechaKey, new Set())
       }
       turnosOcupadosPorFecha.get(fechaKey)!.add(t.hora)
     })
+    
+    console.log(`Turnos ocupados encontrados:`, turnosOcupadosPorFecha.size, "fechas")
 
     // Obtener bloqueos en el rango
     const bloqueosRaw = await prisma.$queryRawUnsafe<Array<{
@@ -129,7 +157,14 @@ export async function GET(request: Request) {
     // Crear un mapa de bloqueos por fecha
     const bloqueosPorFecha = new Map<string, Array<{ inicio: string; fin: string }>>()
     bloqueosRaw.forEach((b) => {
-      const fechaKey = b.fecha.toString().split('T')[0]
+      // Normalizar la fecha (puede venir como string o Date)
+      let fechaKey = b.fecha.toString()
+      if (fechaKey.includes('T')) {
+        fechaKey = fechaKey.split('T')[0]
+      } else if (fechaKey.includes(' ')) {
+        fechaKey = fechaKey.split(' ')[0]
+      }
+      
       if (!bloqueosPorFecha.has(fechaKey)) {
         bloqueosPorFecha.set(fechaKey, [])
       }
@@ -138,10 +173,16 @@ export async function GET(request: Request) {
         fin: b.horaFin,
       })
     })
+    
+    console.log(`Bloqueos encontrados:`, bloqueosPorFecha.size, "fechas")
 
     // Generar días disponibles con sus horarios
     const diasDisponibles: Record<string, string[]> = {}
     const fechaActual = new Date(fechaInicio)
+
+    console.log(`Procesando días desde ${fechaInicioStr} hasta ${fechaFinStr}`)
+    console.log(`Horarios disponibles encontrados:`, horariosDisponibles.length)
+    console.log(`Días de semana configurados:`, horariosDisponibles.map(h => h.diaSemana))
 
     while (fechaActual <= fechaFin) {
       // Solo considerar fechas futuras o de hoy
@@ -151,7 +192,11 @@ export async function GET(request: Request) {
       }
 
       const diaSemana = obtenerDiaSemana(fechaActual)
-      const fechaKey = fechaActual.toISOString().split('T')[0]
+      // Formatear fecha como YYYY-MM-DD sin usar toISOString para evitar problemas de zona horaria
+      const year = fechaActual.getFullYear()
+      const month = fechaActual.getMonth() + 1
+      const day = fechaActual.getDate()
+      const fechaKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
       // Buscar horarios configurados para este día de la semana
       const horariosDelDia = horariosDisponibles.filter((h) => h.diaSemana === diaSemana)
@@ -194,13 +239,19 @@ export async function GET(request: Request) {
       fechaActual.setDate(fechaActual.getDate() + 1)
     }
 
+    console.log(`Días disponibles calculados para profesional ${profesionalId}:`, Object.keys(diasDisponibles).length, "días")
+    
     return NextResponse.json({
       diasDisponibles,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error obteniendo días disponibles:", error)
+    console.error("Stack:", error?.stack)
     return NextResponse.json(
-      { error: "Error al obtener días disponibles" },
+      { 
+        error: "Error al obtener días disponibles",
+        details: error?.message || String(error)
+      },
       { status: 500 }
     )
   }

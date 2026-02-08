@@ -17,6 +17,7 @@ import {
   FolderOpen,
   FolderPlus,
 } from "lucide-react"
+import { GmailSmtpConfig } from "./gmail-smtp-config"
 
 interface ConfiguracionSistema {
   notificacionesEmail: boolean
@@ -324,35 +325,32 @@ export function ConfiguracionForm() {
         </CardContent>
       </Card>
 
-      {/* Email */}
+      {/* Configuración Gmail SMTP (Guida y simplificada) */}
+      <GmailSmtpConfig
+        config={{
+          emailFrom: config.emailFrom,
+          emailFromName: config.emailFromName,
+          emailSmtpHost: config.emailSmtpHost,
+          emailSmtpPort: config.emailSmtpPort,
+          emailSmtpUser: config.emailSmtpUser,
+          emailSmtpPassword: config.emailSmtpPassword,
+          emailSmtpSecure: config.emailSmtpSecure,
+        }}
+        onConfigChange={updateConfig}
+      />
+
+      {/* Configuración SMTP Avanzada (para otros proveedores) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Configuración de Email
+            Configuración SMTP Avanzada
           </CardTitle>
           <CardDescription>
-            Configura los parámetros del servidor de email
+            Configuración manual para otros proveedores SMTP (si no usas Gmail)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="emailFrom">Email remitente</Label>
-            <Input
-              id="emailFrom"
-              type="email"
-              value={config.emailFrom}
-              onChange={(e) => updateConfig("emailFrom", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="emailFromName">Nombre del remitente</Label>
-            <Input
-              id="emailFromName"
-              value={config.emailFromName}
-              onChange={(e) => updateConfig("emailFromName", e.target.value)}
-            />
-          </div>
           <div>
             <Label htmlFor="emailSmtpHost">Servidor SMTP</Label>
             <Input

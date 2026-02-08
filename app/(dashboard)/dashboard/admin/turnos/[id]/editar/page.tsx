@@ -186,6 +186,11 @@ export default function EditarTurnoAdminPage() {
               <Button type="submit" disabled={loading}>
                 {loading ? "Guardando..." : "Guardar Cambios"}
               </Button>
+              <Link href={`/dashboard/paciente/turnos/${turnoId}/imprimir`}>
+                <Button type="button" variant="outline">
+                  Imprimir con QR
+                </Button>
+              </Link>
               <Link href="/dashboard/admin/turnos">
                 <Button type="button" variant="outline">
                   Cancelar

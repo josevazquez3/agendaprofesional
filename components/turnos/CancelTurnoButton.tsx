@@ -21,22 +21,37 @@ export function CancelTurnoButton({ turnoId }: CancelTurnoButtonProps) {
     setLoading(true)
 
     try {
-      const formData = new FormData()
-      formData.append("turnoId", turnoId)
-
+      console.log("Cancelando turno:", turnoId)
+      
       const response = await fetch("/api/turnos/cancelar", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ turnoId }),
       })
+      
+      console.log("Respuesta recibida:", response.status, response.statusText)
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Error al cancelar turno")
+        let errorMessage = "Error al cancelar turno"
+        try {
+          const data = await response.json()
+          errorMessage = data.error || data.details || errorMessage
+        } catch {
+          const text = await response.text()
+          errorMessage = text || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
+      const result = await response.json()
+      alert("Turno cancelado exitosamente")
       router.refresh()
     } catch (error: any) {
-      alert(error.message || "Error al cancelar turno")
+      console.error("Error cancelando turno:", error)
+      alert(error.message || "Error al cancelar turno. Por favor, intente nuevamente.")
+    } finally {
       setLoading(false)
     }
   }

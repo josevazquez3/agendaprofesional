@@ -327,7 +327,12 @@ export default function NuevoTurnoPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.back()}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  router.push("/dashboard/paciente")
+                }}
+                disabled={loading}
               >
                 Cancelar
               </Button>

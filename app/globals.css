@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Clase para ocultar elementos al imprimir */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Estilos para impresión de comprobantes de turno */
+@media print {
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+  
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: white;
+  }
+  
+  /* Asegurar que el QR se imprima correctamente */
+  img[alt*="QR"] {
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid;
+  }
+}
+
 :root {
   --brand-primary: #2563EB;
   --brand-primary-hover: #1E40AF;

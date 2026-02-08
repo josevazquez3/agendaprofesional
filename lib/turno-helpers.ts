@@ -377,6 +377,7 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
       id: string
       pacienteId: string
       profesionalId: string
+      consultorioProfesionalId: string | null
       fecha: string | bigint | number
       hora: string
       estado: string
@@ -389,7 +390,7 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
       motivoEliminacion: string | null
       eliminadoAt: string | bigint | number | null
     }>>(
-      `SELECT id, pacienteId, profesionalId, fecha, hora, estado, motivo, codigoTurno, 
+      `SELECT id, pacienteId, profesionalId, consultorioProfesionalId, fecha, hora, estado, motivo, codigoTurno, 
        obraSocial, arancel, motivoCancelacion, canceladoAt, motivoEliminacion, eliminadoAt
        FROM Turno WHERE id = ? LIMIT 1`,
       id
@@ -443,6 +444,7 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
       id: turno.id,
       pacienteId: turno.pacienteId,
       profesionalId: turno.profesionalId,
+      consultorioProfesionalId: turno.consultorioProfesionalId || null,
       fecha: safeDate(turno.fecha) || new Date(),
       hora: turno.hora,
       estado: turno.estado,
