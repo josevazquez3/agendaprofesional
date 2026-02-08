@@ -1,0 +1,129 @@
+import { PrismaClient } from "@prisma/client"
+import bcrypt from "bcryptjs"
+
+const prisma = new PrismaClient()
+
+async function main() {
+  console.log("🌱 Iniciando seed de base de datos...")
+
+  // Crear planes SaaS
+  console.log("📦 Creando planes...")
+
+  const plans = [
+    {
+      id: "plan-starter",
+      nombre: "Starter",
+      precioMensual: 0,
+      limiteUsuarios: 5,
+      limiteProfesionales: 2,
+      limiteTurnosMes: 100,
+      storageLimitMb: 100,
+      activo: true,
+    },
+    {
+      id: "plan-professional",
+      nombre: "Professional",
+      precioMensual: 49,
+      limiteUsuarios: 25,
+      limiteProfesionales: 10,
+      limiteTurnosMes: 1000,
+      storageLimitMb: 2000,
+      activo: true,
+    },
+    {
+      id: "plan-enterprise",
+      nombre: "Enterprise",
+      precioMensual: 149,
+      limiteUsuarios: -1, // Ilimitado
+      limiteProfesionales: -1, // Ilimitado
+      limiteTurnosMes: -1, // Ilimitado
+      storageLimitMb: 10000,
+      activo: true,
+    },
+  ]
+
+  for (const planData of plans) {
+    const plan = await prisma.plan.upsert({
+      where: { id: planData.id },
+      update: planData,
+      create: planData,
+    })
+    console.log(`  ✅ Plan creado/actualizado: ${plan.nombre}`)
+  }
+
+  // Crear usuario admin si no existe
+  const adminPassword = await bcrypt.hash("admin123", 10)
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@agendaprofesional.com" },
+    update: {},
+    create: {
+      email: "admin@agendaprofesional.com",
+      password: adminPassword,
+      nombre: "Administrador",
+      role: "ADMIN",
+    },
+  })
+  console.log("  ✅ Usuario admin creado/actualizado")
+
+  // Crear clínica por defecto si no existe
+  const defaultClinic = await prisma.clinic.findFirst({
+    where: { slug: "default" },
+  })
+
+  if (!defaultClinic) {
+    console.log("🏥 Creando clínica por defecto...")
+    const clinic = await prisma.clinic.create({
+      data: {
+        nombre: "Clínica Principal",
+        slug: "default",
+        activo: true,
+        planId: "plan-starter",
+      },
+    })
+    console.log(`  ✅ Clínica creada: ${clinic.nombre}`)
+
+    // Asociar admin a la clínica como OWNER
+    await prisma.clinicUser.upsert({
+      where: {
+        clinicId_userId: {
+          clinicId: clinic.id,
+          userId: admin.id,
+        },
+      },
+      update: {},
+      create: {
+        clinicId: clinic.id,
+        userId: admin.id,
+        role: "OWNER",
+        activo: true,
+      },
+    })
+    console.log("  ✅ Admin asociado a clínica como OWNER")
+
+    // Crear suscripción trial para clínica por defecto
+    const trialEnd = new Date()
+    trialEnd.setDate(trialEnd.getDate() + 30) // 30 días de trial
+
+    await prisma.subscription.create({
+      data: {
+        clinicId: clinic.id,
+        planId: "plan-starter",
+        status: "trial",
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: trialEnd,
+      },
+    })
+    console.log("  ✅ Suscripción trial creada")
+  }
+
+  console.log("✨ Seed completado exitosamente!")
+}
+
+main()
+  .catch((e) => {
+    console.error("❌ Error en seed:", e)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })

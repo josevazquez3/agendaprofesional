@@ -1,0 +1,232 @@
+import { getServerSession } from "next-auth"
+import { redirect, notFound } from "next/navigation"
+import { authOptions } from "@/lib/auth"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { prisma } from "@/lib/prisma"
+import { getUserById } from "@/lib/user-helpers"
+import { Plus } from "lucide-react"
+import Link from "next/link"
+import { Breadcrumb } from "@/components/ui/breadcrumb"
+import { PatientProfileCard } from "@/components/historia-clinica/patient-profile-card"
+import { MedicalInfoCard } from "@/components/historia-clinica/medical-info-card"
+import { MedicalTimeline } from "@/components/historia-clinica/medical-timeline"
+
+export default async function HistoriaClinicaDetallePage({
+  params,
+}: {
+  params: Promise<{ pacienteId: string }>
+}) {
+  const session = await getServerSession(authOptions)
+
+  if (!session || session.user.role !== "ADMIN") {
+    redirect("/auth/login")
+  }
+
+  const { pacienteId } = await params
+
+  // Obtener paciente con información completa usando helper
+  const pacienteRaw = await getUserById(pacienteId, {
+    includeObraSocial: true,
+  })
+
+  if (!pacienteRaw || pacienteRaw.role !== "PACIENTE") {
+    notFound()
+  }
+
+  // Obtener último turno con profesional usando SQL raw
+  const turnos = await prisma.$queryRawUnsafe<Array<{
+    id: string
+    pacienteId: string
+    profesionalId: string
+    fecha: string
+    estado: string
+  }>>(
+    `SELECT id, pacienteId, profesionalId, fecha, estado 
+     FROM Turno 
+     WHERE pacienteId = ? AND estado IN ('CONFIRMADO', 'COMPLETADO')
+     ORDER BY fecha DESC 
+     LIMIT 1`,
+    pacienteId
+  )
+
+  let pacienteTurnos: Array<{
+    profesional: {
+      user: {
+        nombre: string
+      }
+      especialidad: string
+    }
+  }> = []
+
+  if (turnos.length > 0) {
+    const turno = turnos[0]
+    const profesional = await prisma.$queryRawUnsafe<Array<{
+      id: string
+      userId: string
+      especialidad: string
+    }>>(
+      `SELECT id, userId, especialidad FROM Profesional WHERE id = ? LIMIT 1`,
+      turno.profesionalId
+    )
+
+    if (profesional.length > 0) {
+      const user = await prisma.$queryRawUnsafe<Array<{
+        id: string
+        nombre: string
+      }>>(
+        `SELECT id, nombre FROM User WHERE id = ? LIMIT 1`,
+        profesional[0].userId
+      )
+
+      if (user.length > 0) {
+        pacienteTurnos = [
+          {
+            profesional: {
+              user: {
+                nombre: user[0].nombre,
+              },
+              especialidad: profesional[0].especialidad,
+            },
+          },
+        ]
+      }
+    }
+  }
+
+  const paciente = {
+    ...pacienteRaw,
+    pacienteTurnos,
+  }
+
+  // Obtener historia clínica
+  const historiaClinica = await prisma.historiaClinica.findMany({
+    where: {
+      pacienteId: pacienteId,
+    },
+    include: {
+      profesional: {
+        include: {
+          user: {
+            select: {
+              nombre: true,
+            },
+          },
+        },
+      },
+      turno: {
+        select: {
+          fecha: true,
+          hora: true,
+          estado: true,
+          motivo: true,
+          motivoEliminacion: true,
+          eliminadoAt: true,
+        },
+      },
+      archivos: {
+        select: {
+          id: true,
+          nombreArchivo: true,
+          tipoArchivo: true,
+          urlArchivo: true,
+        },
+      },
+    },
+    orderBy: {
+      fechaConsulta: "desc",
+    },
+  })
+
+  // Obtener profesional asignado más reciente
+  const profesionalAsignado =
+    paciente.pacienteTurnos.length > 0
+      ? {
+          nombre:
+            paciente.pacienteTurnos[0].profesional.user.nombre,
+          especialidad: paciente.pacienteTurnos[0].profesional.especialidad,
+        }
+      : null
+
+  // Extraer información médica de las notas (por ahora usar campos genéricos)
+  // En el futuro esto podría venir de campos específicos en el schema
+  const alergias = null // Se puede agregar al schema más adelante
+  const enfermedadesCronicas = null
+  const medicacionActual = null
+  const observaciones = null
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb y Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex-1">
+          <Breadcrumb
+            items={[
+              { label: "Pacientes", href: "/dashboard/admin/pacientes" },
+              { label: paciente.nombre, href: `/dashboard/admin/pacientes/${pacienteId}` },
+              { label: "Historia clínica" },
+            ]}
+            className="mb-4"
+          />
+          <h1 className="text-2xl lg:text-3xl font-semibold text-[#0F172A] font-inter">
+            Historia Clínica
+          </h1>
+        </div>
+        <Link href={`/dashboard/admin/historia-clinica/${pacienteId}/editar`}>
+          <Button className="bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl font-medium px-6 transition-all duration-200 ease-out hover:scale-[1.02]">
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva evolución
+          </Button>
+        </Link>
+      </div>
+
+      {/* Layout 2 columnas */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Columna izquierda - Perfil del paciente */}
+        <div className="lg:col-span-1 space-y-6">
+          <PatientProfileCard
+            paciente={{
+              nombre: paciente.nombre,
+              dni: paciente.dni,
+              email: paciente.email,
+              telefono: paciente.telefono,
+              fechaNacimiento: paciente.fechaNacimiento,
+              obraSocial: paciente.obraSocial,
+              obraSocialRel: paciente.obraSocialRel,
+            }}
+            profesionalAsignado={profesionalAsignado}
+          />
+
+          <MedicalInfoCard
+            alergias={alergias}
+            enfermedadesCronicas={enfermedadesCronicas}
+            medicacionActual={medicacionActual}
+            observaciones={observaciones}
+          />
+        </div>
+
+        {/* Columna derecha - Historial clínico */}
+        <div className="lg:col-span-2">
+          <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+            <CardHeader className="border-b border-[#E2E8F0]">
+              <CardTitle className="text-lg font-semibold text-[#0F172A] font-inter">
+                Historial Clínico
+              </CardTitle>
+              <p className="text-sm text-[#64748B] mt-1">
+                {historiaClinica.length} registro
+                {historiaClinica.length !== 1 ? "s" : ""} médico
+                {historiaClinica.length !== 1 ? "s" : ""}
+              </p>
+            </CardHeader>
+            <CardContent className="p-6">
+              <MedicalTimeline
+                registros={historiaClinica as any}
+                basePath={`/dashboard/admin/historia-clinica/${pacienteId}`}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}

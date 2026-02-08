@@ -1,0 +1,469 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Enums convertidos a String para compatibilidad con SQLite
+// Role: PACIENTE | PROFESIONAL | SECRETARIA | ADMIN | PLATFORM_OWNER
+// ClinicRole: OWNER | ADMIN | SECRETARIA | PROFESIONAL | FACTURACION | LECTURA
+// EstadoTurno: PENDIENTE | CONFIRMADO | CANCELADO | COMPLETADO
+// DiaSemana: LUNES | MARTES | MIERCOLES | JUEVES | VIERNES | SABADO | DOMINGO
+// SubscriptionStatus: active | past_due | canceled | trial
+
+model Plan {
+  id                  String   @id @default(cuid())
+  nombre              String   @unique
+  precioMensual       Float
+  limiteUsuarios      Int
+  limiteProfesionales Int
+  limiteTurnosMes      Int
+  storageLimitMb      Int
+  activo              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  subscriptions       Subscription[]
+  clinics             Clinic[]
+
+  @@index([activo])
+}
+
+model Clinic {
+  id                String   @id @default(cuid())
+  nombre            String
+  slug              String   @unique
+  logo              String?
+  colorPrimary      String?  @default("#2563EB")
+  direccion         String?
+  telefono          String?
+  email             String?
+  activo            Boolean  @default(true)
+  
+  // Relación con Plan
+  planId            String?
+  plan              Plan?    @relation(fields: [planId], references: [id])
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relaciones
+  usuarios          ClinicUser[]
+  pacientes        User[]           @relation("ClinicPacientes")
+  profesionales    Profesional[]
+  turnos           Turno[]
+  historiasClinicas HistoriaClinica[]
+  obrasSociales    ObraSocial[]
+  consultorios     Consultorio[]
+  configuracion    ConfiguracionClinica?
+  invitaciones     Invitation[]
+  subscriptions    Subscription[]
+  usageMetrics     ClinicUsageDaily[]
+  backupJobs       BackupJob[]
+  auditLogs        AuditLog[]
+
+  @@index([slug])
+  @@index([activo])
+  @@index([planId])
+}
+
+model Subscription {
+  id                      String   @id @default(cuid())
+  clinicId                String   @unique
+  planId                  String
+  status                  String   // active | past_due | canceled | trial
+  currentPeriodStart      DateTime
+  currentPeriodEnd        DateTime
+  externalSubscriptionId  String?  // Para Stripe futuro
+  canceledAt              DateTime?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  clinic                  Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  plan                    Plan     @relation(fields: [planId], references: [id])
+
+  @@index([clinicId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+}
+
+model ClinicUsageDaily {
+  id                  String   @id @default(cuid())
+  clinicId            String
+  date                DateTime
+  usersCount          Int
+  professionalsCount  Int
+  appointmentsCount   Int
+  storageUsedMb       Int      @default(0)
+  createdAt           DateTime @default(now())
+
+  clinic              Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, date])
+  @@index([clinicId])
+  @@index([date])
+}
+
+model ClinicUser {
+  id            String   @id @default(cuid())
+  clinicId      String
+  userId        String
+  role          String   // OWNER | ADMIN | SECRETARIA | PROFESIONAL | FACTURACION | LECTURA
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, userId])
+  @@index([clinicId])
+  @@index([userId])
+}
+
+model RolePermission {
+  id            String   @id @default(cuid())
+  role          String   // OWNER | ADMIN | SECRETARIA | PROFESIONAL | FACTURACION | LECTURA
+  resource      String   // turnos | pacientes | profesionales | historia_clinica | obras_sociales | configuracion
+  action        String   // create | read | update | delete
+  createdAt     DateTime @default(now())
+
+  @@unique([role, resource, action])
+  @@index([role])
+}
+
+model Invitation {
+  id            String   @id @default(cuid())
+  clinicId      String
+  email         String
+  role          String
+  token         String   @unique
+  aceptada      Boolean  @default(false)
+  expiraEn      DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([email])
+  @@index([clinicId])
+}
+
+model ConfiguracionClinica {
+  id                String   @id @default(cuid())
+  clinicId          String   @unique
+  horarioAtencionInicio String?  // HH:mm
+  horarioAtencionFin   String?    // HH:mm
+  duracionTurnoDefault Int?       @default(30) // minutos
+  especialidadesActivas String?   // JSON array
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  clinic            Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  role          String    @default("PACIENTE")
+  nombre        String
+  dni           String?   @unique
+  fechaNacimiento DateTime?
+  telefono      String?
+  direccion     String?
+  fotoPerfil    String?
+  obraSocial    String?   // Mantenido para compatibilidad
+  obraSocialId  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relaciones
+  pacienteTurnos      Turno[]           @relation("PacienteTurnos")
+  profesional         Profesional?
+  historiaClinica     HistoriaClinica[]
+  notificaciones      Notificacion[]
+  obraSocialRel       ObraSocial?       @relation(fields: [obraSocialId], references: [id])
+  clinicPaciente      Clinic?           @relation("ClinicPacientes", fields: [clinicId], references: [id])
+  clinicId            String?
+  clinicUsers         ClinicUser[]
+  auditLogs           AuditLog[]
+}
+
+model Profesional {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  clinicId        String
+  especialidad    String
+  matricula       String?  @unique
+  atiendeObraSocial Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  turnos          Turno[]  @relation("ProfesionalTurnos")
+  horarios        HorarioDisponible[]
+  aranceles       Arancel[]
+  consultorios    ConsultorioProfesional[]
+  historiaClinica HistoriaClinica[]
+
+  @@index([clinicId])
+}
+
+model Consultorio {
+  id          String   @id @default(cuid())
+  clinicId    String
+  nombre      String
+  direccion   String
+  telefono    String?
+  email       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  profesionales ConsultorioProfesional[]
+
+  @@index([clinicId])
+}
+
+model ConsultorioProfesional {
+  id            String   @id @default(cuid())
+  consultorioId String
+  profesionalId String
+  createdAt     DateTime @default(now())
+
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id], onDelete: Cascade)
+  profesional   Profesional @relation(fields: [profesionalId], references: [id], onDelete: Cascade)
+  turnos        Turno[]
+
+  @@unique([consultorioId, profesionalId])
+}
+
+model HorarioDisponible {
+  id            String     @id @default(cuid())
+  profesionalId String
+  diaSemana     String
+  horaInicio    String     // Formato HH:mm
+  horaFin       String     // Formato HH:mm
+  duracionTurno Int        @default(30) // minutos
+  activo        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  profesional   Profesional @relation(fields: [profesionalId], references: [id], onDelete: Cascade)
+  bloqueos      BloqueoHorario[]
+
+  @@index([profesionalId, diaSemana])
+}
+
+model BloqueoHorario {
+  id                String   @id @default(cuid())
+  horarioDisponibleId String
+  fecha             DateTime
+  horaInicio        String
+  horaFin           String
+  motivo            String?
+  createdAt         DateTime @default(now())
+
+  horarioDisponible HorarioDisponible @relation(fields: [horarioDisponibleId], references: [id], onDelete: Cascade)
+
+  @@index([horarioDisponibleId, fecha])
+}
+
+model Turno {
+  id                String      @id @default(cuid())
+  clinicId          String
+  pacienteId        String
+  profesionalId     String
+  consultorioProfesionalId String?
+  fecha             DateTime
+  hora              String      // Formato HH:mm
+  estado            String @default("PENDIENTE")
+  motivo            String?
+  obraSocial        String?     // Mantenido para compatibilidad
+  obraSocialId      String?
+  arancel           Float?
+  codigoTurno       String      @unique @default(cuid())
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  canceladoAt       DateTime?
+  motivoCancelacion String?
+  eliminadoAt       DateTime?
+  motivoEliminacion String?
+
+  clinic            Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  paciente          User        @relation("PacienteTurnos", fields: [pacienteId], references: [id], onDelete: Cascade)
+  profesional       Profesional @relation("ProfesionalTurnos", fields: [profesionalId], references: [id], onDelete: Cascade)
+  consultorioProfesional ConsultorioProfesional? @relation(fields: [consultorioProfesionalId], references: [id])
+  obraSocialRel     ObraSocial? @relation(fields: [obraSocialId], references: [id])
+  historiaClinica   HistoriaClinica?
+
+  @@index([clinicId])
+  @@index([pacienteId])
+  @@index([profesionalId])
+  @@index([fecha, hora])
+  @@index([estado])
+}
+
+model Arancel {
+  id            String   @id @default(cuid())
+  profesionalId String
+  monto         Float
+  descripcion   String?
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  profesional   Profesional @relation(fields: [profesionalId], references: [id], onDelete: Cascade)
+
+  @@index([profesionalId])
+}
+
+model HistoriaClinica {
+  id            String   @id @default(cuid())
+  clinicId      String
+  pacienteId    String
+  profesionalId String
+  turnoId       String?  @unique
+  fechaConsulta DateTime @default(now())
+  notas         String?
+  diagnostico   String?
+  tratamiento   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  paciente      User      @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  profesional   Profesional @relation(fields: [profesionalId], references: [id], onDelete: Cascade)
+  turno         Turno?    @relation(fields: [turnoId], references: [id])
+  archivos      ArchivoHistoriaClinica[]
+
+  @@index([clinicId])
+  @@index([pacienteId])
+  @@index([profesionalId])
+  @@index([fechaConsulta])
+}
+
+model ArchivoHistoriaClinica {
+  id                String   @id @default(cuid())
+  historiaClinicaId String
+  nombreArchivo     String
+  tipoArchivo       String   // PDF, DOC, JPG, PNG, etc.
+  urlArchivo        String
+  tamano            Int?     // bytes
+  createdAt         DateTime @default(now())
+
+  historiaClinica   HistoriaClinica @relation(fields: [historiaClinicaId], references: [id], onDelete: Cascade)
+
+  @@index([historiaClinicaId])
+}
+
+model Notificacion {
+  id            String   @id @default(cuid())
+  userId        String
+  turnoId       String?
+  tipo          String   // TURNO_CONFIRMADO, TURNO_CANCELADO, etc.
+  titulo        String
+  mensaje       String
+  leida         Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, leida])
+  @@index([turnoId])
+}
+
+model ObraSocial {
+  id            String   @id @default(cuid())
+  clinicId      String
+  nombre        String
+  codigo        String?
+  activa        Boolean  @default(true)
+  descripcion   String?
+  telefono      String?
+  email         String?
+  direccion     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pacientes     User[]
+  turnos        Turno[]
+
+  @@unique([clinicId, nombre])
+  @@index([clinicId])
+  @@index([nombre])
+  @@index([activa])
+}
+
+model BackupJob {
+  id            String   @id @default(cuid())
+  clinicId      String
+  frequency     String   // manual | daily | weekly | monthly
+  scheduledTime String?  // HH:mm formato (ej: "02:00")
+  scheduledDay  Int?     // 0-6 para weekly (0=Lunes), 1-31 para monthly
+  storageType   String   @default("local") // local | s3 | gcs
+  storagePath   String?  // Ruta en storage (ej: "backups/clinic-123/2026-02-07.zip")
+  lastRunAt     DateTime?
+  status        String   @default("active") // active | paused
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  logs          BackupLog[]
+
+  @@index([clinicId])
+  @@index([status])
+  @@index([frequency])
+}
+
+model BackupLog {
+  id            String   @id @default(cuid())
+  jobId         String
+  executedAt    DateTime @default(now())
+  fileUrl       String?  // URL del archivo de backup
+  status        String   // success | error
+  sizeMB        Float?
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+
+  job           BackupJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([executedAt])
+  @@index([status])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  clinicId      String
+  userId        String
+  action        String   // CREATE | UPDATE | DELETE | LOGIN | LOGOUT | EXPORT | DOWNLOAD | PERMISSION_CHANGE
+  entityType    String   // PATIENT | APPOINTMENT | MEDICAL_RECORD | USER | BILLING | SETTINGS | FILE
+  entityId      String?
+  oldValues     String?  // Valores anteriores (JSON como texto)
+  newValues     String?  // Valores nuevos (JSON como texto)
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId])
+  @@index([userId])
+  @@index([entityType])
+  @@index([action])
+  @@index([createdAt])
+  @@index([clinicId, createdAt])
+  @@index([clinicId, entityType])
+}
