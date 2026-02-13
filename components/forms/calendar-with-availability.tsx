@@ -77,19 +77,6 @@ export function CalendarWithAvailability({
         ...(dataActual.diasDisponibles || {}),
         ...(dataSiguiente.diasDisponibles || {}),
       }
-      
-      console.log("📅 Días disponibles cargados:", Object.keys(diasCombinados).length, "días")
-      if (Object.keys(diasCombinados).length > 0) {
-        console.log("📅 Ejemplos de fechas disponibles:", Object.keys(diasCombinados).slice(0, 10))
-        // Mostrar algunos ejemplos con sus horarios
-        const ejemplos = Object.keys(diasCombinados).slice(0, 3)
-        ejemplos.forEach(fecha => {
-          console.log(`  - ${fecha}: ${diasCombinados[fecha].length} horarios`, diasCombinados[fecha].slice(0, 5))
-        })
-      } else {
-        console.warn("⚠️ No se encontraron días disponibles. Verificar que el profesional tenga horarios configurados.")
-      }
-      
       setDiasDisponibles(diasCombinados)
     } catch (error) {
       console.error("Error cargando días disponibles:", error)
@@ -136,12 +123,6 @@ export function CalendarWithAvailability({
       const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       const horarios = diasDisponibles[dateKey] || []
       const isAvailable = horarios.length > 0
-      
-      // Debug: Log para días disponibles
-      if (isAvailable) {
-        console.log(`Día disponible encontrado: ${dateKey} con ${horarios.length} horarios`)
-      }
-      
       days.push({
         date,
         isCurrentMonth: true,
@@ -245,15 +226,7 @@ export function CalendarWithAvailability({
   }
 
   const days = getDaysInMonth(currentMonth)
-  
-  // Debug: Verificar que los días disponibles se están usando correctamente
-  useEffect(() => {
-    if (Object.keys(diasDisponibles).length > 0) {
-      console.log("Estado actual de días disponibles:", Object.keys(diasDisponibles).length, "días")
-      console.log("Ejemplos:", Object.keys(diasDisponibles).slice(0, 5))
-    }
-  }, [diasDisponibles])
-  
+
   // Formatear la fecha seleccionada para mostrar en el input
   const formatDateForDisplay = (dateStr: string): string => {
     if (!dateStr) return ''
@@ -340,13 +313,7 @@ export function CalendarWithAvailability({
                 const isSelectedDate = isSelected(day.date)
                 // Permitir seleccionar cualquier día válido (no pasado, del mes actual)
                 const canSelect = !isPastDate && day.isCurrentMonth
-                // Solo mostrar tooltip si hay horarios disponibles
                 const canShowTooltip = isAvailableDay && canSelect
-                
-                // Debug log para días disponibles
-                if (isAvailableDay && day.isCurrentMonth) {
-                  console.log(`Renderizando día disponible: ${dateKey} con ${horariosDelDia.length} horarios`)
-                }
 
                 return (
                   <div

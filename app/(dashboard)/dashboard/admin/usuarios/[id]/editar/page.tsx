@@ -120,7 +120,7 @@ export default function EditarUsuarioPage() {
         fechaNacimiento: formData.fechaNacimiento || null,
         direccion: formData.direccion || null,
         obraSocial: formData.obraSocial || null,
-        obraSocialId: formData.obraSocialId || null,
+        obraSocialId: formData.obraSocialId === "SIN_OBRA_SOCIAL" ? null : (formData.obraSocialId || null),
         role: formData.role,
       }
 
@@ -286,6 +286,7 @@ export default function EditarUsuarioPage() {
                   onChange={handleChange}
                 >
                   <option value="">Seleccione una obra social</option>
+                  <option value="SIN_OBRA_SOCIAL">No tengo obra social</option>
                   {obrasSociales.map((obraSocial) => (
                     <option key={obraSocial.id} value={obraSocial.id}>
                       {obraSocial.nombre} {obraSocial.codigo ? `(${obraSocial.codigo})` : ""}
@@ -297,7 +298,7 @@ export default function EditarUsuarioPage() {
                     No hay obras sociales disponibles. Puede ingresar una manualmente.
                   </p>
                 )}
-                {formData.obraSocialId === "" && (
+                {formData.obraSocialId !== "SIN_OBRA_SOCIAL" && formData.obraSocialId === "" && (
                   <Input
                     id="obraSocial"
                     name="obraSocial"

@@ -49,10 +49,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar que el profesional existe
+    // Verificar que el profesional existe (una sola consulta)
     const profesional = await getProfesionalById(profesionalId, {
-      includeUser: true,
-      includeUserFields: ["nombre", "email"],
       includeUser: true,
       includeUserFields: ["nombre", "email"],
     })
@@ -314,64 +312,46 @@ export async function POST(request: Request) {
           },
     }
 
-    // Enviar notificaciones (no bloquean la creación del turno si fallan)
+    // Notificaciones y auditoría en paralelo (no bloquean ni fallan la respuesta)
     const fechaFormateada = new Date(fecha).toLocaleDateString("es-AR", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
     })
+    const nombreProfesional = profesional.user?.nombre || "Profesional"
 
-    // Email al paciente (no bloquea si falla)
-    if (paciente.email) {
-      try {
-        const emailHtml = generateTurnoConfirmationEmail(
-          paciente.nombre,
-          profesional.user?.nombre || "Profesional",
-          fechaFormateada,
-          hora
-        )
-        await sendEmail({
-          to: paciente.email,
-          subject: "Turno Confirmado - Agenda Profesional",
-          html: emailHtml,
-        })
-      } catch (emailError) {
-        console.error("Error enviando email:", emailError)
-        // No lanzar error, solo registrar
-      }
-    }
-
-    // WhatsApp al paciente (no bloquea si falla)
-    if (paciente.telefono) {
-      try {
-        const whatsappMessage = generateTurnoConfirmationWhatsApp(
-          paciente.nombre,
-          profesional.user?.nombre || "Profesional",
-          fechaFormateada,
-          hora,
-          turno.codigoTurno
-        )
-        await sendWhatsAppMessage({
-          to: paciente.telefono,
-          message: whatsappMessage,
-        })
-      } catch (whatsappError) {
-        console.error("Error enviando WhatsApp:", whatsappError)
-        // No lanzar error, solo registrar
-      }
-    }
-
-    // Crear notificaciones in-app (no bloquea si falla)
-    try {
-      await prisma.notificacion.createMany({
+    await Promise.allSettled([
+      // 1. Email al paciente
+      paciente.email
+        ? sendEmail({
+            to: paciente.email,
+            subject: "Turno Confirmado - Agenda Profesional",
+            html: generateTurnoConfirmationEmail(paciente.nombre, nombreProfesional, fechaFormateada, hora),
+          })
+        : Promise.resolve(),
+      // 2. WhatsApp al paciente
+      paciente.telefono
+        ? sendWhatsAppMessage({
+            to: paciente.telefono,
+            message: generateTurnoConfirmationWhatsApp(
+              paciente.nombre,
+              nombreProfesional,
+              fechaFormateada,
+              hora,
+              turno.codigoTurno
+            ),
+          })
+        : Promise.resolve(),
+      // 3. Notificaciones in-app
+      prisma.notificacion.createMany({
         data: [
           {
             userId: pacienteId,
             turnoId: turno.id,
             tipo: "TURNO_CONFIRMADO",
             titulo: "Turno Confirmado",
-            mensaje: `Su turno con ${profesional.user?.nombre || "Profesional"} ha sido confirmado para el ${fechaFormateada} a las ${hora}`,
+            mensaje: `Su turno con ${nombreProfesional} ha sido confirmado para el ${fechaFormateada} a las ${hora}`,
           },
           {
             userId: profesional.userId,
@@ -381,36 +361,26 @@ export async function POST(request: Request) {
             mensaje: `Nuevo turno con ${paciente.nombre} el ${fechaFormateada} a las ${hora}`,
           },
         ],
-      })
-    } catch (notificacionError) {
-      console.error("Error creando notificaciones:", notificacionError)
-      // No lanzar error, solo registrar
-    }
-
-    // Registrar auditoría (no bloquea si falla)
-    try {
-      const clinic = await getActiveClinic()
-      if (clinic) {
-        await logCreate(
-          clinic.id,
-          session.user.id,
-          "APPOINTMENT",
-          turno.id,
-          {
-            pacienteId: turno.pacienteId,
-            profesionalId: turno.profesionalId,
-            fecha: turno.fecha.toISOString(),
-            hora: turno.hora,
-            motivo: turno.motivo,
-            estado: turno.estado,
-          },
-          request as any
-        )
-      }
-    } catch (auditError) {
-      console.error("Error registrando auditoría:", auditError)
-      // No lanzar error, solo registrar
-    }
+      }),
+      // 4. Auditoría (reutilizando clinicId ya obtenido)
+      clinicId
+        ? logCreate(
+            clinicId,
+            session.user.id,
+            "APPOINTMENT",
+            turno.id,
+            {
+              pacienteId: turno.pacienteId,
+              profesionalId: turno.profesionalId,
+              fecha: turno.fecha.toISOString(),
+              hora: turno.hora,
+              motivo: turno.motivo,
+              estado: turno.estado,
+            },
+            request as any
+          )
+        : Promise.resolve(),
+    ])
 
     return NextResponse.json(
       {

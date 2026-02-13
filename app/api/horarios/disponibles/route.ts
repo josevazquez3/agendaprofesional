@@ -66,7 +66,6 @@ export async function GET(request: Request) {
     }
 
     const diaSemana = obtenerDiaSemana(fechaObj)
-    console.log("[horarios/disponibles]", { profesionalId, fechaParam: fecha, fechaNormalizada, diaSemana })
 
     // Obtener horarios disponibles del profesional para ese día (SQL raw para evitar problemas con SQLite)
     const horariosDisponiblesRaw = await prisma.$queryRawUnsafe<
@@ -82,7 +81,6 @@ export async function GET(request: Request) {
       horaFin: h.horaFin,
       duracionTurno: Number(h.duracionTurno),
     }))
-    console.log("[horarios/disponibles] horarios configurados:", horariosDisponibles.length, horariosDisponibles)
 
     // Obtener turnos ya ocupados para esa fecha usando SQL raw
     const fechaStr = fechaNormalizada
@@ -95,7 +93,6 @@ export async function GET(request: Request) {
       fechaStr
     )
     const horasOcupadas = new Set(turnosOcupadosRaw.map((t) => t.hora))
-    console.log("[horarios/disponibles] turnos ocupados:", turnosOcupadosRaw.length, Array.from(horasOcupadas))
 
     // Obtener bloqueos para esa fecha (por rango de día en SQL para evitar problemas de timezone)
     const fechaInicioStr = fechaNormalizada + "T00:00:00"
@@ -113,7 +110,6 @@ export async function GET(request: Request) {
       fechaFinStr
     )
     const bloqueos = bloqueosRaw.map((b) => ({ horaInicio: b.horaInicio, horaFin: b.horaFin }))
-    console.log("[horarios/disponibles] bloqueos:", bloqueos.length)
 
     // Generar lista de horarios disponibles
     const horarios: string[] = []

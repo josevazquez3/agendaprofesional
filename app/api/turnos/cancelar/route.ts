@@ -20,8 +20,6 @@ export async function POST(request: Request) {
     })
     const turnoId = body.turnoId || (await request.formData()).get("turnoId") as string
     const motivoCancelacion = body.motivoCancelacion || "Cancelado por el usuario"
-    
-    console.log("Cancelando turno:", turnoId, "Motivo:", motivoCancelacion)
 
     if (!turnoId) {
       return NextResponse.json(
@@ -30,25 +28,15 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log("Obteniendo turno con ID:", turnoId)
-    
     // Obtener turno usando helper
     const turno = await getTurnoById(turnoId)
 
     if (!turno) {
-      console.error("Turno no encontrado:", turnoId)
       return NextResponse.json(
         { error: "Turno no encontrado" },
         { status: 404 }
       )
     }
-    
-    console.log("Turno encontrado:", {
-      id: turno.id,
-      estado: turno.estado,
-      pacienteId: turno.pacienteId,
-      profesionalId: turno.profesionalId,
-    })
 
     // Verificar permisos (paciente solo puede cancelar sus propios turnos)
     if (session.user.role === "PACIENTE" && turno.pacienteId !== session.user.id) {
@@ -61,8 +49,7 @@ export async function POST(request: Request) {
     // Actualizar turno usando SQL raw para evitar problemas con schema
     const ahora = new Date()
     const ahoraISO = ahora.toISOString()
-    
-    console.log("Actualizando turno en base de datos...")
+
     try {
       // Actualizar turno usando SQL raw
       const result = await prisma.$executeRawUnsafe(
@@ -75,14 +62,8 @@ export async function POST(request: Request) {
         ahoraISO,
         turnoId
       )
-      console.log("Turno actualizado exitosamente. Filas afectadas:", result)
     } catch (error: any) {
-      console.error("Error en UPDATE de turno:", error)
-      console.error("Detalles:", {
-        message: error.message,
-        code: error.code,
-        meta: error.meta,
-      })
+      console.error("Error al actualizar turno:", error?.message)
       throw new Error(`Error al actualizar turno: ${error.message || String(error)}`)
     }
     

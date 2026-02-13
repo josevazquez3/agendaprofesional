@@ -117,8 +117,6 @@ export async function updateSubscriptionPlan(
   //   },
   // }
 
-  // Stub por ahora
-  console.log(`[Billing] Updating subscription ${subscriptionId} to plan ${newPlanId}`)
   return {
     id: subscriptionId,
     status: "active",

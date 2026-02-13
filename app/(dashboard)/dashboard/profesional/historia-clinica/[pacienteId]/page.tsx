@@ -84,7 +84,6 @@ export default function HistoriaClinicaDetalleProfesionalPage() {
       setPaciente(pacienteData)
       // La API devuelve todas las historias clínicas del paciente
       setHistoriaClinica(Array.isArray(historiaData) ? historiaData : [])
-      console.log(`Historia clínica cargada: ${Array.isArray(historiaData) ? historiaData.length : 0} registros`)
       setLoading(false)
     } catch (error: any) {
       console.error("Error cargando datos:", error)

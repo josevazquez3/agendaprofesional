@@ -37,37 +37,24 @@ export default function ProfesionalPacientesPage() {
       setLoading(true)
       // Obtener pacientes del profesional desde la API
       const response = await fetch("/api/historia-clinica/profesional/pacientes")
-      
-      console.log("📋 Response status:", response.status, response.ok)
-      
       if (!response.ok) {
         const errorData = await response.json()
-        console.error("❌ Error en la respuesta:", errorData)
         throw new Error(errorData.error || "Error al cargar pacientes")
       }
-      
       const data = await response.json()
-      console.log("📋 Pacientes recibidos:", data.length, "pacientes")
-      console.log("📋 Datos:", data)
-      
-      // Verificar si la respuesta es un array
       if (Array.isArray(data)) {
         setPacientes(data)
         setPacientesFiltrados(data)
       } else if (data.pacientes && Array.isArray(data.pacientes)) {
-        // Si viene envuelto en un objeto
         setPacientes(data.pacientes)
         setPacientesFiltrados(data.pacientes)
       } else {
-        console.warn("⚠️ Formato de datos inesperado:", data)
         setPacientes([])
         setPacientesFiltrados([])
       }
-      
       setLoading(false)
     } catch (error: any) {
-      console.error("❌ Error cargando pacientes:", error)
-      console.error("❌ Error details:", error.message, error.stack)
+      console.error("Error cargando pacientes:", error?.message)
       setPacientes([])
       setPacientesFiltrados([])
       setLoading(false)

@@ -133,7 +133,6 @@ export async function POST(request: Request) {
             },
           })
           
-          console.log("Clínica por defecto creada:", clinic.id)
         } catch (createError: any) {
           console.error("Error creando clínica por defecto:", createError)
           return NextResponse.json(

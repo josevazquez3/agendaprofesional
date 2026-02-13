@@ -36,7 +36,7 @@ export function PublicNavbar() {
       <div className="max-w-[1200px] mx-auto px-6 lg:px-8 h-full">
         <div className="flex items-center justify-between h-full">
           {/* Logo izquierda */}
-          <Link href="/" className="flex-shrink-0">
+          <Link href="/" className="flex-shrink-0 mr-8 lg:mr-12">
             <span className="text-xl font-semibold text-[#0F172A] font-inter">
               Agenda Profesional
             </span>
@@ -56,8 +56,8 @@ export function PublicNavbar() {
             ))}
           </div>
 
-          {/* Botones - Desktop */}
-          <div className="hidden md:flex items-center space-x-4 flex-shrink-0">
+          {/* Botones - Desktop (separados del enlace Contacto) */}
+          <div className="hidden md:flex items-center space-x-4 flex-shrink-0 ml-8 lg:ml-12 pl-8 lg:pl-10 border-l border-[#E2E8F0]">
             <Link href="/auth/login">
               <Button
                 variant="outline"

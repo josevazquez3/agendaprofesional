@@ -21,8 +21,6 @@ export function CancelTurnoButton({ turnoId }: CancelTurnoButtonProps) {
     setLoading(true)
 
     try {
-      console.log("Cancelando turno:", turnoId)
-      
       const response = await fetch("/api/turnos/cancelar", {
         method: "POST",
         headers: {
@@ -30,8 +28,6 @@ export function CancelTurnoButton({ turnoId }: CancelTurnoButtonProps) {
         },
         body: JSON.stringify({ turnoId }),
       })
-      
-      console.log("Respuesta recibida:", response.status, response.statusText)
 
       if (!response.ok) {
         let errorMessage = "Error al cancelar turno"

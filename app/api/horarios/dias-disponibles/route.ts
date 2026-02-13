@@ -134,8 +134,6 @@ export async function GET(request: Request) {
       }
       turnosOcupadosPorFecha.get(fechaKey)!.add(t.hora)
     })
-    
-    console.log(`Turnos ocupados encontrados:`, turnosOcupadosPorFecha.size, "fechas")
 
     // Obtener bloqueos en el rango
     const bloqueosRaw = await prisma.$queryRawUnsafe<Array<{
@@ -173,16 +171,10 @@ export async function GET(request: Request) {
         fin: b.horaFin,
       })
     })
-    
-    console.log(`Bloqueos encontrados:`, bloqueosPorFecha.size, "fechas")
 
     // Generar días disponibles con sus horarios
     const diasDisponibles: Record<string, string[]> = {}
     const fechaActual = new Date(fechaInicio)
-
-    console.log(`Procesando días desde ${fechaInicioStr} hasta ${fechaFinStr}`)
-    console.log(`Horarios disponibles encontrados:`, horariosDisponibles.length)
-    console.log(`Días de semana configurados:`, horariosDisponibles.map(h => h.diaSemana))
 
     while (fechaActual <= fechaFin) {
       // Solo considerar fechas futuras o de hoy
@@ -239,14 +231,11 @@ export async function GET(request: Request) {
       fechaActual.setDate(fechaActual.getDate() + 1)
     }
 
-    console.log(`Días disponibles calculados para profesional ${profesionalId}:`, Object.keys(diasDisponibles).length, "días")
-    
     return NextResponse.json({
       diasDisponibles,
     })
   } catch (error: any) {
-    console.error("Error obteniendo días disponibles:", error)
-    console.error("Stack:", error?.stack)
+    console.error("Error obteniendo días disponibles:", error?.message)
     return NextResponse.json(
       { 
         error: "Error al obtener días disponibles",

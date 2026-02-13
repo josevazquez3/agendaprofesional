@@ -79,7 +79,10 @@ export default function NuevoUsuarioPage() {
       const response = await fetch("/api/admin/usuarios/crear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          obraSocialId: formData.obraSocialId === "SIN_OBRA_SOCIAL" ? "" : formData.obraSocialId,
+        }),
       })
 
       const data = await response.json()
@@ -240,15 +243,21 @@ export default function NuevoUsuarioPage() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formData.obraSocialId}
                   onChange={(e) => {
-                    const selectedObraSocial = obrasSociales.find(os => os.id === e.target.value)
+                    const val = e.target.value
+                    if (val === "SIN_OBRA_SOCIAL") {
+                      setFormData({ ...formData, obraSocialId: "SIN_OBRA_SOCIAL", obraSocial: "No tengo obra social" })
+                      return
+                    }
+                    const selectedObraSocial = obrasSociales.find(os => os.id === val)
                     setFormData({
                       ...formData,
-                      obraSocialId: e.target.value,
+                      obraSocialId: val,
                       obraSocial: selectedObraSocial ? selectedObraSocial.nombre : "",
                     })
                   }}
                 >
                   <option value="">Seleccione una obra social</option>
+                  <option value="SIN_OBRA_SOCIAL">No tengo obra social</option>
                   {obrasSociales.map((obraSocial) => (
                     <option key={obraSocial.id} value={obraSocial.id}>
                       {obraSocial.nombre} {obraSocial.codigo ? `(${obraSocial.codigo})` : ""}
@@ -260,7 +269,7 @@ export default function NuevoUsuarioPage() {
                     No hay obras sociales disponibles. Puede ingresar una manualmente.
                   </p>
                 )}
-                {formData.obraSocialId === "" && (
+                {formData.obraSocialId !== "SIN_OBRA_SOCIAL" && formData.obraSocialId === "" && (
                   <Input
                     id="obraSocial"
                     name="obraSocial"

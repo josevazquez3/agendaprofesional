@@ -45,9 +45,7 @@ export function CompletarTurnoModal({
         throw new Error(data.error || "Error al completar turno")
       }
 
-      const data = await response.json()
-      console.log("Turno completado exitosamente:", data)
-
+      await response.json()
       onSuccess()
       onClose()
     } catch (error: any) {

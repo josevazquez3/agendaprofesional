@@ -27,8 +27,6 @@ export async function sendWhatsAppMessage({
     return { success: true, sid: result.sid }
     */
 
-    // Por ahora, solo logueamos el mensaje
-    console.log(`WhatsApp a ${to}: ${message}`)
     return { success: true, message: "WhatsApp enviado (simulado)" }
   } catch (error) {
     console.error("Error enviando WhatsApp:", error)
