@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma"
 import { getProfesionalById } from "@/lib/profesional-helpers"
 import { sendEmail } from "@/lib/email"
 import { sendWhatsAppMessage } from "@/lib/whatsapp"
-import { generateTurnoConfirmationEmail, generateTurnoConfirmationWhatsApp } from "@/lib/email"
+import { generateTurnoConfirmationEmail } from "@/lib/email"
+import { generateTurnoConfirmationWhatsApp } from "@/lib/whatsapp"
 import { logCreate } from "@/lib/audit-service"
 import { getActiveClinic } from "@/lib/clinic-context"
 
@@ -50,6 +51,8 @@ export async function POST(request: Request) {
 
     // Verificar que el profesional existe
     const profesional = await getProfesionalById(profesionalId, {
+      includeUser: true,
+      includeUserFields: ["nombre", "email"],
       includeUser: true,
       includeUserFields: ["nombre", "email"],
     })
@@ -297,14 +300,18 @@ export async function POST(request: Request) {
         nombre: paciente.nombre,
         email: paciente.email,
       },
-      profesional: {
-        id: profesional.id,
-        user: {
-          id: profesional.userId,
-          nombre: profesional.user?.nombre || "",
-          email: profesional.user?.email || "",
-        },
-      },
+          profesional: {
+            id: profesional.id,
+            user: profesional.user ? {
+              id: profesional.userId,
+              nombre: profesional.user.nombre || "",
+              email: profesional.user.email || "",
+            } : {
+              id: profesional.userId,
+              nombre: "",
+              email: "",
+            },
+          },
     }
 
     // Enviar notificaciones (no bloquean la creación del turno si fallan)
@@ -320,7 +327,7 @@ export async function POST(request: Request) {
       try {
         const emailHtml = generateTurnoConfirmationEmail(
           paciente.nombre,
-          profesional.user.nombre,
+          profesional.user?.nombre || "Profesional",
           fechaFormateada,
           hora
         )
@@ -340,7 +347,7 @@ export async function POST(request: Request) {
       try {
         const whatsappMessage = generateTurnoConfirmationWhatsApp(
           paciente.nombre,
-          profesional.user.nombre,
+          profesional.user?.nombre || "Profesional",
           fechaFormateada,
           hora,
           turno.codigoTurno
@@ -364,7 +371,7 @@ export async function POST(request: Request) {
             turnoId: turno.id,
             tipo: "TURNO_CONFIRMADO",
             titulo: "Turno Confirmado",
-            mensaje: `Su turno con ${profesional.user.nombre} ha sido confirmado para el ${fechaFormateada} a las ${hora}`,
+            mensaje: `Su turno con ${profesional.user?.nombre || "Profesional"} ha sido confirmado para el ${fechaFormateada} a las ${hora}`,
           },
           {
             userId: profesional.userId,

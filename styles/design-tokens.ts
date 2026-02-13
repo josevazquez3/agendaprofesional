@@ -110,15 +110,15 @@ export const designTokens = {
       sans: ["Inter", "system-ui", "sans-serif"],
     },
     fontSize: {
-      xs: "0.75rem", // 12px
-      sm: "0.875rem", // 14px
-      base: "1rem", // 16px
-      lg: "1.125rem", // 18px
-      xl: "1.25rem", // 20px
-      "2xl": "1.5rem", // 24px
-      "3xl": "1.875rem", // 30px
-      "4xl": "2.25rem", // 36px
-      "5xl": "3rem", // 48px
+      xs: "1rem", // 16px (aumentado desde 15px)
+      sm: "1.125rem", // 18px (aumentado desde 17px)
+      base: "1.25rem", // 20px (aumentado desde 19px)
+      lg: "1.375rem", // 22px (aumentado desde 21px)
+      xl: "1.625rem", // 26px (aumentado desde 24px)
+      "2xl": "2rem", // 32px (aumentado desde 30px)
+      "3xl": "2.5rem", // 40px (aumentado desde 36px)
+      "4xl": "3rem", // 48px (aumentado desde 42px)
+      "5xl": "4rem", // 64px (aumentado desde 56px)
     },
     fontWeight: {
       normal: 400,

@@ -85,8 +85,8 @@ export async function GET(request: Request) {
     // Tabla de registros
     const tableData = historiaClinica.map((registro) => [
       new Date(registro.fechaConsulta).toLocaleDateString("es-AR"),
-      registro.profesional.user.nombre,
-      registro.profesional.especialidad,
+      registro.profesional?.user?.nombre || "Profesional no disponible",
+      registro.profesional?.especialidad || "N/A",
       registro.diagnostico || "N/A",
       registro.tratamiento || "N/A",
     ])

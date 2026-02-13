@@ -106,11 +106,7 @@ export default async function PacienteDashboard() {
                       })}{" "}
                       a las {turno.hora}
                     </p>
-                    {turno.consultorioProfesional && (
-                      <p className="text-sm text-gray-500">
-                        {turno.consultorioProfesional.consultorio.direccion}
-                      </p>
-                    )}
+                    {/* Consultorio info removed - not available in TurnoWithRelations */}
                   </div>
                   <div className="flex gap-2">
                     <span

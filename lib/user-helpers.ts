@@ -67,11 +67,37 @@ export async function getUsers(where: {
     }
 
     if (where.search) {
-      conditions.push(
-        "(nombre LIKE ? OR dni LIKE ? OR email LIKE ?)"
-      )
-      const searchPattern = `%${where.search}%`
-      params.push(searchPattern, searchPattern, searchPattern)
+      // Dividir la búsqueda en palabras individuales para buscar por nombre y apellido
+      const searchTerms = where.search.trim().split(/\s+/).filter(term => term.length > 0)
+      
+      if (searchTerms.length > 0) {
+        // Construir condiciones para buscar cada palabra en el nombre
+        const nombreConditions: string[] = []
+        const searchPatterns: string[] = []
+        
+        // Para cada término de búsqueda, buscar en el nombre completo
+        searchTerms.forEach((term) => {
+          nombreConditions.push(`nombre LIKE ?`)
+          searchPatterns.push(`%${term}%`)
+        })
+        
+        // Combinar todas las condiciones: todas las palabras deben estar en el nombre
+        // O buscar en DNI o email
+        conditions.push(
+          `((${nombreConditions.join(' AND ')}) OR dni LIKE ? OR email LIKE ?)`
+        )
+        
+        // Agregar todos los parámetros: primero los patrones de nombre, luego DNI y email
+        const dniEmailPattern = `%${where.search}%`
+        params.push(...searchPatterns, dniEmailPattern, dniEmailPattern)
+      } else {
+        // Si no hay términos válidos, usar búsqueda simple
+        const searchPattern = `%${where.search}%`
+        conditions.push(
+          "(nombre LIKE ? OR dni LIKE ? OR email LIKE ?)"
+        )
+        params.push(searchPattern, searchPattern, searchPattern)
+      }
     }
 
     if (where.obraSocialId) {
@@ -232,11 +258,37 @@ export async function countUsers(where: {
     }
 
     if (where.search) {
-      conditions.push(
-        "(nombre LIKE ? OR dni LIKE ? OR email LIKE ?)"
-      )
-      const searchPattern = `%${where.search}%`
-      params.push(searchPattern, searchPattern, searchPattern)
+      // Dividir la búsqueda en palabras individuales para buscar por nombre y apellido
+      const searchTerms = where.search.trim().split(/\s+/).filter(term => term.length > 0)
+      
+      if (searchTerms.length > 0) {
+        // Construir condiciones para buscar cada palabra en el nombre
+        const nombreConditions: string[] = []
+        const searchPatterns: string[] = []
+        
+        // Para cada término de búsqueda, buscar en el nombre completo
+        searchTerms.forEach((term) => {
+          nombreConditions.push(`nombre LIKE ?`)
+          searchPatterns.push(`%${term}%`)
+        })
+        
+        // Combinar todas las condiciones: todas las palabras deben estar en el nombre
+        // O buscar en DNI o email
+        conditions.push(
+          `((${nombreConditions.join(' AND ')}) OR dni LIKE ? OR email LIKE ?)`
+        )
+        
+        // Agregar todos los parámetros: primero los patrones de nombre, luego DNI y email
+        const dniEmailPattern = `%${where.search}%`
+        params.push(...searchPatterns, dniEmailPattern, dniEmailPattern)
+      } else {
+        // Si no hay términos válidos, usar búsqueda simple
+        const searchPattern = `%${where.search}%`
+        conditions.push(
+          "(nombre LIKE ? OR dni LIKE ? OR email LIKE ?)"
+        )
+        params.push(searchPattern, searchPattern, searchPattern)
+      }
     }
 
     if (where.obraSocialId) {

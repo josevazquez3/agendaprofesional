@@ -128,7 +128,7 @@ export default async function AdminDashboard() {
                         {turno.paciente.nombre}
                       </p>
                       <p className="text-xs text-[#64748B] mt-1">
-                        {turno.profesional?.nombre || "Sin profesional"}
+                        {turno.profesional?.user?.nombre || "Sin profesional"}
                       </p>
                       <p className="text-xs text-[#64748B] mt-1">
                         {format(new Date(turno.fecha), "dd/MM/yyyy")} a las{" "}

@@ -108,14 +108,16 @@ export default async function AdminObrasSocialesPage() {
                         <p className="text-gray-800">{obraSocial.direccion}</p>
                       </div>
                     )}
-                    <div className="flex items-center gap-4 pt-2 border-t">
-                      <div className="text-sm text-gray-600">
-                        <strong>Pacientes:</strong> {obraSocial._count.pacientes}
+                    {obraSocial._count && (
+                      <div className="flex items-center gap-4 pt-2 border-t">
+                        <div className="text-sm text-gray-600">
+                          <strong>Pacientes:</strong> {obraSocial._count.pacientes}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          <strong>Turnos:</strong> {obraSocial._count.turnos}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600">
-                        <strong>Turnos:</strong> {obraSocial._count.turnos}
-                      </div>
-                    </div>
+                    )}
                     <div className="flex items-center gap-2 pt-2 border-t">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${

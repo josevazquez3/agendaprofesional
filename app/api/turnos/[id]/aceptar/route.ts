@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getTurnoById } from "@/lib/turno-helpers"
+import { getActiveClinic } from "@/lib/clinic-context"
 
 export async function POST(
   request: Request,
@@ -60,9 +61,25 @@ export async function POST(
         },
       })
     } else {
+      // Obtener clinicId del turno o de la clínica activa
+      let clinicId: string | null = turno.clinicId || null
+      
+      if (!clinicId) {
+        const clinic = await getActiveClinic()
+        clinicId = clinic?.id || null
+      }
+      
+      if (!clinicId) {
+        return NextResponse.json(
+          { error: "No se pudo determinar la clínica activa" },
+          { status: 400 }
+        )
+      }
+      
       // Crear nueva historia clínica
       historiaClinica = await prisma.historiaClinica.create({
         data: {
+          clinicId,
           pacienteId: turno.pacienteId,
           profesionalId: turno.profesionalId,
           turnoId: turno.id,

@@ -35,13 +35,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validar tipo de archivo (PDF y DOC/DOCX)
+    // Validar tipo de archivo (solo PDF y DOCX)
     const allowedTypes = [
       "application/pdf",
-      "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ]
-    const allowedExtensions = [".pdf", ".doc", ".docx"]
+    const allowedExtensions = [".pdf", ".docx"]
     const fileExtension = "." + file.name.split(".").pop()?.toLowerCase()
 
     if (
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Tipo de archivo no permitido. Solo se permiten PDF y DOC/DOCX",
+            "Tipo de archivo no permitido. Solo se permiten archivos PDF y DOCX",
         },
         { status: 400 }
       )
@@ -86,8 +85,8 @@ export async function POST(request: Request) {
 
     // Determinar tipo de archivo
     let tipoArchivo = "PDF"
-    if (fileExtension === ".doc" || fileExtension === ".docx") {
-      tipoArchivo = "DOC"
+    if (fileExtension === ".docx") {
+      tipoArchivo = "DOCX"
     }
 
     // Retornar URL relativa y datos del archivo

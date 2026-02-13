@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
+// Select removed - using native HTML select
 import { Button } from "@/components/ui/button"
 import { Search, Filter, X } from "lucide-react"
 
@@ -92,10 +92,10 @@ export function AppointmentFilters({
 
         {/* Filtros */}
         <div className="flex flex-wrap gap-3 flex-1">
-          <Select
+          <select
             value={profesionalId}
             onChange={(e) => setProfesionalId(e.target.value)}
-            className="min-w-[180px]"
+            className="min-w-[180px] rounded-xl border-[#E2E8F0] focus:ring-[#2563EB] px-3 py-2"
           >
             <option value="">Todos los profesionales</option>
             {profesionales.map((prof) => (
@@ -103,12 +103,12 @@ export function AppointmentFilters({
                 {prof.user.nombre}
               </option>
             ))}
-          </Select>
+          </select>
 
-          <Select
+          <select
             value={especialidad}
             onChange={(e) => setEspecialidad(e.target.value)}
-            className="min-w-[160px]"
+            className="min-w-[160px] rounded-xl border-[#E2E8F0] focus:ring-[#2563EB] px-3 py-2"
           >
             <option value="">Todas las especialidades</option>
             {especialidadesUnicas.map((esp) => (
@@ -116,7 +116,7 @@ export function AppointmentFilters({
                 {esp}
               </option>
             ))}
-          </Select>
+          </select>
 
           <Input
             type="date"
@@ -125,17 +125,17 @@ export function AppointmentFilters({
             className="min-w-[160px] rounded-xl border-[#E2E8F0] focus:ring-[#2563EB]"
           />
 
-          <Select
+          <select
             value={estado}
             onChange={(e) => setEstado(e.target.value)}
-            className="min-w-[140px]"
+            className="min-w-[140px] rounded-xl border-[#E2E8F0] focus:ring-[#2563EB] px-3 py-2"
           >
             <option value="">Todos los estados</option>
             <option value="PENDIENTE">Pendiente</option>
             <option value="CONFIRMADO">Confirmado</option>
             <option value="CANCELADO">Cancelado</option>
             <option value="COMPLETADO">Completado</option>
-          </Select>
+          </select>
         </div>
 
         {/* Botones */}

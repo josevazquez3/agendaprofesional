@@ -31,45 +31,121 @@ export function HourSelectorPopup({
     bloqueos?: number
   } | null>(null)
 
+  // Cargar horarios automáticamente cuando cambia la fecha o profesional
   useEffect(() => {
-    if (profesionalId && fecha && showPopup) {
+    if (profesionalId && fecha) {
       fetchHorariosDisponibles()
+    } else {
+      setHorariosDisponibles([])
     }
-  }, [profesionalId, fecha, showPopup])
+  }, [profesionalId, fecha])
+
+  // Establecer el primer horario disponible como valor por defecto cuando hay horarios y cambia la fecha
+  useEffect(() => {
+    if (horariosDisponibles.length > 0 && profesionalId && fecha) {
+      // Si no hay valor seleccionado o el valor actual no está en los horarios disponibles, usar el primero
+      if (!value || !horariosDisponibles.includes(value)) {
+        onChange(horariosDisponibles[0])
+      }
+    } else if (!horariosDisponibles.length && profesionalId && fecha && value) {
+      // Si no hay horarios disponibles y hay un valor, limpiar el campo
+      onChange("")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [horariosDisponibles.length, fecha, profesionalId])
 
   const fetchHorariosDisponibles = async () => {
     if (!profesionalId || !fecha) {
+      console.log("🕐 No se puede cargar: profesionalId o fecha faltante", { profesionalId, fecha })
       setHorariosDisponibles([])
+      setInfoHorarios(null)
       return
     }
 
     setLoading(true)
     try {
       // Asegurar que la fecha esté en formato YYYY-MM-DD
-      const fechaFormateada = fecha.includes('T') ? fecha.split('T')[0] : fecha
+      let fechaFormateada = fecha
       
-      const response = await fetch(
-        `/api/horarios/disponibles?profesionalId=${profesionalId}&fecha=${fechaFormateada}`
-      )
+      // Si la fecha viene en formato DD/MM/YYYY, convertirla a YYYY-MM-DD
+      if (fecha.includes('/')) {
+        const partes = fecha.split('/')
+        if (partes.length === 3) {
+          const [dia, mes, anio] = partes
+          fechaFormateada = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`
+        }
+      } else if (fecha.includes('T')) {
+        fechaFormateada = fecha.split('T')[0]
+      }
+      
+      console.log("🕐 Fetching horarios:", { profesionalId, fechaOriginal: fecha, fechaFormateada })
+      
+      const url = `/api/horarios/disponibles?profesionalId=${profesionalId}&fecha=${fechaFormateada}`
+      console.log("🕐 URL:", url)
+      
+      const response = await fetch(url)
+      
+      console.log("🕐 Response status:", response.status, response.ok)
       
       if (!response.ok) {
         const errorData = await response.json()
-        console.error("Error en la respuesta:", errorData)
+        console.error("❌ Error en la respuesta:", errorData)
         setHorariosDisponibles([])
+        setInfoHorarios(null)
         return
       }
       
       const data = await response.json()
-      setHorariosDisponibles(data.horarios || [])
+      console.log("🕐 Data recibida completa:", JSON.stringify(data, null, 2))
+      
+      // Verificar si hay un error en la respuesta
+      if (data.error) {
+        console.error("❌ Error en la respuesta del API:", data.error)
+        setHorariosDisponibles([])
+        setInfoHorarios(null)
+        return
+      }
+      
+      const horarios = data.horarios || []
+      console.log("🕐 Horarios disponibles cargados:", horarios.length, "horarios")
+      console.log("🕐 Horarios:", horarios)
+      
+      if (horarios.length === 0) {
+        console.warn("⚠️ No se encontraron horarios disponibles. Info:", {
+          diaSemana: data.diaSemana,
+          totalHorariosConfigurados: data.totalHorariosConfigurados,
+          turnosOcupados: data.turnosOcupados,
+          bloqueos: data.bloqueos,
+          profesionalId: data.profesionalId,
+          fecha: data.fecha,
+        })
+        
+        // Si hay horarios configurados pero no disponibles, mostrar mensaje más específico
+        if (data.totalHorariosConfigurados > 0) {
+          console.warn("⚠️ El profesional tiene horarios configurados pero todos están ocupados o bloqueados")
+        } else {
+          console.warn("⚠️ El profesional NO tiene horarios configurados para este día de la semana")
+        }
+      }
+      
+      setHorariosDisponibles(horarios)
       setInfoHorarios({
         diaSemana: data.diaSemana,
         totalHorariosConfigurados: data.totalHorariosConfigurados,
         turnosOcupados: data.turnosOcupados,
         bloqueos: data.bloqueos,
       })
-    } catch (error) {
-      console.error("Error cargando horarios disponibles:", error)
+    } catch (error: any) {
+      console.error("❌ Error cargando horarios disponibles:", error)
+      console.error("❌ Error details:", error.message, error.stack)
+      console.error("❌ Error completo:", JSON.stringify(error, null, 2))
       setHorariosDisponibles([])
+      setInfoHorarios(null)
+      
+      // Mostrar mensaje de error al usuario si es posible
+      if (error.message) {
+        console.error("❌ Mensaje de error:", error.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -81,28 +157,81 @@ export function HourSelectorPopup({
     setShowAllHours(false)
   }
 
+  // Debug: Log del estado actual
+  useEffect(() => {
+    console.log("🕐 HourSelectorPopup estado:", {
+      profesionalId: profesionalId || "NO HAY",
+      fecha: fecha || "NO HAY",
+      horariosDisponibles: horariosDisponibles.length,
+      loading,
+      value,
+      mostrarSelect: profesionalId && fecha && horariosDisponibles.length > 0 && !loading,
+      infoHorarios
+    })
+  }, [profesionalId, fecha, horariosDisponibles.length, loading, value, infoHorarios])
+
   return (
     <div className={cn("relative", className)}>
       <Label htmlFor="hora">Hora *</Label>
-      <Input
-        id="hora"
-        type="text"
-        value={value}
-        onClick={() => {
-          if (profesionalId && fecha) {
-            setShowPopup(true)
-          }
-        }}
-        onChange={(e) => {
-          // Permitir edición manual si no hay profesional/fecha seleccionados
-          if (!profesionalId || !fecha) {
+      
+      {/* Siempre mostrar select cuando hay profesional y fecha seleccionados */}
+      {profesionalId && fecha ? (
+        loading ? (
+          <Input
+            id="hora"
+            type="text"
+            value=""
+            readOnly
+            placeholder="Cargando horarios disponibles..."
+            className="cursor-wait bg-gray-50"
+          />
+        ) : (
+          <div className="space-y-2">
+            <select
+              id="hora"
+              value={value || ""}
+              onChange={(e) => {
+                onChange(e.target.value)
+              }}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
+              required
+            >
+              <option value="">
+                {horariosDisponibles.length > 0
+                  ? `Seleccione una hora (${horariosDisponibles.length} disponibles)`
+                  : "No hay horarios disponibles"}
+              </option>
+              {horariosDisponibles.map((hora) => (
+                <option key={hora} value={hora}>
+                  {hora}
+                </option>
+              ))}
+            </select>
+            {horariosDisponibles.length > 0 && (
+              <p className="text-xs text-gray-600">
+                {horariosDisponibles.length} horario{horariosDisponibles.length !== 1 ? "s" : ""} disponible
+                {horariosDisponibles.length !== 1 ? "s" : ""} para esta fecha
+              </p>
+            )}
+            {!loading && horariosDisponibles.length === 0 && infoHorarios?.totalHorariosConfigurados === 0 && (
+              <p className="text-xs text-amber-700 mt-1">
+                Este profesional no tiene horarios configurados para este día. Configure horarios en Configuración → Horarios.
+              </p>
+            )}
+          </div>
+        )
+      ) : (
+        <Input
+          id="hora"
+          type="text"
+          value={value}
+          onChange={(e) => {
             onChange(e.target.value)
-          }
-        }}
-        placeholder={profesionalId && fecha ? "Haga clic para ver horarios disponibles" : "Ingrese la hora"}
-        className={profesionalId && fecha ? "cursor-pointer" : ""}
-        readOnly={!!profesionalId && !!fecha}
-      />
+          }}
+          placeholder="Primero seleccione profesional y fecha"
+          disabled={!profesionalId || !fecha}
+        />
+      )}
       
       {showPopup && profesionalId && fecha && (
         <>

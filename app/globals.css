@@ -88,5 +88,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 1.25rem; /* 20px base (aumentado desde 19px) */
+  }
+  html {
+    font-size: 20px; /* Base para rem calculations (aumentado desde 18px) */
   }
 }

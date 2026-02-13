@@ -14,6 +14,7 @@ import { es } from "date-fns/locale"
 interface HistoriaClinicaRegistro {
   id: string
   fechaConsulta: string
+  updatedAt?: string
   notas: string | null
   diagnostico: string | null
   tratamiento: string | null
@@ -124,17 +125,37 @@ export default function EditarHistoriaClinicaPage() {
 
   const guardarCambios = async (registroId: string) => {
     try {
+      // Obtener el registro actual para incluir versión (usar updatedAt si está disponible)
+      const registroActual = historiaClinica.find((r) => r.id === registroId)
+      const version = registroActual?.updatedAt 
+        ? registroActual.updatedAt 
+        : registroActual 
+        ? new Date(registroActual.fechaConsulta).toISOString() 
+        : undefined
+
       const response = await fetch(`/api/historia-clinica/${registroId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           estudios,
+          version,
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Error al guardar cambios")
+        const errorData = await response.json()
+        
+        // Manejar conflicto de concurrencia
+        if (response.status === 409 && errorData.conflict) {
+          if (confirm("Este registro fue modificado por otro usuario. ¿Desea recargar y volver a intentar?")) {
+            await fetchData()
+            return
+          }
+          throw new Error(errorData.error || "El registro fue modificado por otro usuario")
+        }
+        
+        throw new Error(errorData.error || "Error al guardar cambios")
       }
 
       alert("Cambios guardados exitosamente")

@@ -161,13 +161,7 @@ export default async function ImprimirTurnoPage({
     
     qrCodeDataUrl = await QRCode.toDataURL(qrData, {
       errorCorrectionLevel: 'M',
-      type: 'image/png',
-      quality: 0.92,
       margin: 1,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      },
       width: 256
     })
   } catch (error: any) {
@@ -231,10 +225,10 @@ export default async function ImprimirTurnoPage({
         <div>
           <h2 className="text-xl font-semibold mb-4">Datos del Turno</h2>
           <p className="text-gray-700">
-            <strong>Profesional:</strong> {turno.profesional.user.nombre}
+            <strong>Profesional:</strong> {turno.profesional?.user?.nombre || "Profesional no disponible"}
           </p>
           <p className="text-gray-700">
-            <strong>Especialidad:</strong> {turno.profesional.especialidad}
+            <strong>Especialidad:</strong> {turno.profesional?.especialidad || "N/A"}
           </p>
           <p className="text-gray-700">
             <strong>Fecha:</strong> {formatDate(turno.fecha)}

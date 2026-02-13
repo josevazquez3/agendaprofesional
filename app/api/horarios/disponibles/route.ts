@@ -47,34 +47,46 @@ export async function GET(request: Request) {
       )
     }
 
-    // Normalizar la fecha (puede venir con o sin hora)
-    const fechaNormalizada = fecha.includes('T') ? fecha.split('T')[0] : fecha
-    const fechaObj = new Date(fechaNormalizada + 'T00:00:00')
-    
-    // Validar que la fecha sea válida
+    // Normalizar la fecha: aceptar YYYY-MM-DD, DD/MM/YYYY o con T
+    let fechaNormalizada = fecha.includes("T") ? fecha.split("T")[0] : fecha.trim()
+    if (fechaNormalizada.includes("/")) {
+      const partes = fechaNormalizada.split("/")
+      if (partes.length === 3) {
+        const [d, m, a] = partes
+        fechaNormalizada = `${a}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
+      }
+    }
+    const fechaObj = new Date(fechaNormalizada + "T12:00:00")
+
     if (isNaN(fechaObj.getTime())) {
       return NextResponse.json(
         { error: "Fecha inválida" },
         { status: 400 }
       )
     }
-    
-    const diaSemana = obtenerDiaSemana(fechaObj)
 
-    // Obtener horarios disponibles del profesional para ese día
-    const horariosDisponibles = await prisma.horarioDisponible.findMany({
-      where: {
-        profesionalId,
-        diaSemana,
-        activo: true,
-      },
-    })
+    const diaSemana = obtenerDiaSemana(fechaObj)
+    console.log("[horarios/disponibles]", { profesionalId, fechaParam: fecha, fechaNormalizada, diaSemana })
+
+    // Obtener horarios disponibles del profesional para ese día (SQL raw para evitar problemas con SQLite)
+    const horariosDisponiblesRaw = await prisma.$queryRawUnsafe<
+      Array<{ id: string; horaInicio: string; horaFin: string; duracionTurno: number }>
+    >(
+      `SELECT id, horaInicio, horaFin, duracionTurno FROM HorarioDisponible 
+       WHERE profesionalId = ? AND diaSemana = ? AND activo = 1`,
+      profesionalId,
+      diaSemana
+    )
+    const horariosDisponibles = horariosDisponiblesRaw.map((h) => ({
+      horaInicio: h.horaInicio,
+      horaFin: h.horaFin,
+      duracionTurno: Number(h.duracionTurno),
+    }))
+    console.log("[horarios/disponibles] horarios configurados:", horariosDisponibles.length, horariosDisponibles)
 
     // Obtener turnos ya ocupados para esa fecha usando SQL raw
     const fechaStr = fechaNormalizada
-    const turnosOcupadosRaw = await prisma.$queryRawUnsafe<Array<{
-      hora: string
-    }>>(
+    const turnosOcupadosRaw = await prisma.$queryRawUnsafe<Array<{ hora: string }>>(
       `SELECT hora FROM Turno 
        WHERE profesionalId = ? 
          AND date(fecha) = date(?)
@@ -82,22 +94,26 @@ export async function GET(request: Request) {
       profesionalId,
       fechaStr
     )
-    const turnosOcupados = turnosOcupadosRaw.map((t) => ({ hora: t.hora }))
+    const horasOcupadas = new Set(turnosOcupadosRaw.map((t) => t.hora))
+    console.log("[horarios/disponibles] turnos ocupados:", turnosOcupadosRaw.length, Array.from(horasOcupadas))
 
-    const horasOcupadas = new Set(turnosOcupados.map((t) => t.hora))
-
-    // Obtener bloqueos para esa fecha
-    const bloqueos = await prisma.bloqueoHorario.findMany({
-      where: {
-        horarioDisponible: {
-          profesionalId,
-        },
-        fecha: fechaObj,
-      },
-      include: {
-        horarioDisponible: true,
-      },
-    })
+    // Obtener bloqueos para esa fecha (por rango de día en SQL para evitar problemas de timezone)
+    const fechaInicioStr = fechaNormalizada + "T00:00:00"
+    const fechaFinStr = fechaNormalizada + "T23:59:59"
+    const bloqueosRaw = await prisma.$queryRawUnsafe<
+      Array<{ horaInicio: string; horaFin: string }>
+    >(
+      `SELECT b.horaInicio, b.horaFin FROM BloqueoHorario b
+       INNER JOIN HorarioDisponible h ON b.horarioDisponibleId = h.id
+       WHERE h.profesionalId = ?
+         AND b.fecha >= ?
+         AND b.fecha <= ?`,
+      profesionalId,
+      fechaInicioStr,
+      fechaFinStr
+    )
+    const bloqueos = bloqueosRaw.map((b) => ({ horaInicio: b.horaInicio, horaFin: b.horaFin }))
+    console.log("[horarios/disponibles] bloqueos:", bloqueos.length)
 
     // Generar lista de horarios disponibles
     const horarios: string[] = []

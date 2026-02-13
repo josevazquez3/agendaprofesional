@@ -12,7 +12,7 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-11-20.acacia",
+  apiVersion: "2023-10-16",
 })
 
 /**
@@ -127,7 +127,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
  * Manejar actualización de suscripción
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const existingSubscription = await prisma.subscription.findUnique({
+  const existingSubscription = await prisma.subscription.findFirst({
     where: { externalSubscriptionId: subscription.id },
   })
 
@@ -155,7 +155,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
  * Manejar eliminación de suscripción
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const existingSubscription = await prisma.subscription.findUnique({
+  const existingSubscription = await prisma.subscription.findFirst({
     where: { externalSubscriptionId: subscription.id },
   })
 
@@ -183,7 +183,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     return
   }
 
-  const existingSubscription = await prisma.subscription.findUnique({
+  const existingSubscription = await prisma.subscription.findFirst({
     where: { externalSubscriptionId: invoice.subscription },
   })
 
@@ -209,7 +209,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     return
   }
 
-  const existingSubscription = await prisma.subscription.findUnique({
+  const existingSubscription = await prisma.subscription.findFirst({
     where: { externalSubscriptionId: invoice.subscription },
   })
 

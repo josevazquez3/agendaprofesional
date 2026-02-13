@@ -1,6 +1,6 @@
 import "next-auth"
 
-type Role = "PACIENTE" | "PROFESIONAL" | "SECRETARIA" | "ADMIN"
+type Role = "PACIENTE" | "PROFESIONAL" | "SECRETARIA" | "ADMIN" | "OWNER" | "PLATFORM_OWNER"
 
 declare module "next-auth" {
   interface Session {

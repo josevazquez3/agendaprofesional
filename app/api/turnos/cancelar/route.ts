@@ -3,9 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getTurnoById } from "@/lib/turno-helpers"
-import { sendEmail } from "@/lib/email"
-import { sendWhatsAppMessage } from "@/lib/whatsapp"
-import { generateTurnoCancellationEmail, generateTurnoCancellationWhatsApp } from "@/lib/email"
+import { sendEmail, generateTurnoCancellationEmail } from "@/lib/email"
+import { sendWhatsAppMessage, generateTurnoCancellationWhatsApp } from "@/lib/whatsapp"
 
 export async function POST(request: Request) {
   try {
@@ -114,10 +113,10 @@ export async function POST(request: Request) {
 
     // Enviar notificaciones
     // Email al paciente
-    if (turno.paciente.email) {
+    if (turno.paciente?.email) {
       const emailHtml = generateTurnoCancellationEmail(
-        turno.paciente.nombre,
-        turno.profesional.user.nombre,
+        turno.paciente?.nombre || "Paciente",
+        turno.profesional?.user?.nombre || "Profesional",
         fechaFormateada,
         turno.hora,
         motivoCancelacion
@@ -140,8 +139,8 @@ export async function POST(request: Request) {
     
     if (telefonoPaciente) {
       const whatsappMessage = generateTurnoCancellationWhatsApp(
-        turno.paciente.nombre,
-        turno.profesional.user.nombre,
+        turno.paciente?.nombre || "Paciente",
+        turno.profesional?.user?.nombre || "Profesional",
         fechaFormateada,
         turno.hora
       )
@@ -152,11 +151,11 @@ export async function POST(request: Request) {
     }
 
     // Email al profesional
-    if (turno.profesional.user.email) {
+    if (turno.profesional?.user?.email) {
       await sendEmail({
         to: turno.profesional.user.email,
         subject: "Turno Cancelado",
-        html: `El turno con ${turno.paciente.nombre} del ${fechaFormateada} a las ${turno.hora} ha sido cancelado.`,
+        html: `El turno con ${turno.paciente?.nombre || "paciente"} del ${fechaFormateada} a las ${turno.hora} ha sido cancelado.`,
       })
     }
 
@@ -175,7 +174,7 @@ export async function POST(request: Request) {
       nombre: u.nombre,
       email: u.email,
       role: u.role,
-    })
+    }))
 
     // Crear notificaciones in-app
     const notificaciones = [
@@ -184,21 +183,21 @@ export async function POST(request: Request) {
         turnoId: turno.id,
         tipo: "TURNO_CANCELADO",
         titulo: "Turno Cancelado",
-        mensaje: `Su turno con ${turno.profesional.user.nombre} ha sido cancelado.`,
+        mensaje: `Su turno con ${turno.profesional?.user?.nombre || "profesional"} ha sido cancelado.`,
       },
       {
-        userId: turno.profesional.userId,
+        userId: turno.profesional?.user?.id || turno.profesionalId,
         turnoId: turno.id,
         tipo: "TURNO_CANCELADO",
         titulo: "Turno Cancelado",
-        mensaje: `El turno con ${turno.paciente.nombre} ha sido cancelado.`,
+        mensaje: `El turno con ${turno.paciente?.nombre || "paciente"} ha sido cancelado.`,
       },
       ...secretariasYAdmin.map((user) => ({
         userId: user.id,
         turnoId: turno.id,
         tipo: "TURNO_CANCELADO",
         titulo: "Turno Cancelado",
-        mensaje: `El turno de ${turno.paciente.nombre} con ${turno.profesional.user.nombre} ha sido cancelado.`,
+        mensaje: `El turno de ${turno.paciente?.nombre || "paciente"} con ${turno.profesional?.user?.nombre || "profesional"} ha sido cancelado.`,
       })),
     ]
 
@@ -212,7 +211,7 @@ export async function POST(request: Request) {
         await sendEmail({
           to: user.email,
           subject: "Turno Cancelado",
-          html: `El turno de ${turno.paciente.nombre} con ${turno.profesional.user.nombre} del ${fechaFormateada} a las ${turno.hora} ha sido cancelado.`,
+          html: `El turno de ${turno.paciente?.nombre || "paciente"} con ${turno.profesional?.user?.nombre || "profesional"} del ${fechaFormateada} a las ${turno.hora} ha sido cancelado.`,
         })
       }
     }

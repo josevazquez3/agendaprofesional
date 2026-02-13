@@ -97,11 +97,35 @@ export function Topbar({
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  // Navegar según el rol del usuario
+                  if (userRole === "PROFESIONAL") {
+                    router.push("/dashboard/profesional/perfil")
+                  } else if (userRole === "SECRETARIA") {
+                    router.push("/dashboard/secretaria/perfil")
+                  } else if (userRole === "ADMIN") {
+                    router.push("/dashboard/admin/perfil")
+                  } else if (userRole === "PACIENTE") {
+                    router.push("/dashboard/paciente/perfil")
+                  }
+                }}
+              >
                 <User className="mr-2 h-4 w-4" />
                 <span>Perfil</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  // Navegar según el rol del usuario
+                  if (userRole === "PROFESIONAL") {
+                    router.push("/dashboard/profesional/configuracion")
+                  } else if (userRole === "SECRETARIA") {
+                    router.push("/dashboard/secretaria/configuracion")
+                  } else if (userRole === "ADMIN") {
+                    router.push("/dashboard/admin/configuracion")
+                  }
+                }}
+              >
                 <Bell className="mr-2 h-4 w-4" />
                 <span>Configuración</span>
               </DropdownMenuItem>

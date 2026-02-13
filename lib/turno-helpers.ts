@@ -28,6 +28,8 @@ export interface TurnoWithRelations {
   estado: string
   motivo: string | null
   codigoTurno: string
+  clinicId?: string | null
+  consultorioProfesionalId?: string | null
   paciente?: {
     nombre: string
     email: string
@@ -36,7 +38,9 @@ export interface TurnoWithRelations {
     id: string
     especialidad?: string
     user?: {
+      id?: string
       nombre: string
+      email?: string
     }
   }
 }
@@ -64,8 +68,9 @@ export async function getTurnosDelDia(
       estado: string
       motivo: string | null
       codigoTurno: string
+      clinicId: string | null
     }>>(
-      `SELECT id, pacienteId, profesionalId, fecha, hora, estado, motivo, codigoTurno
+      `SELECT id, pacienteId, profesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId
        FROM Turno
        WHERE date(fecha) >= date(?) AND date(fecha) < date(?)
        ORDER BY hora ASC
@@ -131,6 +136,7 @@ export async function getTurnosDelDia(
     return turnos.map(turno => ({
       ...turno,
       fecha: safeDate(turno.fecha) || new Date(),
+      clinicId: turno.clinicId || null,
       paciente: pacientesMap.get(turno.pacienteId),
       profesional: {
         id: turno.profesionalId,
@@ -219,7 +225,7 @@ export async function getTurnos(where: {
 }): Promise<TurnoWithRelations[]> {
   try {
     let query = `
-      SELECT id, pacienteId, profesionalId, fecha, hora, estado, motivo, codigoTurno
+      SELECT id, pacienteId, profesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId
       FROM Turno
       WHERE 1=1
     `
@@ -286,6 +292,7 @@ export async function getTurnos(where: {
       estado: string
       motivo: string | null
       codigoTurno: string
+      clinicId: string | null
     }>>(query, ...params)
 
     if (turnos.length === 0) {
@@ -346,7 +353,9 @@ export async function getTurnos(where: {
     return turnos.map(turno => ({
       ...turno,
       fecha: safeDate(turno.fecha) || new Date(),
+      clinicId: turno.clinicId || null,
       paciente: pacientesMap.get(turno.pacienteId),
+      clinicId: turno.clinicId || null,
       profesional: {
         id: turno.profesionalId,
         especialidad: profesionalesMap.get(turno.profesionalId)?.especialidad,
@@ -383,6 +392,7 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
       estado: string
       motivo: string | null
       codigoTurno: string
+      clinicId: string | null
       obraSocial: string | null
       arancel: number | null
       motivoCancelacion: string | null
@@ -390,7 +400,7 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
       motivoEliminacion: string | null
       eliminadoAt: string | bigint | number | null
     }>>(
-      `SELECT id, pacienteId, profesionalId, consultorioProfesionalId, fecha, hora, estado, motivo, codigoTurno, 
+      `SELECT id, pacienteId, profesionalId, consultorioProfesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId,
        obraSocial, arancel, motivoCancelacion, canceladoAt, motivoEliminacion, eliminadoAt
        FROM Turno WHERE id = ? LIMIT 1`,
       id
@@ -412,33 +422,6 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
       turno.pacienteId
     )
 
-    // Obtener profesional con especialidad
-    const profesionales = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      userId: string
-      especialidad: string
-    }>>(
-      `SELECT id, userId, especialidad FROM Profesional WHERE id = ? LIMIT 1`,
-      turno.profesionalId
-    )
-
-    let profesional = null
-    if (profesionales.length > 0) {
-      const prof = profesionales[0]
-      const usuarios = await prisma.$queryRawUnsafe<Array<{
-        id: string
-        nombre: string
-      }>>(
-        `SELECT id, nombre FROM User WHERE id = ? LIMIT 1`,
-        prof.userId
-      )
-
-      profesional = {
-        id: prof.id,
-        especialidad: prof.especialidad,
-        user: usuarios.length > 0 ? usuarios[0] : undefined,
-      }
-    }
 
     return {
       id: turno.id,
@@ -450,6 +433,7 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
       estado: turno.estado,
       motivo: turno.motivo,
       codigoTurno: turno.codigoTurno,
+      clinicId: turno.clinicId || null,
       paciente: pacientes.length > 0 ? pacientes[0] : undefined,
       profesional,
       obraSocial: turno.obraSocial,

@@ -50,7 +50,7 @@ export function PatientQuickPreview({
     return edad
   }
 
-  const edad = calcularEdad(paciente.fechaNacimiento)
+  const edad = calcularEdad(paciente.fechaNacimiento || null)
   const tieneAlergias = paciente.alergias && paciente.alergias.trim() !== ""
   const tieneEnfermedadesCronicas =
     paciente.enfermedadesCronicas &&

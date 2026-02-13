@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getObrasSociales, getObraSocialByNombre, getObraSocialByCodigo } from "@/lib/obra-social-helpers"
+import { getObrasSociales, getObraSocialByNombre, getObraSocialByCodigo, getObraSocialById } from "@/lib/obra-social-helpers"
 
 // GET - Listar todas las obras sociales
 export async function GET() {

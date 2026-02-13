@@ -101,7 +101,7 @@ export async function GET(request: Request) {
           heading: HeadingLevel.HEADING_2,
         }),
         new Paragraph({
-          text: `Profesional: ${registro.profesional.user.nombre} - ${registro.profesional.especialidad}`,
+          text: `Profesional: ${registro.profesional?.user?.nombre || "Profesional no disponible"} - ${registro.profesional?.especialidad || "N/A"}`,
         }),
         ...(registro.turno
           ? [
@@ -171,7 +171,7 @@ export async function GET(request: Request) {
 
     const buffer = await Packer.toBuffer(doc)
 
-    return new NextResponse(buffer, {
+    return new NextResponse(buffer as any, {
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

@@ -3,29 +3,33 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getUserById } from "@/lib/user-helpers"
+import { requireAuth, verifyPatientOwnership, createAuthErrorResponse } from "@/lib/auth-helpers"
 
 export async function GET(
   request: Request,
   { params }: { params: { pacienteId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    // Validar autenticación básica
+    const authResult = await requireAuth()
 
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    if (!authResult || !authResult.allowed) {
+      return authResult?.error || createAuthErrorResponse("UNAUTHORIZED")
     }
 
-    // Verificar permisos
-    if (
+    const session = authResult.session
+
+    // Verificar permisos: PACIENTE solo puede ver sus propias historias
+    if (session.user.role === "PACIENTE") {
+      if (!verifyPatientOwnership(params.pacienteId, session.user.id)) {
+        return createAuthErrorResponse("OWNERSHIP_REQUIRED")
+      }
+    } else if (
       session.user.role !== "ADMIN" &&
       session.user.role !== "SECRETARIA" &&
-      session.user.role !== "PROFESIONAL" &&
-      (session.user.role === "PACIENTE" && session.user.id !== params.pacienteId)
+      session.user.role !== "PROFESIONAL"
     ) {
-      return NextResponse.json(
-        { error: "No autorizado" },
-        { status: 403 }
-      )
+      return createAuthErrorResponse("FORBIDDEN")
     }
 
     // Verificar que el paciente existe usando helper
@@ -79,13 +83,22 @@ export async function GET(
       },
     })
 
-    console.log(`Historia clínica encontrada para paciente ${params.pacienteId}:`, historiaClinica.length, "registros")
-
     return NextResponse.json(historiaClinica)
-  } catch (error) {
-    console.error("Error obteniendo historia clínica:", error)
+  } catch (error: any) {
+    // Log error para debugging (solo en desarrollo)
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error obteniendo historia clínica:", error)
+    } else {
+      // En producción, solo log crítico sin detalles sensibles
+      console.error("Error obteniendo historia clínica")
+    }
+    
+    if (error.code === "P2025") {
+      return createAuthErrorResponse("NOT_FOUND")
+    }
+    
     return NextResponse.json(
-      { error: "Error al obtener historia clínica" },
+      { error: "Error al obtener historia clínica. Por favor, intente nuevamente." },
       { status: 500 }
     )
   }
@@ -115,10 +128,25 @@ export async function DELETE(
     return NextResponse.json({
       message: "Historia clínica eliminada exitosamente",
     })
-  } catch (error) {
-    console.error("Error eliminando historia clínica:", error)
+  } catch (error: any) {
+    // Log error para debugging (solo en desarrollo)
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error eliminando historia clínica:", error)
+    }
+    
+    if (error.code === "P2025") {
+      return createAuthErrorResponse("NOT_FOUND")
+    }
+    
+    if (error.code === "P2003") {
+      return NextResponse.json(
+        { error: "No se puede eliminar porque tiene datos relacionados." },
+        { status: 400 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: "Error al eliminar historia clínica" },
+      { error: "Error al eliminar historia clínica. Por favor, intente nuevamente." },
       { status: 500 }
     )
   }

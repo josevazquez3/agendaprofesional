@@ -85,12 +85,18 @@ export default function NuevoUsuarioPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Error al crear usuario")
+        // Mostrar el mensaje de error específico del servidor
+        const errorMessage = data.error || "Error al crear usuario"
+        const errorDetails = data.details ? `\n\nDetalles: ${data.details}` : ""
+        throw new Error(errorMessage + errorDetails)
       }
 
       router.push("/dashboard/admin/usuarios")
     } catch (error: any) {
-      setError(error.message || "Error al crear usuario")
+      console.error("Error completo:", error)
+      // Mostrar mensaje de error más descriptivo
+      const errorMessage = error.message || "Error al crear usuario. Por favor, verifica los datos e intenta nuevamente."
+      setError(errorMessage)
       setLoading(false)
     }
   }

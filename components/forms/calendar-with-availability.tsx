@@ -30,10 +30,12 @@ export function CalendarWithAvailability({
   const [showAllHours, setShowAllHours] = useState<string | null>(null)
 
   useEffect(() => {
-    if (profesionalId && showCalendar) {
+    if (profesionalId) {
       fetchDiasDisponibles()
+    } else {
+      setDiasDisponibles({})
     }
-  }, [profesionalId, currentMonth, showCalendar])
+  }, [profesionalId, currentMonth])
 
   const fetchDiasDisponibles = async () => {
     if (!profesionalId) return
@@ -66,6 +68,7 @@ export function CalendarWithAvailability({
       // Verificar si hay errores en las respuestas
       if (dataActual.error || dataSiguiente.error) {
         console.error("Error en API:", dataActual.error || dataSiguiente.error)
+        setDiasDisponibles({})
         return
       }
 
@@ -75,7 +78,18 @@ export function CalendarWithAvailability({
         ...(dataSiguiente.diasDisponibles || {}),
       }
       
-      console.log("Días disponibles cargados:", Object.keys(diasCombinados).length, "días")
+      console.log("📅 Días disponibles cargados:", Object.keys(diasCombinados).length, "días")
+      if (Object.keys(diasCombinados).length > 0) {
+        console.log("📅 Ejemplos de fechas disponibles:", Object.keys(diasCombinados).slice(0, 10))
+        // Mostrar algunos ejemplos con sus horarios
+        const ejemplos = Object.keys(diasCombinados).slice(0, 3)
+        ejemplos.forEach(fecha => {
+          console.log(`  - ${fecha}: ${diasCombinados[fecha].length} horarios`, diasCombinados[fecha].slice(0, 5))
+        })
+      } else {
+        console.warn("⚠️ No se encontraron días disponibles. Verificar que el profesional tenga horarios configurados.")
+      }
+      
       setDiasDisponibles(diasCombinados)
     } catch (error) {
       console.error("Error cargando días disponibles:", error)
@@ -122,6 +136,11 @@ export function CalendarWithAvailability({
       const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       const horarios = diasDisponibles[dateKey] || []
       const isAvailable = horarios.length > 0
+      
+      // Debug: Log para días disponibles
+      if (isAvailable) {
+        console.log(`Día disponible encontrado: ${dateKey} con ${horarios.length} horarios`)
+      }
       
       days.push({
         date,
@@ -227,6 +246,14 @@ export function CalendarWithAvailability({
 
   const days = getDaysInMonth(currentMonth)
   
+  // Debug: Verificar que los días disponibles se están usando correctamente
+  useEffect(() => {
+    if (Object.keys(diasDisponibles).length > 0) {
+      console.log("Estado actual de días disponibles:", Object.keys(diasDisponibles).length, "días")
+      console.log("Ejemplos:", Object.keys(diasDisponibles).slice(0, 5))
+    }
+  }, [diasDisponibles])
+  
   // Formatear la fecha seleccionada para mostrar en el input
   const formatDateForDisplay = (dateStr: string): string => {
     if (!dateStr) return ''
@@ -303,13 +330,23 @@ export function CalendarWithAvailability({
                 const dayNum = day.date.getDate()
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
                 
+                // Verificar si este día está en los días disponibles cargados
+                // Usar directamente diasDisponibles en lugar de day.isAvailable para asegurar datos actualizados
+                const horariosDelDia = diasDisponibles[dateKey] || []
+                const isAvailableDay = horariosDelDia.length > 0 && day.isCurrentMonth
+                
                 const isPastDate = isPast(day.date)
                 const isTodayDate = isToday(day.date)
                 const isSelectedDate = isSelected(day.date)
                 // Permitir seleccionar cualquier día válido (no pasado, del mes actual)
                 const canSelect = !isPastDate && day.isCurrentMonth
                 // Solo mostrar tooltip si hay horarios disponibles
-                const canShowTooltip = day.isAvailable && canSelect
+                const canShowTooltip = isAvailableDay && canSelect
+                
+                // Debug log para días disponibles
+                if (isAvailableDay && day.isCurrentMonth) {
+                  console.log(`Renderizando día disponible: ${dateKey} con ${horariosDelDia.length} horarios`)
+                }
 
                 return (
                   <div
@@ -318,8 +355,8 @@ export function CalendarWithAvailability({
                       "relative aspect-square flex items-center justify-center text-sm rounded transition-colors",
                       !day.isCurrentMonth && "text-gray-300 cursor-default",
                       day.isCurrentMonth && isPastDate && "text-gray-400 cursor-not-allowed",
-                      day.isCurrentMonth && !isPastDate && !day.isAvailable && !isSelectedDate && "text-gray-600 hover:bg-gray-100 cursor-pointer",
-                      day.isCurrentMonth && !isPastDate && day.isAvailable && !isSelectedDate && "bg-blue-100 text-blue-800 font-medium border-2 border-blue-300 hover:bg-blue-200 cursor-pointer",
+                      day.isCurrentMonth && !isPastDate && !isAvailableDay && !isSelectedDate && "text-gray-600 hover:bg-gray-100 cursor-pointer",
+                      day.isCurrentMonth && !isPastDate && isAvailableDay && !isSelectedDate && "bg-blue-100 text-blue-800 font-medium border-2 border-blue-300 hover:bg-blue-200 cursor-pointer",
                       isSelectedDate && "bg-blue-600 text-white font-semibold cursor-pointer border-2 border-blue-700",
                       isTodayDate && !isSelectedDate && day.isCurrentMonth && !isPastDate && "ring-2 ring-blue-400"
                     )}
@@ -338,62 +375,12 @@ export function CalendarWithAvailability({
                   >
                     {day.date.getDate()}
                     
-                    {/* Tooltip con horarios disponibles */}
-                    {hoveredDate === dateKey && day.horarios.length > 0 && (
+                    {/* Tooltip simple solo con cantidad de horarios (sin mostrar los horarios individuales) */}
+                    {hoveredDate === dateKey && horariosDelDia.length > 0 && (
                       <div 
-                        className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 min-w-[220px] max-w-[320px] max-h-[400px] overflow-y-auto"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          e.preventDefault()
-                        }}
-                        onMouseDown={(e) => {
-                          e.stopPropagation()
-                          e.preventDefault()
-                        }}
+                        className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg z-50 whitespace-nowrap"
                       >
-                        <div className="font-semibold mb-2 text-sm sticky top-0 bg-gray-900 pb-1">
-                          Horarios disponibles ({day.horarios.length}):
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(showAllHours === dateKey ? day.horarios : day.horarios.slice(0, 12)).map((hora, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => handleHourClick(hora, dateKey)}
-                              className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 px-2.5 py-1.5 rounded font-medium transition-all cursor-pointer active:scale-95 shadow-sm"
-                            >
-                              {hora}
-                            </button>
-                          ))}
-                          {day.horarios.length > 12 && showAllHours !== dateKey && (
-                            <div className="w-full mt-2 pt-2 border-t border-gray-700">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setShowAllHours(dateKey)
-                                }}
-                                className="text-blue-400 hover:text-blue-300 text-xs font-medium"
-                              >
-                                Ver todos los {day.horarios.length} horarios ↓
-                              </button>
-                            </div>
-                          )}
-                          {showAllHours === dateKey && day.horarios.length > 12 && (
-                            <div className="w-full mt-2 pt-2 border-t border-gray-700">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setShowAllHours(null)
-                                }}
-                                className="text-blue-400 hover:text-blue-300 text-xs font-medium"
-                              >
-                                Ver menos ↑
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        {horariosDelDia.length} horario{horariosDelDia.length !== 1 ? 's' : ''} disponible{horariosDelDia.length !== 1 ? 's' : ''}
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
                           <div className="w-2 h-2 bg-gray-900 rotate-45"></div>
                         </div>

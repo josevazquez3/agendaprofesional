@@ -3,26 +3,36 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getTurnos } from "@/lib/turno-helpers"
+import { requireAuthWithRolesAndClinic, createAuthErrorResponse } from "@/lib/auth-helpers"
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    // Solo ADMIN y SECRETARIA pueden migrar
+    const authResult = await requireAuthWithRolesAndClinic([
+      "ADMIN",
+      "SECRETARIA",
+    ])
 
-    if (
-      !session ||
-      (session.user.role !== "ADMIN" && session.user.role !== "SECRETARIA")
-    ) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    if (!authResult || !authResult.allowed) {
+      return authResult?.error || createAuthErrorResponse("UNAUTHORIZED")
     }
+
+    const session = authResult.session
+    const clinicId = authResult.clinicId!
 
     // Buscar todos los turnos completados usando helper
     const turnosCompletadosRaw = await getTurnos({
       estado: "COMPLETADO",
     })
 
-    // Filtrar los que no tienen historia clínica
+    // Filtrar los que no tienen historia clínica y pertenecen a la clínica activa
     const turnosSinHistoria = []
     for (const turno of turnosCompletadosRaw) {
+      // Solo migrar turnos de la clínica activa
+      if (turno.clinicId !== clinicId) {
+        continue
+      }
+      
       const tieneHistoria = await prisma.$queryRawUnsafe<Array<{
         id: string
       }>>(
@@ -46,9 +56,10 @@ export async function POST(request: Request) {
         const [horas, minutos] = turno.hora.split(":").map(Number)
         fechaConsulta.setHours(horas, minutos, 0, 0)
 
-        // Crear historia clínica básica
+        // Crear historia clínica básica con clinicId
         await prisma.historiaClinica.create({
           data: {
+            clinicId,
             pacienteId: turno.pacienteId,
             profesionalId: turno.profesionalId,
             turnoId: turno.id,
@@ -60,7 +71,10 @@ export async function POST(request: Request) {
         })
         creados++
       } catch (error: any) {
-        console.error(`Error creando historia clínica para turno ${turno.id}:`, error)
+        // Log error solo en desarrollo
+        if (process.env.NODE_ENV === "development") {
+          console.error(`Error creando historia clínica para turno ${turno.id}:`, error)
+        }
         errores++
       }
     }
@@ -72,9 +86,13 @@ export async function POST(request: Request) {
       total: turnosCompletados.length,
     })
   } catch (error: any) {
-    console.error("Error migrando turnos:", error)
+    // Log error solo en desarrollo
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error migrando turnos:", error)
+    }
+    
     return NextResponse.json(
-      { error: error.message || "Error al migrar turnos" },
+      { error: error.message || "Error al migrar turnos. Por favor, intente nuevamente." },
       { status: 500 }
     )
   }

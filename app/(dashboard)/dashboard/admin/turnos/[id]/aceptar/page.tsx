@@ -75,20 +75,19 @@ export default function AceptarTurnoAdminPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validar tipo de archivo
+    // Validar tipo de archivo (solo PDF y DOCX)
     const allowedTypes = [
       "application/pdf",
-      "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ]
-    const allowedExtensions = [".pdf", ".doc", ".docx"]
+    const allowedExtensions = [".pdf", ".docx"]
     const fileExtension = "." + file.name.split(".").pop()?.toLowerCase()
 
     if (
       !allowedTypes.includes(file.type) &&
       !allowedExtensions.includes(fileExtension)
     ) {
-      alert("Solo se permiten archivos PDF y DOC/DOCX")
+      alert("Solo se permiten archivos PDF y DOCX")
       return
     }
 
@@ -319,7 +318,7 @@ export default function AceptarTurnoAdminPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf,.docx"
                   onChange={handleFileSelect}
                   className="hidden"
                   id="adjuntar-estudios"

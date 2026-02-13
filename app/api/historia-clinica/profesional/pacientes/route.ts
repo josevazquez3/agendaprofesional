@@ -24,48 +24,58 @@ export async function GET(request: Request) {
       )
     }
 
-    // Obtener todos los pacientes únicos que tienen historias clínicas (de cualquier profesional)
-    const historiasClinicas = await prisma.historiaClinica.findMany({
-      select: {
-        pacienteId: true,
-      },
-      distinct: ["pacienteId"],
-    })
-
-    // Obtener información de los pacientes usando SQL raw
-    const pacienteIds = historiasClinicas.map((hc) => hc.pacienteId)
-    
-    if (pacienteIds.length === 0) {
-      return NextResponse.json([])
-    }
-
-    const placeholders = pacienteIds.map(() => "?").join(",")
+    // Obtener todos los pacientes del sistema
+    // Los profesionales pueden ver todos los pacientes para poder crear nuevas historias clínicas
+    // Usar parámetros preparados para evitar SQL injection
     const pacientesRaw = await prisma.$queryRawUnsafe<Array<{
       id: string
       nombre: string
       dni: string | null
       email: string
-      fechaNacimiento: string | null
+      telefono: string | null
+      fechaNacimiento: string | bigint | number | null
     }>>(
-      `SELECT id, nombre, dni, email, fechaNacimiento 
-       FROM User 
-       WHERE id IN (${placeholders}) AND role = 'PACIENTE'`,
-      ...pacienteIds
+      `SELECT id, nombre, dni, email, telefono, fechaNacimiento
+       FROM User
+       WHERE role = ?
+       ORDER BY nombre ASC`,
+      "PACIENTE"
     )
 
-    const pacientes = pacientesRaw.map((p) => ({
-      id: p.id,
-      nombre: p.nombre,
-      dni: p.dni,
-      email: p.email,
-      fechaNacimiento: p.fechaNacimiento ? new Date(p.fechaNacimiento) : null,
-    }))
+    const pacientes = pacientesRaw.map((p) => {
+      let fechaNacimiento: Date | null = null
+      if (p.fechaNacimiento) {
+        if (typeof p.fechaNacimiento === 'bigint') {
+          fechaNacimiento = new Date(Number(p.fechaNacimiento))
+        } else if (typeof p.fechaNacimiento === 'number') {
+          fechaNacimiento = new Date(p.fechaNacimiento)
+        } else {
+          fechaNacimiento = new Date(p.fechaNacimiento)
+        }
+      }
+      
+      return {
+        id: p.id,
+        nombre: p.nombre,
+        dni: p.dni,
+        email: p.email,
+        telefono: p.telefono,
+        fechaNacimiento,
+      }
+    })
 
     return NextResponse.json(pacientes)
-  } catch (error) {
-    console.error("Error obteniendo pacientes del profesional:", error)
+  } catch (error: any) {
+    // Log error para debugging (solo en desarrollo)
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error obteniendo pacientes del profesional:", error)
+    }
+    
     return NextResponse.json(
-      { error: "Error al obtener pacientes" },
+      { 
+        error: "Error al obtener pacientes. Por favor, intente nuevamente.",
+        details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      },
       { status: 500 }
     )
   }
