@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
 import { getUserById } from "@/lib/user-helpers"
-import { Plus } from "lucide-react"
+import { Plus, FilePlus } from "lucide-react"
 import Link from "next/link"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
 import { PatientProfileCard } from "@/components/historia-clinica/patient-profile-card"
 import { MedicalInfoCard } from "@/components/historia-clinica/medical-info-card"
 import { MedicalTimeline } from "@/components/historia-clinica/medical-timeline"
+import { ExportarHistoriaButton } from "@/components/historia-clinica/exportar-historia-button"
 
 export default async function HistoriaClinicaDetallePage({
   params,
@@ -172,12 +173,24 @@ export default async function HistoriaClinicaDetallePage({
             Historia Clínica
           </h1>
         </div>
-        <Link href={`/dashboard/admin/historia-clinica/${pacienteId}/editar`}>
-          <Button className="bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl font-medium px-6 transition-all duration-200 ease-out hover:scale-[1.02]">
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva evolución
-          </Button>
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/dashboard/admin/historia-clinica/${pacienteId}/agregar`}>
+            <Button className="bg-[#16A34A] hover:bg-[#15803D] text-white rounded-xl font-medium px-6 transition-all duration-200 ease-out hover:scale-[1.02]">
+              <FilePlus className="h-4 w-4 mr-2" />
+              Agregar historia clínica
+            </Button>
+          </Link>
+          <Link href={`/dashboard/admin/historia-clinica/${pacienteId}/editar`}>
+            <Button className="bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl font-medium px-6 transition-all duration-200 ease-out hover:scale-[1.02]">
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva evolución
+            </Button>
+          </Link>
+          <ExportarHistoriaButton
+            pacienteId={pacienteId}
+            pacienteNombre={paciente.nombre}
+          />
+        </div>
       </div>
 
       {/* Layout 2 columnas */}
@@ -222,6 +235,8 @@ export default async function HistoriaClinicaDetallePage({
               <MedicalTimeline
                 registros={historiaClinica as any}
                 basePath={`/dashboard/admin/historia-clinica/${pacienteId}`}
+                pacienteId={pacienteId}
+                pacienteNombre={paciente.nombre ?? ""}
               />
             </CardContent>
           </Card>

@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { Input } from "@/components/ui/input"
-// Select removed - using native HTML select
 import { Button } from "@/components/ui/button"
 import { Search, Filter, X } from "lucide-react"
 
@@ -15,6 +14,8 @@ interface PatientFiltersProps {
     especialidad: string
   }>
 }
+
+const DEBOUNCE_MS = 400
 
 export function PatientFilters({
   obrasSociales = [],
@@ -37,12 +38,26 @@ export function PatientFilters({
     setProfesionalId(searchParams.get("profesionalId") || "")
   }, [searchParams])
 
-  const handleFilter = () => {
-    const params = new URLSearchParams()
-    if (search) params.set("search", search)
-    if (obraSocialId) params.set("obraSocialId", obraSocialId)
-    if (profesionalId) params.set("profesionalId", profesionalId)
-    router.push(`${pathname}?${params.toString()}`)
+  const applyParams = useCallback(
+    (nextSearch: string, nextObraId: string, nextProfId: string) => {
+      const params = new URLSearchParams()
+      if (nextSearch.trim()) params.set("search", nextSearch.trim())
+      if (nextObraId) params.set("obraSocialId", nextObraId)
+      if (nextProfId) params.set("profesionalId", nextProfId)
+      const qs = params.toString()
+      router.push(qs ? `${pathname}?${qs}` : pathname)
+    },
+    [pathname, router]
+  )
+
+  const handleObraSocialChange = (value: string) => {
+    setObraSocialId(value)
+    applyParams(search, value, profesionalId)
+  }
+
+  const handleProfesionalChange = (value: string) => {
+    setProfesionalId(value)
+    applyParams(search, obraSocialId, value)
   }
 
   const handleClear = () => {
@@ -53,6 +68,20 @@ export function PatientFilters({
   }
 
   const hasFilters = search || obraSocialId || profesionalId
+  const isFirstMount = useRef(true)
+
+  // Búsqueda a tiempo real con debounce al escribir (no aplicar en el primer montaje)
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false
+      return
+    }
+    const t = setTimeout(() => {
+      applyParams(search, obraSocialId, profesionalId)
+    }, DEBOUNCE_MS)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debounce cuando cambia search
+  }, [search])
 
   return (
     <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm p-6">
@@ -68,7 +97,7 @@ export function PatientFilters({
             className="pl-10 rounded-xl border-[#E2E8F0] focus:ring-[#2563EB]"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                handleFilter()
+                applyParams(search, obraSocialId, profesionalId)
               }
             }}
           />
@@ -79,7 +108,7 @@ export function PatientFilters({
           {obrasSociales.length > 0 && (
             <select
               value={obraSocialId}
-              onChange={(e) => setObraSocialId(e.target.value)}
+              onChange={(e) => handleObraSocialChange(e.target.value)}
               className="min-w-[180px] rounded-xl border-[#E2E8F0] focus:ring-[#2563EB] px-3 py-2"
             >
               <option value="">Todas las obras sociales</option>
@@ -94,7 +123,7 @@ export function PatientFilters({
           {profesionales.length > 0 && (
             <select
               value={profesionalId}
-              onChange={(e) => setProfesionalId(e.target.value)}
+              onChange={(e) => handleProfesionalChange(e.target.value)}
               className="min-w-[200px] rounded-xl border-[#E2E8F0] focus:ring-[#2563EB] px-3 py-2"
             >
               <option value="">Todos los profesionales</option>

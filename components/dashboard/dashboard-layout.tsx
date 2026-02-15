@@ -88,7 +88,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
           sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
-        <div className="max-w-[1400px] mx-auto p-6 space-y-6">
+        <div className="max-w-[1800px] w-full mx-auto px-6 py-6 space-y-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}

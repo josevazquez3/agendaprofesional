@@ -51,31 +51,31 @@ export function PatientTable({
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
-      className="overflow-x-auto"
+      className="overflow-x-auto -mx-1"
     >
-      <table className="w-full">
+      <table className="w-full min-w-[980px]">
         <thead>
           <tr className="border-b border-[#E2E8F0]">
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[160px]">
               Paciente
             </th>
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[100px]">
               Documento
             </th>
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[110px]">
               Teléfono
             </th>
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[220px]">
               Email
             </th>
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[120px]">
               Obra social
             </th>
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[100px]">
               Última visita
             </th>
             {showActions && (
-              <th className="text-right py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+              <th className="text-right py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[120px]">
                 Acciones
               </th>
             )}
@@ -88,7 +88,7 @@ export function PatientTable({
               variants={staggerItem}
               className="hover:bg-slate-50 transition-colors duration-150 ease-out"
             >
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <PatientQuickPreview
                   paciente={{
                     id: paciente.id,
@@ -119,27 +119,27 @@ export function PatientTable({
                   </div>
                 </PatientQuickPreview>
               </td>
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <span className="text-sm text-[#64748B]">
                   {paciente.dni || "-"}
                 </span>
               </td>
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <span className="text-sm text-[#64748B]">
                   {paciente.telefono || "-"}
                 </span>
               </td>
-              <td className="py-5 px-6">
-                <span className="text-sm text-[#64748B]">{paciente.email}</span>
+              <td className="py-4 px-4">
+                <span className="text-sm text-[#64748B] break-all">{paciente.email}</span>
               </td>
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <span className="text-sm text-[#64748B]">
                   {paciente.obraSocialRel?.nombre ||
                     paciente.obraSocial ||
                     "-"}
                 </span>
               </td>
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 {paciente.ultimaVisita ? (
                   <span className="text-sm text-[#64748B]">
                     {format(new Date(paciente.ultimaVisita), "dd/MM/yyyy")}
@@ -149,7 +149,7 @@ export function PatientTable({
                 )}
               </td>
               {showActions && (
-                <td className="py-5 px-6">
+                <td className="py-4 px-4">
                   <div className="flex items-center justify-end gap-2">
                     <Link href={`/dashboard/admin/pacientes/${paciente.id}`}>
                       <Button

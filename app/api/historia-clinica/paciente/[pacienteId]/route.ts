@@ -138,7 +138,9 @@ export async function DELETE(
 
     if (
       !session ||
-      (session.user.role !== "ADMIN" && session.user.role !== "SECRETARIA")
+      (session.user.role !== "ADMIN" &&
+        session.user.role !== "SECRETARIA" &&
+        session.user.role !== "PROFESIONAL")
     ) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }

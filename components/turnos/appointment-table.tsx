@@ -85,27 +85,27 @@ export function AppointmentTable({
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
-      className="overflow-x-auto"
+      className="overflow-x-auto -mx-1"
     >
-      <table className="w-full">
+      <table className="w-full min-w-[920px]">
         <thead>
           <tr className="border-b border-[#E2E8F0]">
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
-              Hora
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[120px]">
+              Fecha / Hora
             </th>
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[140px]">
               Paciente
             </th>
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[120px]">
               Profesional
             </th>
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[100px]">
               Especialidad
             </th>
-            <th className="text-left py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-left py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[100px]">
               Estado
             </th>
-            <th className="text-right py-4 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wide">
+            <th className="text-right py-4 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wide min-w-[120px]">
               Acciones
             </th>
           </tr>
@@ -117,7 +117,7 @@ export function AppointmentTable({
               variants={staggerItem}
               className="hover:bg-slate-50 transition-colors duration-150 ease-out"
             >
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-[#0F172A]">
                     {format(new Date(turno.fecha), "dd/MM/yyyy")}
@@ -125,7 +125,7 @@ export function AppointmentTable({
                   <span className="text-xs text-[#64748B] mt-0.5">{turno.hora}</span>
                 </div>
               </td>
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-[#0F172A]">
                     {turno.paciente?.nombre ?? "—"}
@@ -137,20 +137,20 @@ export function AppointmentTable({
                   )}
                 </div>
               </td>
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <span className="text-sm text-[#0F172A]">
                   {turno.profesional?.user?.nombre || "Sin asignar"}
                 </span>
               </td>
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <span className="text-sm text-[#64748B]">
                   {turno.profesional?.especialidad || "-"}
                 </span>
               </td>
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <AppointmentStatusBadge status={turno.estado} />
               </td>
-              <td className="py-5 px-6">
+              <td className="py-4 px-4">
                 <div className="flex items-center justify-end gap-2">
                   {showQuickConsultation &&
                     onQuickConsultation &&
@@ -177,7 +177,10 @@ export function AppointmentTable({
                       <Edit className="h-4 w-4" />
                     </Button>
                   </Link>
-                  <Link href={`${basePath}/${turno.id}/reprogramar`}>
+                  <Link
+                    href={`${basePath}/${turno.id}/editar`}
+                    title="Reprogramar (cambiar fecha/hora)"
+                  >
                     <Button
                       variant="ghost"
                       size="icon"
@@ -204,7 +207,7 @@ export function AppointmentTable({
             </motion.tr>
             {turno.estado === "ELIMINADO" && (
               <motion.tr key={`${turno.id}-eliminado`} variants={staggerItem} className="bg-red-50/50">
-                <td colSpan={6} className="py-2 px-6">
+                <td colSpan={6} className="py-2 px-4">
                   <div className="p-3 rounded-md border border-red-200 bg-red-50 text-red-800 text-sm">
                     <p className="font-semibold flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 shrink-0" />

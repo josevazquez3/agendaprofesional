@@ -8,6 +8,7 @@ import { getProfesionales } from "@/lib/profesional-helpers"
 import Link from "next/link"
 import { User, Plus, Edit, Building } from "lucide-react"
 import Image from "next/image"
+import { ExportarProfesionalButton } from "@/components/profesionales/exportar-profesional-button"
 
 export default async function AdminProfesionalesPage() {
   const session = await getServerSession(authOptions)
@@ -230,7 +231,11 @@ export default async function AdminProfesionalesPage() {
                         )}
                       </div>
 
-                      <div className="flex gap-2 ml-4">
+                      <div className="flex gap-2 ml-4 flex-shrink-0">
+                        <ExportarProfesionalButton
+                          profesionalId={profesional.id}
+                          nombreProfesional={profesional.user.nombre}
+                        />
                         <Link
                           href={`/dashboard/admin/profesionales/${profesional.id}/editar`}
                         >

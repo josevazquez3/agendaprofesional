@@ -197,6 +197,7 @@ model User {
   auditLogs           AuditLog[]
   turnosEliminados    Turno[]     @relation("TurnoEliminadoPor")
   historiasClinicasEliminadas HistoriaClinica[] @relation("HistoriaClinicaEliminadoPor")
+  historiasClinicasCreadas    HistoriaClinica[] @relation("HistoriaClinicaCreadoPor")
 }
 
 model Profesional {
@@ -346,12 +347,14 @@ model HistoriaClinica {
   eliminadoAt         DateTime?
   motivoEliminacion   String?
   eliminadoPorId      String?
+  creadoPorId         String?   // Usuario que agregó el registro (auditoría)
 
   clinic              Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   paciente            User      @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   profesional         Profesional @relation(fields: [profesionalId], references: [id], onDelete: Cascade)
   turno               Turno?    @relation(fields: [turnoId], references: [id])
   eliminadoPor        User?     @relation("HistoriaClinicaEliminadoPor", fields: [eliminadoPorId], references: [id])
+  creadoPor           User?     @relation("HistoriaClinicaCreadoPor", fields: [creadoPorId], references: [id])
   archivos            ArchivoHistoriaClinica[]
 
   @@index([clinicId])

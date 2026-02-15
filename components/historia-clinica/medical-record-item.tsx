@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
 import { Eye, FileText } from "lucide-react"
 import Link from "next/link"
+import { ExportarRegistroButton } from "./exportar-registro-button"
 
 interface MedicalRecordItemProps {
   id: string
@@ -31,6 +32,8 @@ interface MedicalRecordItemProps {
     urlArchivo: string
   }>
   basePath: string
+  pacienteId: string
+  pacienteNombre: string
 }
 
 export function MedicalRecordItem({
@@ -44,6 +47,8 @@ export function MedicalRecordItem({
   turno,
   archivos = [],
   basePath,
+  pacienteId,
+  pacienteNombre,
 }: MedicalRecordItemProps) {
   return (
     <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 ease-out">
@@ -167,6 +172,15 @@ export function MedicalRecordItem({
               </div>
             </div>
           )}
+
+          <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
+            <ExportarRegistroButton
+              pacienteId={pacienteId}
+              registroId={id}
+              pacienteNombre={pacienteNombre}
+              nombreProfesional={profesional.nombre}
+            />
+          </div>
         </div>
       </div>
     </Card>

@@ -133,10 +133,10 @@ export default async function AdminPacientesPage({
         profesionales={profesionales}
       />
 
-      {/* Contenido principal */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      {/* Contenido principal: más espacio para el listado */}
+      <div className="grid lg:grid-cols-[1fr_300px] gap-6">
         {/* Tabla de pacientes */}
-        <div className="lg:col-span-2">
+        <div className="min-w-0">
           <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex justify-between items-center">
@@ -163,7 +163,7 @@ export default async function AdminPacientesPage({
         </div>
 
         {/* Panel lateral - Resumen */}
-        <div className="lg:col-span-1">
+        <div className="shrink-0">
           <PatientSummaryPanel
             totalPacientes={totalPacientes}
             nuevosEsteMes={nuevosEsteMes}

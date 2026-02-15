@@ -23,7 +23,16 @@ export async function POST(request: Request) {
     const clinicId = authResult.clinicId!
 
     const body = await request.json()
-    const { pacienteId, profesionalId, notas, diagnostico, tratamiento, turnoId } = body
+    const {
+      pacienteId,
+      profesionalId,
+      notas,
+      diagnostico,
+      tratamiento,
+      turnoId,
+      fechaConsulta: fechaConsultaBody,
+      estudios,
+    } = body
 
     if (!pacienteId) {
       return NextResponse.json(
@@ -117,41 +126,84 @@ export async function POST(request: Request) {
       }
     }
 
-    // Crear fecha de consulta (ahora)
-    const fechaConsulta = new Date()
+    // Fecha de consulta: la envía el cliente (agregar manual) o ahora (evolución desde turno)
+    const fechaConsulta = fechaConsultaBody
+      ? new Date(fechaConsultaBody)
+      : new Date()
 
-    // Crear nueva historia clínica
-    const historiaClinica = await prisma.historiaClinica.create({
-      data: {
-        clinicId,
-        pacienteId,
-        profesionalId: profesionalIdFinal,
-        turnoId: turnoId || null,
-        fechaConsulta,
-        notas: notas || null,
-        diagnostico: diagnostico || null,
-        tratamiento: tratamiento || null,
-      },
-      include: {
-        profesional: {
-          select: {
-            id: true,
-            especialidad: true,
-            user: {
-              select: {
-                nombre: true,
+    // Usuario que crea el registro (auditoría) cuando el admin agrega manualmente (fechaConsulta enviada)
+    const creadoPorId =
+      session.user.role === "ADMIN" && fechaConsultaBody ? session.user.id : null
+
+    // Crear nueva historia clínica (sin creadoPorId en create por compatibilidad con cliente Prisma)
+    const historiaClinica = await prisma.$transaction(async (tx) => {
+      const created = await tx.historiaClinica.create({
+        data: {
+          clinicId,
+          pacienteId,
+          profesionalId: profesionalIdFinal,
+          turnoId: turnoId || null,
+          fechaConsulta,
+          notas: notas || null,
+          diagnostico: diagnostico || null,
+          tratamiento: tratamiento || null,
+        },
+        include: {
+          profesional: {
+            select: {
+              id: true,
+              especialidad: true,
+              user: {
+                select: {
+                  nombre: true,
+                },
               },
             },
           },
-        },
-        turno: {
-          select: {
-            fecha: true,
-            hora: true,
-            estado: true,
+          turno: {
+            select: {
+              fecha: true,
+              hora: true,
+              estado: true,
+            },
           },
         },
-      },
+      })
+
+      // Auditoría: registrar quién creó el registro (columna creadoPorId)
+      if (creadoPorId) {
+        try {
+          await tx.$executeRawUnsafe(
+            `UPDATE HistoriaClinica SET creadoPorId = ? WHERE id = ?`,
+            creadoPorId,
+            created.id
+          )
+        } catch {
+          // Si la columna no existe aún, ignorar
+        }
+      }
+
+      // Adjuntos (estudios): PDF, DOCX, etc.
+      if (estudios && Array.isArray(estudios)) {
+        for (const estudio of estudios) {
+          if (estudio.nombreArchivo) {
+            const contenido = estudio.contenido || ""
+            await tx.archivoHistoriaClinica.create({
+              data: {
+                historiaClinicaId: created.id,
+                nombreArchivo: estudio.nombreArchivo,
+                tipoArchivo: estudio.tipoArchivo || "TEXTO",
+                urlArchivo: contenido.startsWith("data:")
+                  ? contenido
+                  : `data:text/plain;base64,${Buffer.from(contenido).toString("base64")}`,
+                tamano: contenido.length,
+              },
+            })
+          }
+        }
+      }
+
+      return created
     })
 
     return NextResponse.json(

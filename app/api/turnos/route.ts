@@ -14,26 +14,15 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const profesionalId = searchParams.get("profesionalId")
+    const pacienteId = searchParams.get("pacienteId")
     const fechaInicio = searchParams.get("fechaInicio")
     const fechaFin = searchParams.get("fechaFin")
 
-    const where: any = {}
-
-    if (profesionalId) {
-      where.profesionalId = profesionalId
-    }
-
-    if (fechaInicio && fechaFin) {
-      where.fecha = {
-        gte: new Date(fechaInicio),
-        lte: new Date(fechaFin),
-      }
-    }
-
-    // Si es paciente, solo puede ver sus propios turnos
-    if (session.user.role === "PACIENTE") {
-      where.pacienteId = session.user.id
-    }
+    // Si es paciente, solo puede ver sus propios turnos; admin/secretaria pueden filtrar por pacienteId
+    const pacienteIdFilter =
+      session.user.role === "PACIENTE"
+        ? session.user.id
+        : pacienteId || undefined
 
     // Si es profesional, solo puede ver sus propios turnos
     let profesionalIdFilter: string | undefined = undefined
@@ -60,8 +49,8 @@ export async function GET(request: Request) {
         : undefined
 
     const turnos = await getTurnos({
-      profesionalId: profesionalIdFilter || profesionalId || undefined,
-      pacienteId: session.user.role === "PACIENTE" ? session.user.id : undefined,
+      profesionalId: profesionalIdFilter ?? profesionalId ?? undefined,
+      pacienteId: pacienteIdFilter,
       fecha: fechaFilter,
       orderBy: { fecha: "asc" },
     })

@@ -184,6 +184,7 @@ export async function DELETE(
     const authResult = await requireAuthWithRolesAndClinic([
       "ADMIN",
       "SECRETARIA",
+      "PROFESIONAL",
     ])
 
     if (!authResult || !authResult.allowed) {
@@ -208,7 +209,7 @@ export async function DELETE(
 
     const historiaExistente = await prisma.historiaClinica.findUnique({
       where: { id: params.id },
-      select: { clinicId: true },
+      select: { clinicId: true, profesionalId: true },
     })
 
     if (!historiaExistente) {
@@ -219,6 +220,17 @@ export async function DELETE(
       return createAuthErrorResponse("FORBIDDEN", {
         message: "Este registro no pertenece a su clínica activa.",
       })
+    }
+
+    // Si es PROFESIONAL, solo puede eliminar registros creados por él
+    if (session.user.role === "PROFESIONAL") {
+      const hasOwnership = await verifyProfessionalOwnership(
+        historiaExistente.profesionalId,
+        session.user.id
+      )
+      if (!hasOwnership) {
+        return createAuthErrorResponse("OWNERSHIP_REQUIRED")
+      }
     }
 
     try {

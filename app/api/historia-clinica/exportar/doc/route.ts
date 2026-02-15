@@ -20,6 +20,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const pacienteId = searchParams.get("pacienteId")
+    const registroId = searchParams.get("registroId") || null
 
     if (!pacienteId) {
       return NextResponse.json(
@@ -38,13 +39,22 @@ export async function GET(request: Request) {
       )
     }
 
-    // Obtener historia clínica
+    // Obtener historia clínica (toda o solo un registro si registroId viene)
     const historiaClinica = await prisma.historiaClinica.findMany({
-      where: { pacienteId },
+      where: {
+        pacienteId,
+        eliminadoAt: null,
+        ...(registroId ? { id: registroId } : {}),
+      },
       include: {
         profesional: {
-          include: {
-            user: true,
+          select: {
+            especialidad: true,
+            user: {
+              select: {
+                nombre: true,
+              },
+            },
           },
         },
         turno: {
@@ -53,7 +63,12 @@ export async function GET(request: Request) {
             hora: true,
           },
         },
-        archivos: true,
+        archivos: {
+          select: {
+            nombreArchivo: true,
+            tipoArchivo: true,
+          },
+        },
       },
       orderBy: {
         fechaConsulta: "desc",
@@ -67,7 +82,7 @@ export async function GET(request: Request) {
         heading: HeadingLevel.TITLE,
       }),
       new Paragraph({
-        text: `Paciente: ${paciente.nombre}`,
+        text: `Paciente: ${String(paciente.nombre ?? "")}`,
       }),
       ...(paciente.dni
         ? [
@@ -77,12 +92,12 @@ export async function GET(request: Request) {
           ]
         : []),
       new Paragraph({
-        text: `Email: ${paciente.email}`,
+        text: `Email: ${String(paciente.email ?? "")}`,
       }),
       ...(paciente.fechaNacimiento
         ? [
             new Paragraph({
-              text: `Fecha de Nacimiento: ${new Date(paciente.fechaNacimiento).toLocaleDateString("es-AR")}`,
+              text: `Fecha de Nacimiento: ${new Date(paciente.fechaNacimiento as Date).toLocaleDateString("es-AR")}`,
             }),
           ]
         : []),
@@ -170,12 +185,19 @@ export async function GET(request: Request) {
     })
 
     const buffer = await Packer.toBuffer(doc)
+    const nombrePac = String(paciente.nombre ?? "").replace(/\s/g, "_")
+    const nombreProf = historiaClinica.length === 1 && historiaClinica[0]?.profesional?.user?.nombre
+      ? String(historiaClinica[0].profesional!.user!.nombre).replace(/\s/g, "_")
+      : null
+    const nombreArchivo = nombreProf
+      ? `historia_clinica_${nombrePac}_${nombreProf}.docx`
+      : `historia_clinica_${nombrePac}.docx`
 
     return new NextResponse(buffer as any, {
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="historia_clinica_${paciente.nombre.replace(/\s/g, "_")}.docx"`,
+        "Content-Disposition": `attachment; filename="${nombreArchivo}"`,
       },
     })
   } catch (error: any) {

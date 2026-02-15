@@ -37,11 +37,15 @@ interface HistoriaClinicaRegistro {
 interface MedicalTimelineProps {
   registros: HistoriaClinicaRegistro[]
   basePath: string
+  pacienteId: string
+  pacienteNombre: string
 }
 
 export function MedicalTimeline({
   registros,
   basePath,
+  pacienteId,
+  pacienteNombre,
 }: MedicalTimelineProps) {
   const [visibleItems, setVisibleItems] = useState(10)
   const [isLoading, setIsLoading] = useState(false)
@@ -142,6 +146,8 @@ export function MedicalTimeline({
             }
             archivos={registro.archivos || []}
             basePath={basePath}
+            pacienteId={pacienteId}
+            pacienteNombre={pacienteNombre}
           />
         </motion.div>
       ))}

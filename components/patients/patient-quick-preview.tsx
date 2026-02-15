@@ -58,7 +58,12 @@ export function PatientQuickPreview({
 
   const handleOpenHistoria = () => {
     setOpen(false)
-    router.push(`${basePath}/historia-clinica/${paciente.id}`)
+    // Ruta de historia clínica: /dashboard/[rol]/historia-clinica/[id]
+    // basePath puede ser /dashboard/admin/pacientes → extraemos /dashboard/admin
+    const parts = basePath.split("/").filter(Boolean)
+    const roleBase =
+      parts.length >= 2 ? `/${parts[0]}/${parts[1]}` : "/dashboard/admin"
+    router.push(`${roleBase}/historia-clinica/${paciente.id}`)
   }
 
   return (
