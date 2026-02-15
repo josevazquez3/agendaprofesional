@@ -55,12 +55,14 @@ export default function AgregarHistoriaClinicaSecretariaPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [pacienteRes, profRes, turnosRes] = await Promise.all([
-          fetch(`/api/pacientes/${pacienteId}`).catch(() => ({ ok: false })),
+        const pacienteRes: Response | null = await fetch(`/api/pacientes/${pacienteId}`).catch(
+          () => null
+        )
+        const [profRes, turnosRes] = await Promise.all([
           fetch("/api/profesionales"),
           fetch(`/api/turnos?pacienteId=${pacienteId}`),
         ])
-        if (pacienteRes.ok) {
+        if (pacienteRes?.ok) {
           const p = await pacienteRes.json()
           setPacienteNombre(p.nombre || "")
         }

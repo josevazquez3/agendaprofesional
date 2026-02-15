@@ -15,7 +15,9 @@ import {
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
-async function getImageBuffer(url: string | null | undefined): Promise<{ buffer: Buffer; type: "png" | "jpeg" } | null> {
+async function getImageBuffer(
+  url: string | null | undefined
+): Promise<{ buffer: Buffer; type: "png" | "jpg" | "gif" | "bmp" } | null> {
   if (!url || typeof url !== "string") return null
   try {
     let finalUrl = url
@@ -27,7 +29,7 @@ async function getImageBuffer(url: string | null | undefined): Promise<{ buffer:
     if (!res.ok) return null
     const buf = Buffer.from(await res.arrayBuffer())
     const contentType = res.headers.get("content-type") || ""
-    const type = contentType.includes("png") ? "png" : "jpeg"
+    const type = contentType.includes("png") ? "png" : "jpg"
     return { buffer: buf, type }
   } catch {
     return null
