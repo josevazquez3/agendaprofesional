@@ -3,23 +3,24 @@ import { headers } from "next/headers"
 import Stripe from "stripe"
 import { prisma } from "@/lib/prisma"
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY no está configurada")
-}
-
-if (!process.env.STRIPE_WEBHOOK_SECRET) {
-  throw new Error("STRIPE_WEBHOOK_SECRET no está configurada")
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-})
-
 /**
  * POST /api/webhooks/stripe
  * Webhook handler para eventos de Stripe
  */
 export async function POST(request: NextRequest) {
+  const secretKey = process.env.STRIPE_SECRET_KEY
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+  if (!secretKey || !webhookSecret) {
+    console.error("STRIPE_SECRET_KEY o STRIPE_WEBHOOK_SECRET no configuradas")
+    return NextResponse.json(
+      { error: "Webhook no configurado" },
+      { status: 503 }
+    )
+  }
+
+  const stripe = new Stripe(secretKey, { apiVersion: "2023-10-16" })
+
   const body = await request.text()
   const headersList = await headers()
   const signature = headersList.get("stripe-signature")
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      webhookSecret
     )
   } catch (err) {
     console.error("❌ Error verificando webhook:", err)

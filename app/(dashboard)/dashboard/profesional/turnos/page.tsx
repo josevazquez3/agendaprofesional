@@ -102,12 +102,12 @@ export default async function ProfesionalTurnosPage() {
               <CardContent className="p-6">
                 <div className="flex flex-col items-center mb-4">
                   <PatientAvatar
-                    name={proximoTurno.paciente.nombre}
+                    name={proximoTurno.paciente?.nombre ?? "—"}
                     size="lg"
                     className="mb-4"
                   />
                   <h3 className="text-lg font-semibold text-[#0F172A] font-inter text-center mb-2">
-                    {proximoTurno.paciente.nombre}
+                    {proximoTurno.paciente?.nombre ?? "—"}
                   </h3>
                   <AppointmentStatusBadge status={proximoTurno.estado} />
                 </div>

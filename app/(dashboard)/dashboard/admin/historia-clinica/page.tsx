@@ -8,6 +8,7 @@ import { Search, FileText, Eye, Edit, Trash2, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { EliminarTurnosModal } from "@/components/turnos/EliminarTurnosModal"
 
 interface Paciente {
   id: string
@@ -22,6 +23,7 @@ export default function HistoriaClinicaAdminPage() {
   const [pacientesFiltrados, setPacientesFiltrados] = useState<Paciente[]>([])
   const [busqueda, setBusqueda] = useState("")
   const [loading, setLoading] = useState(true)
+  const [eliminarPacienteId, setEliminarPacienteId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPacientes()
@@ -68,21 +70,24 @@ export default function HistoriaClinicaAdminPage() {
     setPacientesFiltrados(filtrados)
   }
 
-  const handleEliminar = async (pacienteId: string) => {
-    if (!confirm("¿Está seguro de que desea eliminar la historia clínica de este paciente?")) {
-      return
-    }
+  const handleEliminar = async (causa: string) => {
+    if (!eliminarPacienteId) return
+    const pacienteId = eliminarPacienteId
+    setEliminarPacienteId(null)
 
     try {
       const response = await fetch(`/api/historia-clinica/paciente/${pacienteId}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ causa }),
       })
 
+      const data = await response.json()
       if (!response.ok) {
-        throw new Error("Error al eliminar historia clínica")
+        throw new Error(data.error || "Error al eliminar historia clínica")
       }
 
-      alert("Historia clínica eliminada exitosamente")
+      alert(data.message || "Historia clínica marcada como eliminada")
       fetchPacientes()
     } catch (error: any) {
       alert(error.message || "Error al eliminar historia clínica")
@@ -208,7 +213,7 @@ export default function HistoriaClinicaAdminPage() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleEliminar(paciente.id)}
+                      onClick={() => setEliminarPacienteId(paciente.id)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Eliminar
@@ -220,6 +225,16 @@ export default function HistoriaClinicaAdminPage() {
           )}
         </CardContent>
       </Card>
+
+      <EliminarTurnosModal
+        open={eliminarPacienteId !== null}
+        onClose={() => setEliminarPacienteId(null)}
+        onConfirm={handleEliminar}
+        cantidad={1}
+        title="Eliminar historia clínica del paciente"
+        description="Indique la causa de eliminación (obligatorio). Los registros no se borran; quedan marcados como eliminados para auditoría."
+        placeholder="Motivo por el cual se elimina la historia clínica..."
+      />
     </div>
   )
 }

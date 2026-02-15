@@ -204,9 +204,9 @@ export default async function ImprimirTurnoPage({
         <div>
           <h2 className="text-xl font-semibold mb-4">Datos del Paciente</h2>
           <p className="text-gray-700">
-            <strong>Nombre:</strong> {turno.paciente.nombre}
+            <strong>Nombre:</strong> {turno.paciente?.nombre ?? "—"}
           </p>
-          {turno.paciente.dni && (
+          {turno.paciente?.dni && (
             <p className="text-gray-700">
               <strong>DNI:</strong> {turno.paciente.dni}
             </p>

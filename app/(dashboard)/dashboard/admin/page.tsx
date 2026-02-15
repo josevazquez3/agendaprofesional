@@ -125,7 +125,7 @@ export default async function AdminDashboard() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-[#0F172A]">
-                        {turno.paciente.nombre}
+                        {turno.paciente?.nombre ?? "Sin paciente"}
                       </p>
                       <p className="text-xs text-[#64748B] mt-1">
                         {turno.profesional?.user?.nombre || "Sin profesional"}

@@ -10,16 +10,11 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { pageTransition } from "@/lib/animations"
 
-type Role = "PACIENTE" | "PROFESIONAL" | "SECRETARIA" | "ADMIN"
+import type { Session } from "next-auth"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  user: {
-    id: string
-    email: string
-    name: string
-    role: Role
-  }
+  user: Session["user"]
 }
 
 export function DashboardLayout({ children, user }: DashboardLayoutProps) {

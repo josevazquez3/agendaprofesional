@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -11,6 +11,11 @@ interface EliminarTurnosModalProps {
   onClose: () => void
   onConfirm: (causa: string) => void
   cantidad: number
+  /** Título del modal (por defecto "Eliminar Turnos") */
+  title?: string
+  /** Descripción (por defecto mensaje para turnos) */
+  description?: string
+  placeholder?: string
 }
 
 export function EliminarTurnosModal({
@@ -18,9 +23,23 @@ export function EliminarTurnosModal({
   onClose,
   onConfirm,
   cantidad,
+  title = "Eliminar Turnos",
+  description,
+  placeholder = "Describe la razón por la cual se eliminan estos turnos...",
 }: EliminarTurnosModalProps) {
   const [causa, setCausa] = useState("")
   const [error, setError] = useState("")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const desc = description ?? `Estás a punto de eliminar ${cantidad} turno${cantidad > 1 ? "s" : ""}. Por favor, indica la causa de eliminación (obligatorio).`
+
+  useEffect(() => {
+    if (open) {
+      setCausa("")
+      setError("")
+      setTimeout(() => textareaRef.current?.focus(), 100)
+    }
+  }, [open])
 
   if (!open) return null
 
@@ -46,11 +65,8 @@ export function EliminarTurnosModal({
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Eliminar Turnos</CardTitle>
-              <CardDescription>
-                Estás a punto de eliminar {cantidad} turno{cantidad > 1 ? "s" : ""}. 
-                Por favor, indica la causa de eliminación (obligatorio).
-              </CardDescription>
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>{desc}</CardDescription>
             </div>
             <Button variant="ghost" size="sm" onClick={handleClose}>
               <X className="h-4 w-4" />
@@ -62,14 +78,17 @@ export function EliminarTurnosModal({
             <div className="space-y-2">
               <Label htmlFor="causa">Causa de eliminación *</Label>
               <textarea
+                ref={textareaRef}
                 id="causa"
+                name="causa"
+                autoFocus
                 className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={causa}
                 onChange={(e) => {
                   setCausa(e.target.value)
                   setError("")
                 }}
-                placeholder="Describe la razón por la cual se eliminan estos turnos..."
+                placeholder={placeholder}
                 required
               />
               {error && (

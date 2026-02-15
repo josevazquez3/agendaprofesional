@@ -180,6 +180,7 @@ export default async function SecretariaTurnosPage({
                 <AppointmentTable
                   turnos={turnos as any}
                   basePath="/dashboard/secretaria/turnos"
+                  showEliminar
                 />
               </div>
             </CardContent>

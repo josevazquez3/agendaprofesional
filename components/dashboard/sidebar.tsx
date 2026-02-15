@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/tooltip"
 import { iconography } from "@/lib/typography"
 
-type Role = "PACIENTE" | "PROFESIONAL" | "SECRETARIA" | "ADMIN"
+type Role = "PACIENTE" | "PROFESIONAL" | "SECRETARIA" | "ADMIN" | "OWNER" | "PLATFORM_OWNER"
 
 interface SidebarProps {
   userRole: Role
@@ -45,6 +45,8 @@ export function Sidebar({
     ]
 
     switch (userRole) {
+      case "OWNER":
+      case "PLATFORM_OWNER":
       case "ADMIN":
         return [
           ...baseItems,

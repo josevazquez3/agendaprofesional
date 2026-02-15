@@ -36,6 +36,7 @@ export function PatientSearchInput({
   const [loading, setLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const skipNextOpenRef = useRef(false)
   const { timeStart, timeEnd } = useAnalytics()
 
   useEffect(() => {
@@ -44,17 +45,18 @@ export function PatientSearchInput({
     }
   }, [autoFocus])
 
+  // Solo re-ejecutar cuando cambie searchQuery (timeStart/timeEnd cambian cada render y causaban bucle)
   useEffect(() => {
     if (!searchQuery || searchQuery.length < 2) {
       setResults([])
       setShowResults(false)
+      setLoading(false)
       return
     }
 
     const searchPatients = async () => {
       timeStart("patient_search")
       setLoading(true)
-      setShowResults(true)
 
       try {
         const response = await fetch(
@@ -63,6 +65,11 @@ export function PatientSearchInput({
         const data = await response.json()
         setResults(data.pacientes || [])
         timeEnd("patient_search", { results_count: data.pacientes?.length || 0 })
+        if (skipNextOpenRef.current) {
+          skipNextOpenRef.current = false
+        } else if (inputRef.current && document.activeElement === inputRef.current) {
+          setShowResults(true)
+        }
       } catch (error) {
         console.error("Error buscando pacientes:", error)
         setResults([])
@@ -73,9 +80,11 @@ export function PatientSearchInput({
 
     const debounceTimer = setTimeout(searchPatients, 300)
     return () => clearTimeout(debounceTimer)
-  }, [searchQuery, timeStart, timeEnd])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo searchQuery; timeStart/timeEnd inestables
+  }, [searchQuery])
 
   const handleSelect = (paciente: Paciente) => {
+    skipNextOpenRef.current = true
     setSearchQuery(paciente.nombre)
     setShowResults(false)
     onChange(paciente)
@@ -133,8 +142,13 @@ export function PatientSearchInput({
           {results.map((paciente) => (
             <button
               key={paciente.id}
-              onClick={() => handleSelect(paciente)}
-              className="w-full text-left px-4 py-3 hover:bg-[#F8FAFC] transition-colors duration-150 ease-out border-b border-[#E2E8F0] last:border-b-0"
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleSelect(paciente)
+              }}
+              className="w-full text-left px-4 py-3 hover:bg-[#F8FAFC] transition-colors duration-150 ease-out border-b border-[#E2E8F0] last:border-b-0 cursor-pointer"
             >
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-[#0F172A]">

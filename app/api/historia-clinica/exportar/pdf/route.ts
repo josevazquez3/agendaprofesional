@@ -116,7 +116,7 @@ export async function GET(request: Request) {
       }
 
       doc.setFontSize(10)
-      doc.setFont(undefined, "bold")
+      doc.setFont("helvetica", "bold")
       doc.text(
         `Registro ${index + 1} - ${new Date(registro.fechaConsulta).toLocaleDateString("es-AR")}`,
         14,
@@ -124,7 +124,7 @@ export async function GET(request: Request) {
       )
       yPos += 7
 
-      doc.setFont(undefined, "normal")
+      doc.setFont("helvetica", "normal")
       if (registro.notas) {
         doc.setFontSize(9)
         const notasLines = doc.splitTextToSize(`Observaciones: ${registro.notas}`, 180)

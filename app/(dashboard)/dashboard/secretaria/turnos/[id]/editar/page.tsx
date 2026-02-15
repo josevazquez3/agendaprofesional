@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
+import { format } from "date-fns"
+import { AlertTriangle } from "lucide-react"
 
 export default function EditarTurnoSecretariaPage() {
   const router = useRouter()
@@ -23,6 +25,11 @@ export default function EditarTurnoSecretariaPage() {
     motivo: "",
     obraSocial: "",
   })
+  const [eliminacion, setEliminacion] = useState<{
+    motivoEliminacion?: string | null
+    eliminadoAt?: string | null
+    eliminadoPor?: { nombre: string }
+  } | null>(null)
 
   useEffect(() => {
     fetchTurno()
@@ -43,6 +50,15 @@ export default function EditarTurnoSecretariaPage() {
         motivo: data.motivo || "",
         obraSocial: data.obraSocial || "",
       })
+      if (data.estado === "ELIMINADO") {
+        setEliminacion({
+          motivoEliminacion: data.motivoEliminacion ?? null,
+          eliminadoAt: data.eliminadoAt ?? null,
+          eliminadoPor: data.eliminadoPor,
+        })
+      } else {
+        setEliminacion(null)
+      }
       setLoadingData(false)
     } catch (error: any) {
       setError(error.message || "Error al cargar turno")
@@ -111,6 +127,23 @@ export default function EditarTurnoSecretariaPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {formData.estado === "ELIMINADO" && eliminacion && (
+            <div className="mb-4 p-3 rounded-md border border-red-200 bg-red-50 text-red-800">
+              <p className="font-semibold flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                Turno Eliminado
+              </p>
+              {eliminacion.motivoEliminacion && (
+                <p className="text-sm mt-1"><strong>Causa de eliminación:</strong> {eliminacion.motivoEliminacion}</p>
+              )}
+              {eliminacion.eliminadoAt && (
+                <p className="text-sm mt-0.5"><strong>Fecha de eliminación:</strong> {format(new Date(eliminacion.eliminadoAt), "dd/MM/yyyy HH:mm")}</p>
+              )}
+              {eliminacion.eliminadoPor?.nombre && (
+                <p className="text-sm mt-0.5"><strong>Eliminado por:</strong> {eliminacion.eliminadoPor.nombre}</p>
+              )}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
@@ -157,6 +190,7 @@ export default function EditarTurnoSecretariaPage() {
                   <option value="CONFIRMADO">Confirmado</option>
                   <option value="CANCELADO">Cancelado</option>
                   <option value="COMPLETADO">Completado</option>
+                  <option value="ELIMINADO">Eliminado (no disponible)</option>
                 </select>
               </div>
 

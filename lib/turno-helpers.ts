@@ -30,6 +30,9 @@ export interface TurnoWithRelations {
   codigoTurno: string
   clinicId?: string | null
   consultorioProfesionalId?: string | null
+  motivoEliminacion?: string | null
+  eliminadoAt?: Date | null
+  eliminadoPor?: { nombre: string }
   paciente?: {
     nombre: string
     email: string
@@ -224,11 +227,20 @@ export async function getTurnos(where: {
   take?: number
 }): Promise<TurnoWithRelations[]> {
   try {
-    let query = `
-      SELECT id, pacienteId, profesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId
+    // Intentar con eliminadoPorId; si la columna no existe (DB antigua), usar consulta sin ella
+    let queryConUsuario = `
+      SELECT id, pacienteId, profesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId,
+             motivoEliminacion, eliminadoAt, eliminadoPorId
       FROM Turno
       WHERE 1=1
     `
+    let querySinUsuario = `
+      SELECT id, pacienteId, profesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId,
+             motivoEliminacion, eliminadoAt, NULL as eliminadoPorId
+      FROM Turno
+      WHERE 1=1
+    `
+    let query = queryConUsuario
     const params: any[] = []
 
     if (where.fecha) {
@@ -283,7 +295,7 @@ export async function getTurnos(where: {
       query += ` LIMIT ${where.take}`
     }
 
-    const turnos = await prisma.$queryRawUnsafe<Array<{
+    let turnos: Array<{
       id: string
       pacienteId: string
       profesionalId: string
@@ -293,17 +305,39 @@ export async function getTurnos(where: {
       motivo: string | null
       codigoTurno: string
       clinicId: string | null
-    }>>(query, ...params)
+      motivoEliminacion: string | null
+      eliminadoAt: string | bigint | number | null
+      eliminadoPorId: string | null
+    }>
+    try {
+      turnos = await prisma.$queryRawUnsafe(query, ...params)
+    } catch (err: any) {
+      if (err?.message?.includes("eliminadoPorId") || err?.message?.includes("no such column")) {
+        query = querySinUsuario + query.slice(queryConUsuario.length)
+        turnos = await prisma.$queryRawUnsafe(query, ...params)
+      } else {
+        throw err
+      }
+    }
 
     if (turnos.length === 0) {
       return []
     }
 
-    // Obtener IDs únicos
     const pacienteIds = [...new Set(turnos.map(t => t.pacienteId))]
     const profesionalIds = [...new Set(turnos.map(t => t.profesionalId))]
+    const eliminadoPorIds = [...new Set((turnos.map(t => t.eliminadoPorId).filter(Boolean) as string[]))]
 
-    // Obtener pacientes
+    let eliminadoPorMap = new Map<string, { nombre: string }>()
+    if (eliminadoPorIds.length > 0) {
+      const ph = eliminadoPorIds.map(() => '?').join(',')
+      const usuariosElim = await prisma.$queryRawUnsafe<Array<{ id: string; nombre: string }>>(
+        `SELECT id, nombre FROM User WHERE id IN (${ph})`,
+        ...eliminadoPorIds
+      )
+      eliminadoPorMap = new Map(usuariosElim.map(u => [u.id, { nombre: u.nombre }]))
+    }
+
     let pacientes: Array<{ id: string; nombre: string; email: string }> = []
     if (pacienteIds.length > 0) {
       const placeholders = pacienteIds.map(() => '?').join(',')
@@ -317,7 +351,6 @@ export async function getTurnos(where: {
       )
     }
 
-    // Obtener profesionales con usuarios
     let profesionales: Array<{ id: string; userId: string; especialidad: string }> = []
     if (profesionalIds.length > 0) {
       const placeholders = profesionalIds.map(() => '?').join(',')
@@ -344,18 +377,18 @@ export async function getTurnos(where: {
       )
     }
 
-    // Construir mapas para acceso rápido
     const pacientesMap = new Map(pacientes.map(p => [p.id, p]))
     const profesionalesMap = new Map(profesionales.map(p => [p.id, p]))
     const usuariosMap = new Map(usuarios.map(u => [u.id, u]))
 
-    // Combinar datos
     return turnos.map(turno => ({
       ...turno,
       fecha: safeDate(turno.fecha) || new Date(),
       clinicId: turno.clinicId || null,
+      motivoEliminacion: turno.motivoEliminacion || null,
+      eliminadoAt: turno.eliminadoAt ? safeDate(turno.eliminadoAt) : null,
+      eliminadoPor: turno.eliminadoPorId ? eliminadoPorMap.get(turno.eliminadoPorId) : undefined,
       paciente: pacientesMap.get(turno.pacienteId),
-      clinicId: turno.clinicId || null,
       profesional: {
         id: turno.profesionalId,
         especialidad: profesionalesMap.get(turno.profesionalId)?.especialidad,
@@ -380,9 +413,10 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
   canceladoAt?: Date | null
   motivoEliminacion?: string | null
   eliminadoAt?: Date | null
+  eliminadoPor?: { nombre: string }
 }) | null> {
   try {
-    const turnos = await prisma.$queryRawUnsafe<Array<{
+    type TurnoRow = {
       id: string
       pacienteId: string
       profesionalId: string
@@ -399,12 +433,28 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
       canceladoAt: string | bigint | number | null
       motivoEliminacion: string | null
       eliminadoAt: string | bigint | number | null
-    }>>(
-      `SELECT id, pacienteId, profesionalId, consultorioProfesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId,
-       obraSocial, arancel, motivoCancelacion, canceladoAt, motivoEliminacion, eliminadoAt
-       FROM Turno WHERE id = ? LIMIT 1`,
-      id
-    )
+      eliminadoPorId: string | null
+    }
+    let turnos: TurnoRow[]
+    try {
+      turnos = await prisma.$queryRawUnsafe<TurnoRow[]>(
+        `SELECT id, pacienteId, profesionalId, consultorioProfesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId,
+         obraSocial, arancel, motivoCancelacion, canceladoAt, motivoEliminacion, eliminadoAt, eliminadoPorId
+         FROM Turno WHERE id = ? LIMIT 1`,
+        id
+      )
+    } catch (err: any) {
+      if (err?.message?.includes("eliminadoPorId") || err?.message?.includes("no such column")) {
+        turnos = await prisma.$queryRawUnsafe<TurnoRow[]>(
+          `SELECT id, pacienteId, profesionalId, consultorioProfesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId,
+           obraSocial, arancel, motivoCancelacion, canceladoAt, motivoEliminacion, eliminadoAt, NULL as eliminadoPorId
+           FROM Turno WHERE id = ? LIMIT 1`,
+          id
+        )
+      } else {
+        throw err
+      }
+    }
 
     if (turnos.length === 0) {
       return null
@@ -412,16 +462,35 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
 
     const turno = turnos[0]
 
-    // Obtener paciente
-    const pacientes = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      email: string
-    }>>(
-      `SELECT id, nombre, email FROM User WHERE id = ? LIMIT 1`,
-      turno.pacienteId
-    )
+    const [pacientes, profesionalesRaw, eliminadoPorUser] = await Promise.all([
+      prisma.$queryRawUnsafe<Array<{ id: string; nombre: string; email: string }>>(
+        `SELECT id, nombre, email FROM User WHERE id = ? LIMIT 1`,
+        turno.pacienteId
+      ),
+      prisma.$queryRawUnsafe<Array<{ id: string; userId: string; especialidad: string }>>(
+        `SELECT id, userId, especialidad FROM Profesional WHERE id = ? LIMIT 1`,
+        turno.profesionalId
+      ),
+      turno.eliminadoPorId
+        ? prisma.$queryRawUnsafe<Array<{ id: string; nombre: string }>>(
+            `SELECT id, nombre FROM User WHERE id = ? LIMIT 1`,
+            turno.eliminadoPorId
+          )
+        : Promise.resolve([]),
+    ])
 
+    let profesional: TurnoWithRelations["profesional"] = undefined
+    if (profesionalesRaw.length > 0) {
+      const us = await prisma.$queryRawUnsafe<Array<{ id: string; nombre: string }>>(
+        `SELECT id, nombre FROM User WHERE id = ? LIMIT 1`,
+        profesionalesRaw[0].userId
+      )
+      profesional = {
+        id: profesionalesRaw[0].id,
+        especialidad: profesionalesRaw[0].especialidad,
+        user: us.length > 0 ? us[0] : undefined,
+      }
+    }
 
     return {
       id: turno.id,
@@ -442,6 +511,7 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
       canceladoAt: safeDate(turno.canceladoAt),
       motivoEliminacion: turno.motivoEliminacion,
       eliminadoAt: safeDate(turno.eliminadoAt),
+      eliminadoPor: eliminadoPorUser.length > 0 ? { nombre: eliminadoPorUser[0].nombre } : undefined,
     }
   } catch (error) {
     console.error("Error obteniendo turno por ID:", error)

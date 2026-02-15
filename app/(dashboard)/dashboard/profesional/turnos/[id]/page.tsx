@@ -165,20 +165,20 @@ export default async function DetalleTurnoProfesionalPage({
                   <User className="h-5 w-5 text-gray-500" />
                   <h3 className="font-semibold">Paciente</h3>
                 </div>
-                <p className="text-gray-700">{turno.paciente.nombre}</p>
-                {turno.paciente.email && (
+                <p className="text-gray-700">{turno.paciente?.nombre ?? "—"}</p>
+                {turno.paciente?.email && (
                   <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
                     <Mail className="h-3 w-3" />
                     {turno.paciente.email}
                   </p>
                 )}
-                {turno.paciente.telefono && (
+                {turno.paciente?.telefono && (
                   <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
                     <Phone className="h-3 w-3" />
                     {turno.paciente.telefono}
                   </p>
                 )}
-                {turno.paciente.dni && (
+                {turno.paciente?.dni && (
                   <p className="text-sm text-gray-500 mt-1">
                     DNI: {turno.paciente.dni}
                   </p>
@@ -274,7 +274,7 @@ export default async function DetalleTurnoProfesionalPage({
             {turno.estado === "CONFIRMADO" && (
               <CompletarTurnoButton
                 turnoId={turno.id}
-                pacienteNombre={turno.paciente.nombre}
+                pacienteNombre={turno.paciente?.nombre ?? ""}
               />
             )}
             {turno.estado !== "CANCELADO" &&

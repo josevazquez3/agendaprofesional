@@ -186,7 +186,7 @@ export function HourSelectorPopup({
                 ) : (
                   <p>
                     No hay franjas libres en esta fecha.
-                    {infoHorarios && infoHorarios.totalHorariosConfigurados > 0 && " Todos los horarios están ocupados o bloqueados."}
+                    {infoHorarios && (infoHorarios.totalHorariosConfigurados ?? 0) > 0 && " Todos los horarios están ocupados o bloqueados."}
                   </p>
                 )}
               </div>

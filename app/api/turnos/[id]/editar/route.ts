@@ -52,13 +52,11 @@ export async function PUT(
         profesional.length === 0 ||
         turno.profesionalId !== profesional[0].id
       ) {
-        // Si el profesional no es el dueño del turno, solo SECRETARIA y ADMIN pueden editarlo
-        if (session.user.role !== "SECRETARIA" && session.user.role !== "ADMIN") {
-          return NextResponse.json(
-            { error: "No tiene permisos para editar este turno" },
-            { status: 403 }
-          )
-        }
+        // Si el profesional no es el dueño del turno, no puede editarlo (SECRETARIA/ADMIN no entran en este bloque)
+        return NextResponse.json(
+          { error: "No tiene permisos para editar este turno" },
+          { status: 403 }
+        )
       }
     }
 

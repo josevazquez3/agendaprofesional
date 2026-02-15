@@ -76,7 +76,7 @@ export class ResendProvider extends BaseEmailProvider {
         text: options.text,
         cc: options.cc ? (Array.isArray(options.cc) ? options.cc : [options.cc]) : undefined,
         bcc: options.bcc ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc]) : undefined,
-        replyTo: options.replyTo,
+        reply_to: options.replyTo,
       })
 
       if (error) {

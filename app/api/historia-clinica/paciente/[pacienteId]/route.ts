@@ -42,7 +42,17 @@ export async function GET(
       )
     }
 
-    // Los profesionales pueden ver todas las historias clínicas del paciente
+    // Asegurar columnas de eliminación lógica (por si no se ejecutó db push)
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE HistoriaClinica ADD COLUMN eliminadoAt DATETIME`)
+    } catch { /* ya existe */ }
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE HistoriaClinica ADD COLUMN motivoEliminacion TEXT`)
+    } catch { /* ya existe */ }
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE HistoriaClinica ADD COLUMN eliminadoPorId TEXT`)
+    } catch { /* ya existe */ }
+
     const historiaClinica = await prisma.historiaClinica.findMany({
       where: {
         pacienteId: params.pacienteId,
@@ -83,7 +93,22 @@ export async function GET(
       },
     })
 
-    return NextResponse.json(historiaClinica)
+    // Enriquecer con nombre de quien eliminó (por si la relación no está en el cliente)
+    const eliminadoPorIds = [...new Set((historiaClinica as any[]).map((h: any) => h.eliminadoPorId).filter(Boolean))]
+    let eliminadoPorMap: Record<string, { nombre: string }> = {}
+    if (eliminadoPorIds.length > 0) {
+      const users = await prisma.user.findMany({
+        where: { id: { in: eliminadoPorIds } },
+        select: { id: true, nombre: true },
+      })
+      eliminadoPorMap = Object.fromEntries(users.map((u) => [u.id, { nombre: u.nombre }]))
+    }
+    const result = (historiaClinica as any[]).map((h) => ({
+      ...h,
+      eliminadoPor: h.eliminadoPorId ? eliminadoPorMap[h.eliminadoPorId] : null,
+    }))
+
+    return NextResponse.json(result)
   } catch (error: any) {
     // Log error para debugging (solo en desarrollo)
     if (process.env.NODE_ENV === "development") {
@@ -118,15 +143,36 @@ export async function DELETE(
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    // Eliminar todas las historias clínicas del paciente
-    await prisma.historiaClinica.deleteMany({
-      where: {
-        pacienteId: params.pacienteId,
+    let causa = ""
+    try {
+      const body = await request.json()
+      causa = (body?.causa ?? "").trim()
+    } catch {
+      // body opcional
+    }
+    if (!causa) {
+      return NextResponse.json(
+        { error: "La causa de eliminación es obligatoria." },
+        { status: 400 }
+      )
+    }
+
+    const ahora = new Date()
+    const userId = session.user.id
+
+    // Eliminación lógica con el cliente Prisma para garantizar que impacte en la BD
+    const result = await prisma.historiaClinica.updateMany({
+      where: { pacienteId: params.pacienteId },
+      data: {
+        eliminadoAt: ahora,
+        motivoEliminacion: causa,
+        eliminadoPorId: userId,
       },
     })
 
     return NextResponse.json({
-      message: "Historia clínica eliminada exitosamente",
+      message: "Historia clínica del paciente marcada como eliminada (eliminación lógica).",
+      actualizados: result.count,
     })
   } catch (error: any) {
     // Log error para debugging (solo en desarrollo)

@@ -336,7 +336,7 @@ export function ConfiguracionForm() {
           emailSmtpPassword: config.emailSmtpPassword,
           emailSmtpSecure: config.emailSmtpSecure,
         }}
-        onConfigChange={updateConfig}
+        onConfigChange={(field, value) => updateConfig(field as keyof ConfiguracionSistema, value)}
       />
 
       {/* Configuración SMTP Avanzada (para otros proveedores) */}

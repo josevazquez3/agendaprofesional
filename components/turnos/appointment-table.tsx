@@ -1,28 +1,34 @@
 "use client"
 
+import React, { useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { format } from "date-fns"
 import { AppointmentStatusBadge } from "./appointment-status-badge"
 import { Button } from "@/components/ui/button"
-import { Edit, Calendar, X, Stethoscope } from "lucide-react"
+import { Edit, Calendar, X, Stethoscope, AlertTriangle, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { staggerContainer, staggerItem } from "@/lib/animations"
+import { EliminarTurnosModal } from "./EliminarTurnosModal"
 
 interface Turno {
   id: string
   fecha: Date
   hora: string
   estado: string
-  paciente: {
+  motivoEliminacion?: string | null
+  eliminadoAt?: Date | string | null
+  eliminadoPor?: { nombre: string }
+  paciente?: {
     nombre: string
     email?: string
   }
   profesional?: {
-    user: {
+    user?: {
       nombre: string
     }
-    especialidad: string
+    especialidad?: string
   } | null
 }
 
@@ -31,6 +37,8 @@ interface AppointmentTableProps {
   basePath: string
   showQuickConsultation?: boolean
   onQuickConsultation?: (turnoId: string, pacienteNombre: string) => void
+  /** Mostrar botón Eliminar (lógico) con causa; para admin/secretaria */
+  showEliminar?: boolean
 }
 
 export function AppointmentTable({
@@ -38,7 +46,32 @@ export function AppointmentTable({
   basePath,
   showQuickConsultation = false,
   onQuickConsultation,
+  showEliminar = false,
 }: AppointmentTableProps) {
+  const router = useRouter()
+  const [eliminarModal, setEliminarModal] = useState<{ turnoId: string } | null>(null)
+  const [eliminando, setEliminando] = useState(false)
+
+  const handleEliminarConfirm = async (causa: string) => {
+    if (!eliminarModal) return
+    setEliminando(true)
+    try {
+      const res = await fetch("/api/turnos/eliminar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ turnoIds: [eliminarModal.turnoId], causa }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error al eliminar")
+      setEliminarModal(null)
+      router.refresh()
+    } catch (e: any) {
+      alert(e.message || "Error al eliminar turno")
+    } finally {
+      setEliminando(false)
+    }
+  }
+
   if (turnos.length === 0) {
     return (
       <div className="text-center py-16">
@@ -79,8 +112,8 @@ export function AppointmentTable({
         </thead>
         <tbody className="divide-y divide-[#E2E8F0]">
           {turnos.map((turno) => (
+            <React.Fragment key={turno.id}>
             <motion.tr
-              key={turno.id}
               variants={staggerItem}
               className="hover:bg-slate-50 transition-colors duration-150 ease-out"
             >
@@ -95,18 +128,18 @@ export function AppointmentTable({
               <td className="py-5 px-6">
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-[#0F172A]">
-                    {turno.paciente.nombre}
+                    {turno.paciente?.nombre ?? "—"}
                   </span>
-                  {turno.paciente.email && (
+                  {turno.paciente?.email && (
                     <span className="text-xs text-[#64748B] mt-0.5">
-                      {turno.paciente.email}
+                      {turno.paciente?.email}
                     </span>
                   )}
                 </div>
               </td>
               <td className="py-5 px-6">
                 <span className="text-sm text-[#0F172A]">
-                  {turno.profesional?.user.nombre || "Sin asignar"}
+                  {turno.profesional?.user?.nombre || "Sin asignar"}
                 </span>
               </td>
               <td className="py-5 px-6">
@@ -127,7 +160,7 @@ export function AppointmentTable({
                         variant="default"
                         size="sm"
                         onClick={() =>
-                          onQuickConsultation(turno.id, turno.paciente.nombre)
+                          onQuickConsultation(turno.id, turno.paciente?.nombre ?? "")
                         }
                         className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl font-medium transition-all duration-200 ease-out"
                       >
@@ -153,31 +186,55 @@ export function AppointmentTable({
                       <Calendar className="h-4 w-4" />
                     </Button>
                   </Link>
-                  {turno.estado !== "CANCELADO" &&
+                  {showEliminar &&
+                    turno.estado !== "CANCELADO" &&
                     turno.estado !== "ELIMINADO" && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 rounded-lg hover:bg-[#FEE2E2] hover:text-[#991B1B] transition-all duration-200 ease-out"
-                        onClick={async () => {
-                          if (
-                            confirm(
-                              "¿Está seguro de cancelar este turno?"
-                            )
-                          ) {
-                            // Implementar cancelación
-                          }
-                        }}
+                        onClick={() => setEliminarModal({ turnoId: turno.id })}
+                        title="Eliminar turno (lógico)"
                       >
-                        <X className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                 </div>
               </td>
             </motion.tr>
+            {turno.estado === "ELIMINADO" && (
+              <motion.tr key={`${turno.id}-eliminado`} variants={staggerItem} className="bg-red-50/50">
+                <td colSpan={6} className="py-2 px-6">
+                  <div className="p-3 rounded-md border border-red-200 bg-red-50 text-red-800 text-sm">
+                    <p className="font-semibold flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      Turno Eliminado
+                    </p>
+                    {turno.motivoEliminacion && (
+                      <p className="mt-1"><strong>Causa de eliminación:</strong> {turno.motivoEliminacion}</p>
+                    )}
+                    {turno.eliminadoAt && (
+                      <p className="mt-0.5"><strong>Fecha de eliminación:</strong> {format(new Date(turno.eliminadoAt), "dd/MM/yyyy HH:mm")}</p>
+                    )}
+                    {turno.eliminadoPor?.nombre && (
+                      <p className="mt-0.5"><strong>Eliminado por:</strong> {turno.eliminadoPor.nombre}</p>
+                    )}
+                  </div>
+                </td>
+              </motion.tr>
+            )}
+            </React.Fragment>
           ))}
         </tbody>
       </table>
+      {showEliminar && (
+        <EliminarTurnosModal
+          open={eliminarModal !== null}
+          onClose={() => setEliminarModal(null)}
+          onConfirm={handleEliminarConfirm}
+          cantidad={1}
+        />
+      )}
     </motion.div>
   )
 }

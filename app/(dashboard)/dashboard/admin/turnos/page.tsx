@@ -192,6 +192,7 @@ export default async function AdminTurnosPage({
                 <AppointmentTable
                   turnos={turnosFiltrados as any}
                   basePath="/dashboard/admin/turnos"
+                  showEliminar
                 />
               </div>
             </CardContent>

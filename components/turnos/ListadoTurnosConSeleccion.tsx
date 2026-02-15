@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { formatDateTime } from "@/lib/utils"
-import { Trash2 } from "lucide-react"
+import { format } from "date-fns"
+import { Trash2, AlertTriangle } from "lucide-react"
 import { EliminarTurnosModal } from "./EliminarTurnosModal"
 
 interface Turno {
@@ -13,6 +14,8 @@ interface Turno {
   hora: string
   estado: string
   motivoEliminacion?: string | null
+  eliminadoAt?: Date | string | null
+  eliminadoPor?: { nombre: string }
   paciente: {
     nombre: string
   }
@@ -173,10 +176,29 @@ export function ListadoTurnosConSeleccion({
                   Obra Social: {turno.obraSocial}
                 </p>
               )}
-              {turno.estado === "ELIMINADO" && turno.motivoEliminacion && (
-                <p className="text-sm text-red-600 mt-2">
-                  <strong>Causa de eliminación:</strong> {turno.motivoEliminacion}
-                </p>
+              {turno.estado === "ELIMINADO" && (
+                <div className="mt-3 p-3 rounded-md border border-red-200 bg-red-50 text-red-800">
+                  <p className="font-semibold flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    Turno Eliminado
+                  </p>
+                  {turno.motivoEliminacion && (
+                    <p className="text-sm mt-1">
+                      <strong>Causa de eliminación:</strong> {turno.motivoEliminacion}
+                    </p>
+                  )}
+                  {turno.eliminadoAt && (
+                    <p className="text-sm mt-0.5">
+                      <strong>Fecha de eliminación:</strong>{" "}
+                      {format(new Date(turno.eliminadoAt), "dd/MM/yyyy HH:mm")}
+                    </p>
+                  )}
+                  {turno.eliminadoPor?.nombre && (
+                    <p className="text-sm mt-0.5">
+                      <strong>Eliminado por:</strong> {turno.eliminadoPor.nombre}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex gap-2">

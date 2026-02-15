@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,7 +20,6 @@ export default function NuevoTurnoAdminPage() {
   const { timeStart, timeEnd, trackFormAbandon } = useAnalytics()
   const [profesionales, setProfesionales] = useState<any[]>([])
   const [pacientes, setPacientes] = useState<any[]>([])
-  const [horariosDisponibles, setHorariosDisponibles] = useState<any[]>([])
   const [obrasSociales, setObrasSociales] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedPaciente, setSelectedPaciente] = useState<any>(null)
@@ -35,12 +34,14 @@ export default function NuevoTurnoAdminPage() {
     consultorioProfesionalId: "",
   })
   const [fieldsCompleted, setFieldsCompleted] = useState(0)
+  const fieldsCompletedRef = useRef(0)
+  fieldsCompletedRef.current = fieldsCompleted
 
+  // Carga inicial: solo al montar o cuando cambia la sesión (no cuando cambia fieldsCompleted para evitar bucle)
   useEffect(() => {
     timeStart("create_appointment_form")
     fetchData()
-    
-    // Cargar smart defaults
+
     if (session?.user?.id) {
       const defaults = getSmartDefaultsFromStorage(session.user.id)
       if (defaults?.ultimoProfesionalId) {
@@ -52,17 +53,15 @@ export default function NuevoTurnoAdminPage() {
     }
 
     return () => {
-      // Trackear abandono si no se completó
-      if (fieldsCompleted < 3) {
-        trackFormAbandon("create_appointment", fieldsCompleted, 7)
+      if (fieldsCompletedRef.current < 3) {
+        trackFormAbandon("create_appointment", fieldsCompletedRef.current, 7)
       }
     }
-  }, [session, timeStart, trackFormAbandon, fieldsCompleted])
+  }, [session?.user?.id])
 
   useEffect(() => {
     if (formData.profesionalId && formData.fecha) {
-      fetchHorariosDisponibles()
-      // Limpiar hora cuando cambia profesional o fecha
+      // Limpiar hora cuando cambia profesional o fecha (HourSelectorPopup carga sus propios horarios)
       setFormData(prev => ({ ...prev, hora: "" }))
     }
   }, [formData.profesionalId, formData.fecha])
@@ -82,18 +81,6 @@ export default function NuevoTurnoAdminPage() {
       setObrasSociales(obrasSocialesData)
     } catch (error) {
       console.error("Error cargando datos:", error)
-    }
-  }
-
-  const fetchHorariosDisponibles = async () => {
-    try {
-      const response = await fetch(
-        `/api/horarios/disponibles?profesionalId=${formData.profesionalId}&fecha=${formData.fecha}`
-      )
-      const data = await response.json()
-      setHorariosDisponibles(data.horarios || [])
-    } catch (error) {
-      console.error("Error cargando horarios:", error)
     }
   }
 

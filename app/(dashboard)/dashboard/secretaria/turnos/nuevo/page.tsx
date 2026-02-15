@@ -14,7 +14,6 @@ export default function NuevoTurnoSecretariaPage() {
   const router = useRouter()
   const [profesionales, setProfesionales] = useState<any[]>([])
   const [pacientes, setPacientes] = useState<any[]>([])
-  const [horariosDisponibles, setHorariosDisponibles] = useState<any[]>([])
   const [obrasSociales, setObrasSociales] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -34,8 +33,7 @@ export default function NuevoTurnoSecretariaPage() {
 
   useEffect(() => {
     if (formData.profesionalId && formData.fecha) {
-      fetchHorariosDisponibles()
-      // Limpiar hora cuando cambia profesional o fecha
+      // Limpiar hora cuando cambia profesional o fecha (HourSelectorPopup carga sus propios horarios)
       setFormData(prev => ({ ...prev, hora: "" }))
     }
   }, [formData.profesionalId, formData.fecha])
@@ -55,18 +53,6 @@ export default function NuevoTurnoSecretariaPage() {
       setObrasSociales(obrasSocialesData)
     } catch (error) {
       console.error("Error cargando datos:", error)
-    }
-  }
-
-  const fetchHorariosDisponibles = async () => {
-    try {
-      const response = await fetch(
-        `/api/horarios/disponibles?profesionalId=${formData.profesionalId}&fecha=${formData.fecha}`
-      )
-      const data = await response.json()
-      setHorariosDisponibles(data.horarios || [])
-    } catch (error) {
-      console.error("Error cargando horarios:", error)
     }
   }
 

@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Plus, X, FileText } from "lucide-react"
+import { ArrowLeft, Plus, X, FileText, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { EliminarTurnosModal } from "@/components/turnos/EliminarTurnosModal"
 
 interface HistoriaClinicaRegistro {
   id: string
@@ -18,6 +19,9 @@ interface HistoriaClinicaRegistro {
   notas: string | null
   diagnostico: string | null
   tratamiento: string | null
+  eliminadoAt?: string | null
+  motivoEliminacion?: string | null
+  eliminadoPor?: { nombre: string }
   profesional: {
     user: {
       nombre: string
@@ -72,6 +76,7 @@ export default function EditarHistoriaClinicaPage() {
     tipoArchivo: "TEXTO",
   })
   const [estudios, setEstudios] = useState<Estudio[]>([])
+  const [eliminarModalRegistroId, setEliminarModalRegistroId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -184,21 +189,23 @@ export default function EditarHistoriaClinicaPage() {
     setEstudios(estudios.filter((_, i) => i !== index))
   }
 
-  const eliminarRegistro = async (registroId: string) => {
-    if (!confirm("¿Está seguro de eliminar este registro?")) {
-      return
-    }
+  const eliminarRegistro = async (causa: string) => {
+    if (!eliminarModalRegistroId) return
+    const registroId = eliminarModalRegistroId
+    setEliminarModalRegistroId(null)
 
     try {
       const response = await fetch(`/api/historia-clinica/${registroId}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ causa }),
       })
 
+      const data = await response.json()
       if (!response.ok) {
-        throw new Error("Error al eliminar registro")
+        throw new Error(data.error || "Error al eliminar registro")
       }
 
-      alert("Registro eliminado exitosamente")
       await fetchData()
     } catch (error: any) {
       alert(error.message || "Error al eliminar registro")
@@ -299,6 +306,24 @@ export default function EditarHistoriaClinicaPage() {
                         </div>
                       )}
                     </div>
+                    {registro.eliminadoAt && (
+                      <div className="mt-3 p-3 rounded-md border border-red-200 bg-red-50 text-red-800 text-sm">
+                        <p className="font-semibold flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                          Registro eliminado (lógico)
+                        </p>
+                        {registro.motivoEliminacion && (
+                          <p className="mt-1"><strong>Causa:</strong> {registro.motivoEliminacion}</p>
+                        )}
+                        {registro.eliminadoAt && (
+                          <p className="mt-0.5"><strong>Fecha:</strong> {format(new Date(registro.eliminadoAt), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+                        )}
+                        {registro.eliminadoPor?.nombre && (
+                          <p className="mt-0.5"><strong>Eliminado por:</strong> {registro.eliminadoPor.nombre}</p>
+                        )}
+                      </div>
+                    )}
+                    {!registro.eliminadoAt && (
                     <div className="flex gap-2">
                       {editandoId === registro.id ? (
                         <>
@@ -328,13 +353,14 @@ export default function EditarHistoriaClinicaPage() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => eliminarRegistro(registro.id)}
+                            onClick={() => setEliminarModalRegistroId(registro.id)}
                           >
                             Eliminar
                           </Button>
                         </>
                       )}
                     </div>
+                    )}
                   </div>
 
                   {editandoId === registro.id ? (
@@ -534,6 +560,16 @@ export default function EditarHistoriaClinicaPage() {
           )}
         </CardContent>
       </Card>
+
+      <EliminarTurnosModal
+        open={eliminarModalRegistroId !== null}
+        onClose={() => setEliminarModalRegistroId(null)}
+        onConfirm={eliminarRegistro}
+        cantidad={1}
+        title="Eliminar registro"
+        description="Indique la causa de eliminación (obligatorio). El registro no se borrará de la base de datos; quedará marcado como eliminado para auditoría."
+        placeholder="Motivo por el cual se elimina este registro..."
+      />
     </div>
   )
 }

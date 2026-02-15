@@ -98,7 +98,7 @@ export async function sendSystemEmail(
 
   // Modo sync: enviar inmediatamente
   const { sendEmail: sendEmailInternal } = await import("./email.service")
-  const result = await sendEmailInternal(options, 0, "sync")
+  const result = await sendEmailInternal(options)
   return {
     success: result.success,
     error: result.error,

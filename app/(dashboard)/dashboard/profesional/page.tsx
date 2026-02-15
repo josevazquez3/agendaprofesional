@@ -67,7 +67,7 @@ export default async function ProfesionalDashboard() {
       pacientesUnicos.set(turno.pacienteId, {
         paciente: {
           id: turno.pacienteId,
-          nombre: turno.paciente.nombre,
+          nombre: turno.paciente?.nombre ?? "—",
         }
       })
     }
@@ -191,11 +191,11 @@ export default async function ProfesionalDashboard() {
                       className="flex items-center justify-between p-4 border border-[#E2E8F0] rounded-xl hover:bg-[#F8FAFC] transition-all duration-200 ease-out"
                     >
                       <div className="flex items-center space-x-4 flex-1">
-                        <PatientAvatar name={turno.paciente.nombre} size="sm" />
+                        <PatientAvatar name={turno.paciente?.nombre ?? "—"} size="sm" />
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-1">
                             <h3 className="text-sm font-semibold text-[#0F172A]">
-                              {turno.paciente.nombre}
+                              {turno.paciente?.nombre ?? "—"}
                             </h3>
                             <AppointmentStatusBadge status={turno.estado} />
                           </div>
@@ -238,9 +238,9 @@ export default async function ProfesionalDashboard() {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="flex flex-col items-center mb-4">
-                  <PatientAvatar name={proximoTurno.paciente.nombre} size="lg" className="mb-4" />
+                  <PatientAvatar name={proximoTurno.paciente?.nombre ?? "—"} size="lg" className="mb-4" />
                   <h3 className="text-lg font-semibold text-[#0F172A] font-inter text-center mb-2">
-                    {proximoTurno.paciente.nombre}
+                    {proximoTurno.paciente?.nombre ?? "—"}
                   </h3>
                   <AppointmentStatusBadge status={proximoTurno.estado} />
                 </div>

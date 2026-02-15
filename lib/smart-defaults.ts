@@ -22,7 +22,7 @@ export async function getSmartDefaults(
     const ultimoTurno = await prisma.turno.findFirst({
       where: {
         paciente: {
-          userId: userId,
+          id: userId,
         },
       },
       orderBy: {
@@ -38,16 +38,10 @@ export async function getSmartDefaults(
       },
     })
 
-    // Obtener configuración de duración típica (si existe)
-    const configuracion = await prisma.configuracion.findFirst({
-      where: {
-        userId: userId,
-      },
-    })
-
+    // Duración típica: por defecto 30 (ConfiguracionClinica es por clínica, no por usuario)
     return {
       ultimoProfesionalId: ultimoTurno?.profesionalId || null,
-      duracionTipica: configuracion?.duracionTurnoDefault || 30,
+      duracionTipica: 30,
       ultimaObraSocialId: ultimoTurno?.paciente?.obraSocialId || null,
     }
   } catch (error) {

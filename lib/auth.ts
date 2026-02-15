@@ -1,3 +1,5 @@
+import type { User } from "next-auth"
+import type { Role } from "@/types/next-auth"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
@@ -72,7 +74,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.nombre,
             role: user.role,
-          }
+          } as User
         } catch (error) {
           console.error("[AUTH] Error en authorize:", error)
           return null
@@ -91,7 +93,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role as string
+        session.user.role = token.role as Role
         session.user.id = token.id as string
         session.user.name = token.name as string
       }
@@ -100,7 +102,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/auth/login",
-    signUp: "/auth/register",
   },
   session: {
     strategy: "jwt",

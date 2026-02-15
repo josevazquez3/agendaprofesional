@@ -181,7 +181,6 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Solo ADMIN y SECRETARIA pueden eliminar
     const authResult = await requireAuthWithRolesAndClinic([
       "ADMIN",
       "SECRETARIA",
@@ -193,7 +192,20 @@ export async function DELETE(
 
     const session = authResult.session
 
-    // Verificar que el registro existe y pertenece a la clínica activa
+    let causa = ""
+    try {
+      const body = await request.json()
+      causa = (body?.causa ?? "").trim()
+    } catch {
+      // body opcional en DELETE
+    }
+    if (!causa) {
+      return NextResponse.json(
+        { error: "La causa de eliminación es obligatoria." },
+        { status: 400 }
+      )
+    }
+
     const historiaExistente = await prisma.historiaClinica.findUnique({
       where: { id: params.id },
       select: { clinicId: true },
@@ -209,12 +221,39 @@ export async function DELETE(
       })
     }
 
-    await prisma.historiaClinica.delete({
-      where: { id: params.id },
-    })
+    try {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE HistoriaClinica ADD COLUMN eliminadoAt DATETIME`
+      )
+    } catch {
+      // Columna ya existe
+    }
+    try {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE HistoriaClinica ADD COLUMN motivoEliminacion TEXT`
+      )
+    } catch {
+      // Columna ya existe
+    }
+    try {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE HistoriaClinica ADD COLUMN eliminadoPorId TEXT`
+      )
+    } catch {
+      // Columna ya existe
+    }
+
+    const ahora = new Date().toISOString()
+    await prisma.$executeRawUnsafe(
+      `UPDATE HistoriaClinica SET eliminadoAt = ?, motivoEliminacion = ?, eliminadoPorId = ? WHERE id = ?`,
+      ahora,
+      causa,
+      session.user.id,
+      params.id
+    )
 
     return NextResponse.json({
-      message: "Registro eliminado exitosamente",
+      message: "Registro marcado como eliminado (eliminación lógica).",
     })
   } catch (error: any) {
     // Log error para debugging (solo en desarrollo)

@@ -215,16 +215,14 @@ export async function getUsers(where: {
       dni: user.dni,
       email: user.email,
       telefono: user.telefono,
-      fechaNacimiento: user.fechaNacimiento
-        ? new Date(user.fechaNacimiento)
-        : null,
+      fechaNacimiento: safeDate(user.fechaNacimiento as string | number | bigint | null),
       direccion: user.direccion,
       fotoPerfil: user.fotoPerfil,
       obraSocial: user.obraSocial,
       obraSocialId: user.obraSocialId,
       role: user.role,
-      createdAt: new Date(user.createdAt),
-      updatedAt: new Date(user.updatedAt),
+      createdAt: safeDate(user.createdAt as string | number | bigint) ?? new Date(0),
+      updatedAt: safeDate(user.updatedAt as string | number | bigint) ?? new Date(0),
       obraSocialRel: user.obraSocialId
         ? obraSocialMap.get(user.obraSocialId) || null
         : null,

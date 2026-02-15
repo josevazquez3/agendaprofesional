@@ -198,7 +198,7 @@ class EmailService {
 
       // Si fue exitoso, retornar
       if (result.success) {
-        this.logEmailSent(result.provider || "unknown", options.to, true)
+        this.logEmailSent(result.provider ?? "resend", options.to, true)
         return result
       }
 

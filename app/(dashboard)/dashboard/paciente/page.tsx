@@ -95,7 +95,7 @@ export default async function PacienteDashboard() {
                 >
                   <div>
                     <p className="font-semibold">
-                      {turno.profesional.user.nombre} - {turno.profesional.especialidad}
+                      {turno.profesional?.user?.nombre ?? "—"} - {turno.profesional?.especialidad ?? "—"}
                     </p>
                     <p className="text-sm text-gray-600">
                       {new Date(turno.fecha).toLocaleDateString("es-AR", {

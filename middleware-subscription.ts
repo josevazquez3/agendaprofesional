@@ -1,4 +1,4 @@
-Tdf/**
+/**
  * Subscription Middleware
  * Valida que la clínica tenga suscripción activa antes de permitir acciones
  * 
