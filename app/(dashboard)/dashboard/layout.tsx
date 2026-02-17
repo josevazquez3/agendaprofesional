@@ -12,10 +12,25 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const session = await getServerSession(authOptions)
-
-  if (!session) {
+  let session
+  try {
+    session = await getServerSession(authOptions)
+  } catch (err) {
+    console.error("[Dashboard layout] getServerSession error:", err)
     redirect("/auth/login")
+  }
+
+  if (!session?.user) {
+    redirect("/auth/login")
+  }
+
+  const user = session.user
+  const safeUser = {
+    ...user,
+    role: user.role ?? "PACIENTE",
+    id: user.id ?? "",
+    name: user.name ?? "",
+    email: user.email ?? "",
   }
 
   return (
@@ -23,7 +38,7 @@ export default async function DashboardLayout({
       <ShortcutProvider>
         <OnboardingProvider>
           <PrefetchProvider>
-            <DashboardLayoutComponent user={session.user}>
+            <DashboardLayoutComponent user={safeUser}>
               {children}
             </DashboardLayoutComponent>
           </PrefetchProvider>

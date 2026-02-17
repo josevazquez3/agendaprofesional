@@ -20,9 +20,15 @@ import Link from "next/link"
 import { format } from "date-fns"
 
 export default async function AdminDashboard() {
-  const session = await getServerSession(authOptions)
+  let session
+  try {
+    session = await getServerSession(authOptions)
+  } catch (err) {
+    console.error("[Admin dashboard] getServerSession error:", err)
+    redirect("/auth/login")
+  }
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session?.user || session.user.role !== "ADMIN") {
     redirect("/auth/login")
   }
 
@@ -58,7 +64,7 @@ export default async function AdminDashboard() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        subtitle={`Bienvenido, ${session.user.name}`}
+        subtitle={`Bienvenido, ${session.user.name ?? ""}`}
       />
 
       {/* Métricas superiores */}

@@ -3,13 +3,19 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions)
-
-  if (!session) {
+  let session
+  try {
+    session = await getServerSession(authOptions)
+  } catch (err) {
+    console.error("[Dashboard page] getServerSession error:", err)
     redirect("/auth/login")
   }
 
-  const role = session.user.role
+  if (!session?.user) {
+    redirect("/auth/login")
+  }
+
+  const role = session.user.role ?? "PACIENTE"
 
   // Redirigir según el rol - usar redirect() de Next.js que maneja correctamente los redirects del servidor
   if (role === "ADMIN") {
