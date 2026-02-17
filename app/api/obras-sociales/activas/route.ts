@@ -1,23 +1,17 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getObrasSociales } from "@/lib/obra-social-helpers"
 
 // GET - Listar solo las obras sociales activas (público para formularios)
 export async function GET() {
   try {
-    const obrasSocialesRaw = await getObrasSociales({
-      activa: true,
+    const obrasSociales = await prisma.obraSocial.findMany({
+      where: { activa: true },
       orderBy: { nombre: "asc" },
+      select: { id: true, nombre: true, codigo: true },
     })
 
-    const obrasSociales = obrasSocialesRaw.map((os) => ({
-      id: os.id,
-      nombre: os.nombre,
-      codigo: os.codigo,
-    }))
-
     return NextResponse.json(obrasSociales)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error obteniendo obras sociales activas:", error)
     return NextResponse.json(
       { error: "Error al obtener obras sociales" },

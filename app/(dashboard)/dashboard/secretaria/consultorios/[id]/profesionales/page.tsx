@@ -32,7 +32,7 @@ export default function ConsultorioProfesionalesPage() {
       // Obtener todos los profesionales
       const profesionalesRes = await fetch("/api/profesionales")
       const profesionalesData = await profesionalesRes.json()
-      setProfesionales(profesionalesData)
+      setProfesionales(Array.isArray(profesionalesData) ? profesionalesData : [])
     } catch (error) {
       console.error("Error cargando datos:", error)
     }

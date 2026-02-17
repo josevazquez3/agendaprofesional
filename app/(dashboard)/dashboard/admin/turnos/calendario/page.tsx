@@ -52,7 +52,7 @@ export default function CalendarioTurnosAdminPage() {
     try {
       const response = await fetch("/api/profesionales")
       const data = await response.json()
-      setProfesionales(data)
+      setProfesionales(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Error cargando profesionales:", error)
     }
@@ -62,7 +62,7 @@ export default function CalendarioTurnosAdminPage() {
     try {
       const response = await fetch("/api/pacientes")
       const data = await response.json()
-      setPacientes(data)
+      setPacientes(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Error cargando pacientes:", error)
     }

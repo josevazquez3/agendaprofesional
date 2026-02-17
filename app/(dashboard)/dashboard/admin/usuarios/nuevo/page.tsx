@@ -39,7 +39,7 @@ export default function NuevoUsuarioPage() {
       const response = await fetch("/api/obras-sociales/activas")
       if (response.ok) {
         const data = await response.json()
-        setObrasSociales(data)
+        setObrasSociales(Array.isArray(data) ? data : [])
       }
     } catch (error) {
       console.error("Error cargando obras sociales:", error)

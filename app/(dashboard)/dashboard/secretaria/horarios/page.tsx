@@ -48,7 +48,7 @@ export default function SecretariaHorariosPage() {
     try {
       const response = await fetch("/api/profesionales")
       const data = await response.json()
-      setProfesionales(data)
+      setProfesionales(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Error cargando profesionales:", error)
     }

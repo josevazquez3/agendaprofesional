@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { prisma } from "@/lib/prisma"
 
 export default function NuevoTurnoPage() {
   const router = useRouter()
@@ -43,8 +42,8 @@ export default function NuevoTurnoPage() {
       ])
       const profesionalesData = await profesionalesRes.json()
       const obrasSocialesData = await obrasSocialesRes.json()
-      setProfesionales(profesionalesData)
-      setObrasSociales(obrasSocialesData)
+      setProfesionales(Array.isArray(profesionalesData) ? profesionalesData : [])
+      setObrasSociales(Array.isArray(obrasSocialesData) ? obrasSocialesData : [])
     } catch (error) {
       console.error("Error cargando datos:", error)
     }

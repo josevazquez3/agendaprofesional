@@ -76,9 +76,9 @@ export default function NuevoTurnoAdminPage() {
       const profesionalesData = await profesionalesRes.json()
       const pacientesData = await pacientesRes.json()
       const obrasSocialesData = await obrasSocialesRes.json()
-      setProfesionales(profesionalesData)
-      setPacientes(pacientesData)
-      setObrasSociales(obrasSocialesData)
+      setProfesionales(Array.isArray(profesionalesData) ? profesionalesData : [])
+      setPacientes(Array.isArray(pacientesData) ? pacientesData : [])
+      setObrasSociales(Array.isArray(obrasSocialesData) ? obrasSocialesData : [])
     } catch (error) {
       console.error("Error cargando datos:", error)
     }
