@@ -2,11 +2,11 @@
   "crons": [
     {
       "path": "/api/internal/cron/calculate-metrics",
-      "schedule": "0 0 * * *"
+      "schedule": "0 2 * * *"
     },
     {
       "path": "/api/internal/cron/run-backups",
-      "schedule": "0 * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }
