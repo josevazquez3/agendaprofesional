@@ -136,6 +136,18 @@ agendaprofesional/
 └── types/                 # Tipos TypeScript
 ```
 
+## ☁️ Despliegue en Vercel
+
+Para que el login funcione en producción, configura estas variables en **Vercel → Project → Settings → Environment Variables**:
+
+| Variable | Descripción |
+|----------|-------------|
+| `NEXTAUTH_SECRET` | Clave secreta para firmar la sesión (ej: `openssl rand -base64 32`). **Obligatoria**; sin ella `/api/auth/session` devuelve 500. |
+| `NEXTAUTH_URL` | URL pública de la app (ej: `https://tu-proyecto.vercel.app`). |
+| `DATABASE_URL` | URL de conexión a PostgreSQL (Neon, Vercel Postgres, etc.). |
+
+Si ves error **500** en `/api/auth/session` o **CLIENT_FETCH_ERROR** de NextAuth, revisa que `NEXTAUTH_SECRET` esté definida en Vercel y que no tenga espacios al inicio/final.
+
 ## 🔒 Seguridad
 
 - Autenticación con NextAuth.js
