@@ -20,7 +20,6 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          // Usar SQL raw para evitar problemas con schema desincronizado
           const users = await prisma.$queryRaw<Array<{
             id: string
             email: string
@@ -29,7 +28,7 @@ export const authOptions: NextAuthOptions = {
             role: string
           }>>`
             SELECT id, email, password, nombre, role 
-            FROM User 
+            FROM "User" 
             WHERE email = ${credentials.email}
             LIMIT 1
           `
@@ -49,15 +48,13 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          // Registrar auditoría de login (completamente opcional, no bloquea)
           try {
-            // Intentar obtener clínica asociada para auditoría
             const clinicUsers = await prisma.$queryRaw<Array<{
               clinicId: string
             }>>`
-              SELECT clinicId 
-              FROM ClinicUser 
-              WHERE userId = ${user.id} AND activo = 1
+              SELECT "clinicId" 
+              FROM "ClinicUser" 
+              WHERE "userId" = ${user.id} AND activo = true
               LIMIT 1
             `
             
@@ -66,7 +63,6 @@ export const authOptions: NextAuthOptions = {
             }
           } catch (auditError) {
             // Ignorar completamente errores de auditoría
-            // El login debe continuar sin importar si la auditoría falla
           }
 
           return {
