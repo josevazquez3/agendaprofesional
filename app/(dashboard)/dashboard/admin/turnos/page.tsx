@@ -4,13 +4,14 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getTurnos } from "@/lib/turno-helpers"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { AppointmentFilters } from "@/components/turnos/appointment-filters"
 import { AppointmentTable } from "@/components/turnos/appointment-table"
 import { DaySummaryPanel } from "@/components/turnos/day-summary-panel"
 import { ExportarTurnosButtons } from "@/components/turnos/ExportarTurnosButtons"
+
+const sinEliminados = { eliminadoAt: null }
 
 export default async function AdminTurnosPage({
   searchParams,
@@ -29,7 +30,6 @@ export default async function AdminTurnosPage({
     redirect("/auth/login")
   }
 
-  // Construir filtros para getTurnos
   const fechaFilter = searchParams.fecha
     ? (() => {
         const fecha = new Date(searchParams.fecha)
@@ -41,112 +41,96 @@ export default async function AdminTurnosPage({
       })()
     : undefined
 
-  // Obtener turnos usando helper
-  const turnos = await getTurnos({
-    profesionalId: searchParams.profesionalId,
-    estado: searchParams.estado,
-    fecha: fechaFilter,
+  const where: Parameters<typeof prisma.turno.findMany>[0]["where"] = { ...sinEliminados }
+  if (searchParams.profesionalId) where.profesionalId = searchParams.profesionalId
+  if (searchParams.estado) where.estado = searchParams.estado
+  if (fechaFilter) where.fecha = fechaFilter
+
+  const turnos = await prisma.turno.findMany({
+    where,
     orderBy: { fecha: "asc" },
     take: 100,
+    include: {
+      paciente: { select: { id: true, nombre: true, email: true } },
+      profesional: {
+        select: {
+          id: true,
+          especialidad: true,
+          user: { select: { id: true, nombre: true, email: true } },
+        },
+      },
+    },
   })
 
-  // Filtrar por búsqueda de paciente si existe (post-procesamiento)
-  let turnosFiltrados = turnos
+  let turnosFiltrados = turnos.map((t) => ({
+    id: t.id,
+    pacienteId: t.pacienteId,
+    profesionalId: t.profesionalId,
+    fecha: t.fecha,
+    hora: t.hora,
+    estado: t.estado,
+    motivo: t.motivo,
+    codigoTurno: t.codigoTurno,
+    paciente: t.paciente ? { nombre: t.paciente.nombre, email: t.paciente.email } : undefined,
+    profesional: t.profesional
+      ? {
+          id: t.profesional.id,
+          especialidad: t.profesional.especialidad,
+          user: t.profesional.user
+            ? { nombre: t.profesional.user.nombre, email: t.profesional.user.email }
+            : undefined,
+        }
+      : undefined,
+  }))
+
   if (searchParams.search) {
     const searchLower = searchParams.search.toLowerCase()
-    turnosFiltrados = turnos.filter(
+    turnosFiltrados = turnosFiltrados.filter(
       (t) =>
         t.paciente?.nombre?.toLowerCase().includes(searchLower) ||
         t.paciente?.email?.toLowerCase().includes(searchLower)
     )
   }
 
-  // Filtrar por especialidad si existe (post-procesamiento)
-  // Necesitamos obtener las especialidades de los profesionales
   if (searchParams.especialidad) {
-    const profesionalIds = turnosFiltrados
-      .map((t) => t.profesional?.id)
-      .filter((id): id is string => id !== undefined)
-    if (profesionalIds.length > 0) {
-      const placeholders = profesionalIds.map(() => "?").join(",")
-      const profesionalesEspecialidades =
-        await prisma.$queryRawUnsafe<Array<{
-          id: string
-          especialidad: string
-        }>>(
-          `SELECT id, especialidad FROM Profesional WHERE id IN (${placeholders})`,
-          ...profesionalIds
-        )
-      const especialidadesMap = new Map(
-        profesionalesEspecialidades.map((p) => [p.id, p.especialidad])
-      )
-      turnosFiltrados = turnosFiltrados.filter((t) => {
-        const especialidad = t.profesional?.id
-          ? especialidadesMap.get(t.profesional.id)
-          : undefined
-        return especialidad === searchParams.especialidad
-      })
-    } else {
-      turnosFiltrados = []
-    }
-  }
-
-  // Obtener profesionales usando SQL raw
-  const profesionalesRaw = await prisma.$queryRawUnsafe<Array<{
-    id: string
-    userId: string
-    especialidad: string
-  }>>(`SELECT id, userId, especialidad FROM Profesional`)
-
-  // Obtener usuarios de los profesionales
-  const userIds = profesionalesRaw.map((p) => p.userId)
-  let usuarios: Array<{ id: string; nombre: string }> = []
-  if (userIds.length > 0) {
-    const placeholders = userIds.map(() => "?").join(",")
-    usuarios = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-    }>>(
-      `SELECT id, nombre FROM User WHERE id IN (${placeholders})`,
-      ...userIds
+    turnosFiltrados = turnosFiltrados.filter(
+      (t) => t.profesional?.especialidad === searchParams.especialidad
     )
   }
 
-  const usuariosMap = new Map(usuarios.map((u) => [u.id, u]))
-  const profesionales = profesionalesRaw.map((p) => ({
+  const profesionales = await prisma.profesional.findMany({
+    select: {
+      id: true,
+      especialidad: true,
+      user: { select: { nombre: true } },
+    },
+  })
+
+  const profesionalesParaFiltro = profesionales.map((p) => ({
     id: p.id,
     especialidad: p.especialidad,
-    user: usuariosMap.get(p.userId) || { nombre: "" },
+    user: { nombre: p.user?.nombre ?? "" },
   }))
 
-  // Calcular resumen del día
-  const fechaFiltro = searchParams.fecha
-    ? new Date(searchParams.fecha)
-    : new Date()
+  const fechaFiltro = searchParams.fecha ? new Date(searchParams.fecha) : new Date()
   fechaFiltro.setHours(0, 0, 0, 0)
   const finDia = new Date(fechaFiltro)
   finDia.setHours(23, 59, 59, 999)
 
-  const turnosDelDia = await getTurnos({
-    fecha: {
-      gte: fechaFiltro,
-      lte: finDia,
+  const turnosDelDia = await prisma.turno.findMany({
+    where: {
+      fecha: { gte: fechaFiltro, lte: finDia },
+      ...sinEliminados,
     },
+    select: { estado: true },
   })
 
-  const turnosConfirmados = turnosDelDia.filter(
-    (t) => t.estado === "CONFIRMADO"
-  ).length
-  const turnosPendientes = turnosDelDia.filter(
-    (t) => t.estado === "PENDIENTE"
-  ).length
-  const turnosCancelados = turnosDelDia.filter(
-    (t) => t.estado === "CANCELADO"
-  ).length
+  const turnosConfirmados = turnosDelDia.filter((t) => t.estado === "CONFIRMADO").length
+  const turnosPendientes = turnosDelDia.filter((t) => t.estado === "PENDIENTE").length
+  const turnosCancelados = turnosDelDia.filter((t) => t.estado === "CANCELADO").length
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold text-[#0F172A] font-inter">
@@ -164,12 +148,9 @@ export default async function AdminTurnosPage({
         </Link>
       </div>
 
-      {/* Barra de herramientas */}
-      <AppointmentFilters profesionales={profesionales} />
+      <AppointmentFilters profesionales={profesionalesParaFiltro} />
 
-      {/* Contenido principal: más espacio para el listado, panel resumen fijo */}
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
-        {/* Tabla de turnos */}
         <div className="min-w-0">
           <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
             <CardHeader className="border-b border-[#E2E8F0]">
@@ -198,8 +179,6 @@ export default async function AdminTurnosPage({
             </CardContent>
           </Card>
         </div>
-
-        {/* Panel lateral - Resumen del día */}
         <div className="shrink-0">
           <DaySummaryPanel
             turnosConfirmados={turnosConfirmados}

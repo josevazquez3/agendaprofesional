@@ -4,8 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getProfesionalByUserId } from "@/lib/profesional-helpers"
-import { getTurnos } from "@/lib/turno-helpers"
 import Link from "next/link"
 import { Calendar, FileText } from "lucide-react"
 import { PageHeader } from "@/components/ui/page-header"
@@ -21,16 +19,49 @@ export default async function ProfesionalTurnosPage() {
     redirect("/auth/login")
   }
 
-  const profesional = await getProfesionalByUserId(session.user.id)
+  const profesional = await prisma.profesional.findUnique({
+    where: { userId: session.user.id },
+  })
 
   if (!profesional) {
     redirect("/dashboard")
   }
 
-  const turnos = await getTurnos({
-    profesionalId: profesional.id,
+  const turnosRaw = await prisma.turno.findMany({
+    where: { profesionalId: profesional.id, eliminadoAt: null },
     orderBy: { fecha: "desc" },
+    include: {
+      paciente: { select: { id: true, nombre: true, email: true } },
+      profesional: {
+        select: {
+          id: true,
+          especialidad: true,
+          user: { select: { nombre: true, email: true } },
+        },
+      },
+    },
   })
+
+  const turnos = turnosRaw.map((t) => ({
+    id: t.id,
+    pacienteId: t.pacienteId,
+    profesionalId: t.profesionalId,
+    fecha: t.fecha,
+    hora: t.hora,
+    estado: t.estado,
+    motivo: t.motivo,
+    codigoTurno: t.codigoTurno,
+    paciente: t.paciente ? { nombre: t.paciente.nombre, email: t.paciente.email } : undefined,
+    profesional: t.profesional
+      ? {
+          id: t.profesional.id,
+          especialidad: t.profesional.especialidad,
+          user: t.profesional.user
+            ? { nombre: t.profesional.user.nombre, email: t.profesional.user.email }
+            : undefined,
+        }
+      : undefined,
+  }))
 
   // Próximo turno
   const proximoTurno = turnos.find(

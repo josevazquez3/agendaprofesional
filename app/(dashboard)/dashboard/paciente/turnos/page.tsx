@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
-import { getTurnos } from "@/lib/turno-helpers"
+import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -16,10 +16,41 @@ export default async function PacienteTurnosPage() {
     redirect("/auth/login")
   }
 
-  const turnos = await getTurnos({
-    pacienteId: session.user.id,
-    orderBy: { fecha: "desc", hora: "asc" },
+  const turnosRaw = await prisma.turno.findMany({
+    where: { pacienteId: session.user.id, eliminadoAt: null },
+    orderBy: [{ fecha: "desc" }, { hora: "asc" }],
+    include: {
+      paciente: { select: { nombre: true, email: true } },
+      profesional: {
+        select: {
+          id: true,
+          especialidad: true,
+          user: { select: { nombre: true, email: true } },
+        },
+      },
+    },
   })
+
+  const turnos = turnosRaw.map((t) => ({
+    id: t.id,
+    pacienteId: t.pacienteId,
+    profesionalId: t.profesionalId,
+    fecha: t.fecha,
+    hora: t.hora,
+    estado: t.estado,
+    motivo: t.motivo,
+    codigoTurno: t.codigoTurno,
+    paciente: t.paciente ? { nombre: t.paciente.nombre, email: t.paciente.email } : undefined,
+    profesional: t.profesional
+      ? {
+          id: t.profesional.id,
+          especialidad: t.profesional.especialidad,
+          user: t.profesional.user
+            ? { nombre: t.profesional.user.nombre, email: t.profesional.user.email }
+            : undefined,
+        }
+      : undefined,
+  }))
 
   return (
     <div className="space-y-6">

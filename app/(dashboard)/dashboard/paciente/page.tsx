@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Calendar, FileText, Clock } from "lucide-react"
 import { prisma } from "@/lib/prisma"
-import { getTurnos } from "@/lib/turno-helpers"
 
 export default async function PacienteDashboard() {
   const session = await getServerSession(authOptions)
@@ -15,13 +14,23 @@ export default async function PacienteDashboard() {
     redirect("/auth/login")
   }
 
-  // Obtener turnos próximos del paciente
-  const turnosProximos = await getTurnos({
-    pacienteId: session.user.id,
-    estado: ["PENDIENTE", "CONFIRMADO"],
-    fecha: { gte: new Date() },
+  const turnosProximos = await prisma.turno.findMany({
+    where: {
+      pacienteId: session.user.id,
+      estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+      fecha: { gte: new Date() },
+      eliminadoAt: null,
+    },
     orderBy: { fecha: "asc" },
     take: 5,
+    include: {
+      profesional: {
+        select: {
+          especialidad: true,
+          user: { select: { nombre: true } },
+        },
+      },
+    },
   })
 
   return (
@@ -95,7 +104,8 @@ export default async function PacienteDashboard() {
                 >
                   <div>
                     <p className="font-semibold">
-                      {turno.profesional?.user?.nombre ?? "—"} - {turno.profesional?.especialidad ?? "—"}
+                      {turno.profesional?.user?.nombre ?? "—"} -{" "}
+                      {turno.profesional?.especialidad ?? "—"}
                     </p>
                     <p className="text-sm text-gray-600">
                       {new Date(turno.fecha).toLocaleDateString("es-AR", {

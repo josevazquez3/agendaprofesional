@@ -4,9 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageHeader } from "@/components/ui/page-header"
 import { MetricCard } from "@/components/dashboard/metric-card"
-import { countTurnos, getTurnos } from "@/lib/turno-helpers"
-import { countUsers } from "@/lib/user-helpers"
-import { countProfesionales } from "@/lib/profesional-helpers"
 import { prisma } from "@/lib/prisma"
 import {
   Calendar,
@@ -18,8 +15,10 @@ import {
   XCircle,
   BarChart3,
 } from "lucide-react"
-import { format, subDays, startOfMonth, endOfMonth } from "date-fns"
-import { es } from "date-fns/locale"
+import { startOfMonth, endOfMonth, subDays } from "date-fns"
+
+const DIAS_NOMBRE = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+const sinEliminados = { eliminadoAt: null }
 
 export default async function AdminReportesPage() {
   const session = await getServerSession(authOptions)
@@ -33,92 +32,90 @@ export default async function AdminReportesPage() {
   const finMes = endOfMonth(hoy)
   const hace30Dias = subDays(hoy, 30)
 
-  // Estadísticas generales
-  const totalPacientes = await countUsers({ role: "PACIENTE" })
-  const totalProfesionales = await countProfesionales()
-  const turnosMes = await countTurnos({
-    fecha: { gte: inicioMes, lte: finMes },
-  })
-  const turnosCompletados = await countTurnos({
-    estado: "COMPLETADO",
-    fecha: { gte: inicioMes, lte: finMes },
-  })
-  const turnosCancelados = await countTurnos({
-    estado: "CANCELADO",
-    fecha: { gte: inicioMes, lte: finMes },
-  })
-  const turnosPendientes = await countTurnos({
-    estado: "PENDIENTE",
+  const [
+    totalPacientes,
+    totalProfesionales,
+    turnosMes,
+    turnosCompletados,
+    turnosCancelados,
+    turnosPendientes,
+    turnosUltimos30Dias,
+    turnosMesParaGrupos,
+    turnosPorEstadoRows,
+    turnosPorProfesionalRows,
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: "PACIENTE" } }),
+    prisma.profesional.count(),
+    prisma.turno.count({
+      where: { fecha: { gte: inicioMes, lte: finMes }, ...sinEliminados },
+    }),
+    prisma.turno.count({
+      where: {
+        estado: "COMPLETADO",
+        fecha: { gte: inicioMes, lte: finMes },
+        ...sinEliminados,
+      },
+    }),
+    prisma.turno.count({
+      where: {
+        estado: "CANCELADO",
+        fecha: { gte: inicioMes, lte: finMes },
+        ...sinEliminados,
+      },
+    }),
+    prisma.turno.count({
+      where: { estado: "PENDIENTE", ...sinEliminados },
+    }),
+    prisma.turno.count({
+      where: { fecha: { gte: hace30Dias, lte: hoy }, ...sinEliminados },
+    }),
+    prisma.turno.findMany({
+      where: { fecha: { gte: inicioMes, lte: finMes }, ...sinEliminados },
+      select: { fecha: true },
+    }),
+    prisma.turno.groupBy({
+      by: ["estado"],
+      where: { fecha: { gte: inicioMes, lte: finMes }, ...sinEliminados },
+      _count: { id: true },
+    }),
+    prisma.turno.groupBy({
+      by: ["profesionalId"],
+      where: { fecha: { gte: inicioMes, lte: finMes }, ...sinEliminados },
+      _count: { id: true },
+    }),
+  ])
+
+  const turnosPorDia = DIAS_NOMBRE.map((dia, i) => {
+    const cantidad = turnosMesParaGrupos.filter((t) => new Date(t.fecha).getDay() === i).length
+    return { dia, cantidad }
   })
 
-  // Estadísticas de los últimos 30 días
-  const turnosUltimos30Dias = await countTurnos({
-    fecha: { gte: hace30Dias, lte: hoy },
-  })
+  const turnosPorEstado = turnosPorEstadoRows.map((r) => ({
+    estado: r.estado,
+    cantidad: r._count.id,
+  }))
 
-  // Obtener turnos por día de la semana
-  const turnosPorDia = await prisma.$queryRawUnsafe<Array<{
-    dia: string
-    cantidad: bigint | number
-  }>>(
-    `SELECT 
-      CASE CAST(strftime('%w', fecha) AS INTEGER)
-        WHEN 0 THEN 'Domingo'
-        WHEN 1 THEN 'Lunes'
-        WHEN 2 THEN 'Martes'
-        WHEN 3 THEN 'Miércoles'
-        WHEN 4 THEN 'Jueves'
-        WHEN 5 THEN 'Viernes'
-        WHEN 6 THEN 'Sábado'
-      END as dia,
-      COUNT(*) as cantidad
-    FROM Turno
-    WHERE fecha >= ? AND fecha <= ?
-    GROUP BY CAST(strftime('%w', fecha) AS INTEGER)
-    ORDER BY CAST(strftime('%w', fecha) AS INTEGER)`,
-    inicioMes.toISOString().split('T')[0],
-    finMes.toISOString().split('T')[0]
+  const turnosPorProfesionalSorted = [...turnosPorProfesionalRows].sort(
+    (a, b) => b._count.id - a._count.id
   )
+  const profesionalIds = turnosPorProfesionalSorted.slice(0, 10).map((r) => r.profesionalId)
+  const profesionalesMap = new Map<string, string>()
+  if (profesionalIds.length > 0) {
+    const profs = await prisma.profesional.findMany({
+      where: { id: { in: profesionalIds } },
+      select: { id: true, user: { select: { nombre: true } } },
+    })
+    profs.forEach((p) => profesionalesMap.set(p.id, p.user?.nombre ?? "—"))
+  }
 
-  // Obtener turnos por profesional
-  const turnosPorProfesional = await prisma.$queryRawUnsafe<Array<{
-    profesionalId: string
-    nombre: string
-    cantidad: bigint | number
-  }>>(
-    `SELECT 
-      t.profesionalId,
-      u.nombre,
-      COUNT(*) as cantidad
-    FROM Turno t
-    INNER JOIN Profesional p ON t.profesionalId = p.id
-    INNER JOIN User u ON p.userId = u.id
-    WHERE t.fecha >= ? AND t.fecha <= ?
-    GROUP BY t.profesionalId, u.nombre
-    ORDER BY cantidad DESC
-    LIMIT 10`,
-    inicioMes.toISOString().split('T')[0],
-    finMes.toISOString().split('T')[0]
-  )
+  const turnosPorProfesional = turnosPorProfesionalSorted.slice(0, 10).map((r) => ({
+    profesionalId: r.profesionalId,
+    nombre: profesionalesMap.get(r.profesionalId) ?? "—",
+    cantidad: r._count.id,
+  }))
 
-  // Obtener turnos por estado
-  const turnosPorEstado = await prisma.$queryRawUnsafe<Array<{
-    estado: string
-    cantidad: bigint | number
-  }>>(
-    `SELECT estado, COUNT(*) as cantidad
-    FROM Turno
-    WHERE fecha >= ? AND fecha <= ?
-    GROUP BY estado`,
-    inicioMes.toISOString().split('T')[0],
-    finMes.toISOString().split('T')[0]
-  )
-
-  // Calcular tasa de completitud
   const tasaCompletitud =
     turnosMes > 0 ? Math.round((turnosCompletados / turnosMes) * 100) : 0
-
-  // Calcular tasa de cancelación
   const tasaCancelacion =
     turnosMes > 0 ? Math.round((turnosCancelados / turnosMes) * 100) : 0
 
@@ -129,7 +126,6 @@ export default async function AdminReportesPage() {
         subtitle="Análisis completo del rendimiento de la clínica"
       />
 
-      {/* Métricas principales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Pacientes"
@@ -157,7 +153,6 @@ export default async function AdminReportesPage() {
         />
       </div>
 
-      {/* Estadísticas de turnos */}
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
           <CardHeader>
@@ -169,16 +164,13 @@ export default async function AdminReportesPage() {
           <CardContent>
             <div className="space-y-4">
               {turnosPorEstado.map((item) => {
-                const cantidad = typeof item.cantidad === 'bigint' ? Number(item.cantidad) : item.cantidad
-                const porcentaje = turnosMes > 0 ? Math.round((cantidad / turnosMes) * 100) : 0
+                const porcentaje = turnosMes > 0 ? Math.round((item.cantidad / turnosMes) * 100) : 0
                 return (
                   <div key={item.estado} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-[#0F172A]">
-                        {item.estado}
-                      </span>
+                      <span className="text-sm font-medium text-[#0F172A]">{item.estado}</span>
                       <span className="text-sm text-[#64748B]">
-                        {cantidad} ({porcentaje}%)
+                        {item.cantidad} ({porcentaje}%)
                       </span>
                     </div>
                     <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
@@ -204,16 +196,13 @@ export default async function AdminReportesPage() {
           <CardContent>
             <div className="space-y-4">
               {turnosPorDia.map((item) => {
-                const cantidad = typeof item.cantidad === 'bigint' ? Number(item.cantidad) : item.cantidad
-                const maxCantidad = Math.max(...turnosPorDia.map(t => typeof t.cantidad === 'bigint' ? Number(t.cantidad) : t.cantidad))
-                const porcentaje = maxCantidad > 0 ? Math.round((cantidad / maxCantidad) * 100) : 0
+                const maxCantidad = Math.max(...turnosPorDia.map((t) => t.cantidad))
+                const porcentaje = maxCantidad > 0 ? Math.round((item.cantidad / maxCantidad) * 100) : 0
                 return (
                   <div key={item.dia} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-[#0F172A]">
-                        {item.dia}
-                      </span>
-                      <span className="text-sm text-[#64748B]">{cantidad}</span>
+                      <span className="text-sm font-medium text-[#0F172A]">{item.dia}</span>
+                      <span className="text-sm text-[#64748B]">{item.cantidad}</span>
                     </div>
                     <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
                       <div
@@ -229,7 +218,6 @@ export default async function AdminReportesPage() {
         </Card>
       </div>
 
-      {/* Top profesionales */}
       <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -239,38 +227,30 @@ export default async function AdminReportesPage() {
         </CardHeader>
         <CardContent>
           {turnosPorProfesional.length === 0 ? (
-            <p className="text-sm text-[#64748B] text-center py-4">
-              No hay datos disponibles
-            </p>
+            <p className="text-sm text-[#64748B] text-center py-4">No hay datos disponibles</p>
           ) : (
             <div className="space-y-3">
-              {turnosPorProfesional.map((item, index) => {
-                const cantidad = typeof item.cantidad === 'bigint' ? Number(item.cantidad) : item.cantidad
-                return (
-                  <div
-                    key={item.profesionalId}
-                    className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-semibold text-sm">
-                        {index + 1}
-                      </div>
-                      <span className="text-sm font-medium text-[#0F172A]">
-                        {item.nombre}
-                      </span>
+              {turnosPorProfesional.map((item, index) => (
+                <div
+                  key={item.profesionalId}
+                  className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-semibold text-sm">
+                      {index + 1}
                     </div>
-                    <span className="text-sm font-semibold text-[#2563EB]">
-                      {cantidad} turnos
-                    </span>
+                    <span className="text-sm font-medium text-[#0F172A]">{item.nombre}</span>
                   </div>
-                )
-              })}
+                  <span className="text-sm font-semibold text-[#2563EB]">
+                    {item.cantidad} turnos
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Resumen del mes */}
       <div className="grid lg:grid-cols-3 gap-6">
         <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
           <CardHeader>
@@ -282,27 +262,21 @@ export default async function AdminReportesPage() {
                 <CheckCircle className="h-5 w-5 text-[#10B981]" />
                 <span className="text-sm text-[#64748B]">Completados</span>
               </div>
-              <span className="text-lg font-semibold text-[#0F172A]">
-                {turnosCompletados}
-              </span>
+              <span className="text-lg font-semibold text-[#0F172A]">{turnosCompletados}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <XCircle className="h-5 w-5 text-[#EF4444]" />
                 <span className="text-sm text-[#64748B]">Cancelados</span>
               </div>
-              <span className="text-lg font-semibold text-[#0F172A]">
-                {turnosCancelados}
-              </span>
+              <span className="text-lg font-semibold text-[#0F172A]">{turnosCancelados}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-[#F59E0B]" />
                 <span className="text-sm text-[#64748B]">Pendientes</span>
               </div>
-              <span className="text-lg font-semibold text-[#0F172A]">
-                {turnosPendientes}
-              </span>
+              <span className="text-lg font-semibold text-[#0F172A]">{turnosPendientes}</span>
             </div>
           </CardContent>
         </Card>
@@ -312,9 +286,7 @@ export default async function AdminReportesPage() {
             <CardTitle className="text-lg">Últimos 30 Días</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-[#0F172A] mb-2">
-              {turnosUltimos30Dias}
-            </div>
+            <div className="text-3xl font-bold text-[#0F172A] mb-2">{turnosUltimos30Dias}</div>
             <p className="text-sm text-[#64748B]">Turnos totales</p>
           </CardContent>
         </Card>
@@ -327,9 +299,7 @@ export default async function AdminReportesPage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm text-[#64748B]">Completitud</span>
-                <span className="text-sm font-semibold text-[#10B981]">
-                  {tasaCompletitud}%
-                </span>
+                <span className="text-sm font-semibold text-[#10B981]">{tasaCompletitud}%</span>
               </div>
               <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
                 <div
@@ -341,9 +311,7 @@ export default async function AdminReportesPage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm text-[#64748B]">Cancelación</span>
-                <span className="text-sm font-semibold text-[#EF4444]">
-                  {tasaCancelacion}%
-                </span>
+                <span className="text-sm font-semibold text-[#EF4444]">{tasaCancelacion}%</span>
               </div>
               <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
                 <div

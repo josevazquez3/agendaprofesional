@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getUserById } from "@/lib/user-helpers"
 import { ArrowLeft, Edit, FileText } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -24,47 +23,46 @@ export default async function FichaPacientePage({
 
   const { id } = await params
 
-  const paciente = await getUserById(id, {
-    includeObraSocial: true,
+  const pacienteRaw = await prisma.user.findUnique({
+    where: { id },
+    include: {
+      obraSocialRel: { select: { nombre: true } },
+    },
   })
 
-  if (!paciente || paciente.role !== "PACIENTE") {
+  if (!pacienteRaw || pacienteRaw.role !== "PACIENTE") {
     notFound()
   }
 
-  // Última visita (último turno completado o confirmado)
-  const turnos = await prisma.$queryRawUnsafe<Array<{
-    fecha: string
-    profesionalId: string
-  }>>(
-    `SELECT fecha, profesionalId FROM Turno 
-     WHERE pacienteId = ? AND estado IN ('CONFIRMADO', 'COMPLETADO')
-     ORDER BY fecha DESC LIMIT 1`,
-    id
-  )
-
-  let profesionalAsignado: { nombre: string; especialidad: string } | null = null
-  if (turnos.length > 0) {
-    const prof = await prisma.$queryRawUnsafe<Array<{
-      userId: string
-      especialidad: string
-    }>>(
-      `SELECT userId, especialidad FROM Profesional WHERE id = ? LIMIT 1`,
-      turnos[0].profesionalId
-    )
-    if (prof.length > 0) {
-      const user = await prisma.$queryRawUnsafe<Array<{ nombre: string }>>(
-        `SELECT nombre FROM User WHERE id = ? LIMIT 1`,
-        prof[0].userId
-      )
-      if (user.length > 0) {
-        profesionalAsignado = {
-          nombre: user[0].nombre,
-          especialidad: prof[0].especialidad,
-        }
-      }
-    }
+  const paciente = {
+    ...pacienteRaw,
+    obraSocialRel: pacienteRaw.obraSocialRel,
   }
+
+  const ultimoTurno = await prisma.turno.findFirst({
+    where: {
+      pacienteId: id,
+      estado: { in: ["CONFIRMADO", "COMPLETADO"] },
+      eliminadoAt: null,
+    },
+    orderBy: { fecha: "desc" },
+    include: {
+      profesional: {
+        select: {
+          especialidad: true,
+          user: { select: { nombre: true } },
+        },
+      },
+    },
+  })
+
+  const profesionalAsignado =
+    ultimoTurno?.profesional != null
+      ? {
+          nombre: ultimoTurno.profesional.user?.nombre ?? "",
+          especialidad: ultimoTurno.profesional.especialidad,
+        }
+      : null
 
   return (
     <div className="space-y-6">

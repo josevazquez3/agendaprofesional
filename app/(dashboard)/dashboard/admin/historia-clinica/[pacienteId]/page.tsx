@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getUserById } from "@/lib/user-helpers"
 import { Plus, FilePlus } from "lucide-react"
 import Link from "next/link"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
@@ -26,77 +25,48 @@ export default async function HistoriaClinicaDetallePage({
 
   const { pacienteId } = await params
 
-  // Obtener paciente con información completa usando helper
-  const pacienteRaw = await getUserById(pacienteId, {
-    includeObraSocial: true,
+  const pacienteRaw = await prisma.user.findUnique({
+    where: { id: pacienteId },
+    include: {
+      obraSocialRel: { select: { nombre: true } },
+    },
   })
 
   if (!pacienteRaw || pacienteRaw.role !== "PACIENTE") {
     notFound()
   }
 
-  // Obtener último turno con profesional usando SQL raw
-  const turnos = await prisma.$queryRawUnsafe<Array<{
-    id: string
-    pacienteId: string
-    profesionalId: string
-    fecha: string
-    estado: string
-  }>>(
-    `SELECT id, pacienteId, profesionalId, fecha, estado 
-     FROM Turno 
-     WHERE pacienteId = ? AND estado IN ('CONFIRMADO', 'COMPLETADO')
-     ORDER BY fecha DESC 
-     LIMIT 1`,
-    pacienteId
-  )
+  const ultimoTurno = await prisma.turno.findFirst({
+    where: {
+      pacienteId,
+      estado: { in: ["CONFIRMADO", "COMPLETADO"] },
+      eliminadoAt: null,
+    },
+    orderBy: { fecha: "desc" },
+    include: {
+      profesional: {
+        select: {
+          especialidad: true,
+          user: { select: { nombre: true } },
+        },
+      },
+    },
+  })
 
-  let pacienteTurnos: Array<{
-    profesional: {
-      user: {
-        nombre: string
-      }
-      especialidad: string
-    }
-  }> = []
-
-  if (turnos.length > 0) {
-    const turno = turnos[0]
-    const profesional = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      userId: string
-      especialidad: string
-    }>>(
-      `SELECT id, userId, especialidad FROM Profesional WHERE id = ? LIMIT 1`,
-      turno.profesionalId
-    )
-
-    if (profesional.length > 0) {
-      const user = await prisma.$queryRawUnsafe<Array<{
-        id: string
-        nombre: string
-      }>>(
-        `SELECT id, nombre FROM User WHERE id = ? LIMIT 1`,
-        profesional[0].userId
-      )
-
-      if (user.length > 0) {
-        pacienteTurnos = [
-          {
-            profesional: {
-              user: {
-                nombre: user[0].nombre,
-              },
-              especialidad: profesional[0].especialidad,
-            },
+  const pacienteTurnos = ultimoTurno?.profesional
+    ? [
+        {
+          profesional: {
+            user: { nombre: ultimoTurno.profesional.user?.nombre ?? "" },
+            especialidad: ultimoTurno.profesional.especialidad,
           },
-        ]
-      }
-    }
-  }
+        },
+      ]
+    : []
 
   const paciente = {
     ...pacienteRaw,
+    obraSocialRel: pacienteRaw.obraSocialRel,
     pacienteTurnos,
   }
 

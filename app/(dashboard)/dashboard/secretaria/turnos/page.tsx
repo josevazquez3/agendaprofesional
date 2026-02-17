@@ -4,8 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getProfesionales } from "@/lib/profesional-helpers"
-import { getTurnos, countTurnos } from "@/lib/turno-helpers"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { PageHeader } from "@/components/ui/page-header"
@@ -13,6 +11,8 @@ import { AppointmentFilters } from "@/components/turnos/appointment-filters"
 import { AppointmentTable } from "@/components/turnos/appointment-table"
 import { DaySummaryPanel } from "@/components/turnos/day-summary-panel"
 import { ExportarTurnosButtons } from "@/components/turnos/ExportarTurnosButtons"
+
+const sinEliminados = { eliminadoAt: null }
 
 export default async function SecretariaTurnosPage({
   searchParams,
@@ -31,75 +31,72 @@ export default async function SecretariaTurnosPage({
     redirect("/auth/login")
   }
 
-  const where: any = {}
-
-  if (searchParams.profesionalId) {
-    where.profesionalId = searchParams.profesionalId
-  }
-
-  if (searchParams.estado) {
-    where.estado = searchParams.estado
-  }
-
-  if (searchParams.fecha) {
-    const fecha = new Date(searchParams.fecha)
-    const inicioDia = new Date(fecha.setHours(0, 0, 0, 0))
-    const finDia = new Date(fecha.setHours(23, 59, 59, 999))
-    where.fecha = {
-      gte: inicioDia,
-      lte: finDia,
-    }
-  }
-
-  if (searchParams.search) {
-    where.paciente = {
-      nombre: {
-        contains: searchParams.search,
-        mode: "insensitive",
-      },
-    }
-  }
-
-  if (searchParams.especialidad) {
-    where.profesional = {
-      especialidad: searchParams.especialidad,
-    }
-  }
-
-  // Construir filtros para getTurnos
-  const turnosFilters: any = {
-    orderBy: { fecha: "asc" },
-    take: 100,
-  }
-
-  if (searchParams.profesionalId) {
-    turnosFilters.profesionalId = searchParams.profesionalId
-  }
-
-  if (searchParams.estado) {
-    turnosFilters.estado = searchParams.estado
-  }
-
+  const where: Parameters<typeof prisma.turno.findMany>[0]["where"] = { ...sinEliminados }
+  if (searchParams.profesionalId) where.profesionalId = searchParams.profesionalId
+  if (searchParams.estado) where.estado = searchParams.estado
   if (searchParams.fecha) {
     const fecha = new Date(searchParams.fecha)
     const inicioDia = new Date(fecha)
     inicioDia.setHours(0, 0, 0, 0)
     const finDia = new Date(fecha)
     finDia.setHours(23, 59, 59, 999)
-    turnosFilters.fecha = {
-      gte: inicioDia,
-      lte: finDia,
+    where.fecha = { gte: inicioDia, lte: finDia }
+  }
+  if (searchParams.search) {
+    where.paciente = {
+      nombre: { contains: searchParams.search, mode: "insensitive" },
     }
   }
+  if (searchParams.especialidad) {
+    where.profesional = { especialidad: searchParams.especialidad }
+  }
 
-  const turnos = await getTurnos(turnosFilters)
-
-  const profesionalesRaw = await getProfesionales({
-    includeUser: true,
-    includeUserFields: ["nombre"],
+  const turnos = await prisma.turno.findMany({
+    where,
+    orderBy: { fecha: "asc" },
+    take: 100,
+    include: {
+      paciente: { select: { id: true, nombre: true, email: true } },
+      profesional: {
+        select: {
+          id: true,
+          especialidad: true,
+          user: { select: { id: true, nombre: true, email: true } },
+        },
+      },
+    },
   })
-  
-  const profesionales = profesionalesRaw
+
+  const turnosFormateados = turnos.map((t) => ({
+    id: t.id,
+    pacienteId: t.pacienteId,
+    profesionalId: t.profesionalId,
+    fecha: t.fecha,
+    hora: t.hora,
+    estado: t.estado,
+    motivo: t.motivo,
+    codigoTurno: t.codigoTurno,
+    paciente: t.paciente ? { nombre: t.paciente.nombre, email: t.paciente.email } : undefined,
+    profesional: t.profesional
+      ? {
+          id: t.profesional.id,
+          especialidad: t.profesional.especialidad,
+          user: t.profesional.user
+            ? { nombre: t.profesional.user.nombre, email: t.profesional.user.email }
+            : undefined,
+        }
+      : undefined,
+  }))
+
+  const profesionales = await prisma.profesional.findMany({
+    select: {
+      id: true,
+      especialidad: true,
+      user: { select: { nombre: true } },
+    },
+  })
+
+  const profesionalesParaFiltro = profesionales
     .filter((p) => p.user)
     .map((p) => ({
       id: p.id,
@@ -107,34 +104,25 @@ export default async function SecretariaTurnosPage({
       especialidad: p.especialidad,
     }))
 
-  // Calcular resumen del día
-  const fechaFiltro = searchParams.fecha
-    ? new Date(searchParams.fecha)
-    : new Date()
+  const fechaFiltro = searchParams.fecha ? new Date(searchParams.fecha) : new Date()
   fechaFiltro.setHours(0, 0, 0, 0)
   const finDia = new Date(fechaFiltro)
   finDia.setHours(23, 59, 59, 999)
 
-  const turnosDelDia = await getTurnos({
-    fecha: {
-      gte: fechaFiltro,
-      lte: finDia,
+  const turnosDelDia = await prisma.turno.findMany({
+    where: {
+      fecha: { gte: fechaFiltro, lte: finDia },
+      ...sinEliminados,
     },
+    select: { estado: true },
   })
 
-  const turnosConfirmados = turnosDelDia.filter(
-    (t) => t.estado === "CONFIRMADO"
-  ).length
-  const turnosPendientes = turnosDelDia.filter(
-    (t) => t.estado === "PENDIENTE"
-  ).length
-  const turnosCancelados = turnosDelDia.filter(
-    (t) => t.estado === "CANCELADO"
-  ).length
+  const turnosConfirmados = turnosDelDia.filter((t) => t.estado === "CONFIRMADO").length
+  const turnosPendientes = turnosDelDia.filter((t) => t.estado === "PENDIENTE").length
+  const turnosCancelados = turnosDelDia.filter((t) => t.estado === "CANCELADO").length
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <PageHeader
         title="Gestión de Turnos"
         subtitle="Administre y organice los turnos de pacientes"
@@ -152,12 +140,9 @@ export default async function SecretariaTurnosPage({
         }
       />
 
-      {/* Barra de herramientas */}
-      <AppointmentFilters profesionales={profesionales} />
+      <AppointmentFilters profesionales={profesionalesParaFiltro} />
 
-      {/* Contenido principal: más espacio para el listado, panel resumen fijo */}
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
-        {/* Tabla de turnos */}
         <div className="min-w-0">
           <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
             <CardHeader className="border-b border-[#E2E8F0]">
@@ -167,18 +152,18 @@ export default async function SecretariaTurnosPage({
                     Listado de Turnos
                   </CardTitle>
                   <p className="text-sm text-[#64748B] mt-1">
-                    Total: {turnos.length} turno{turnos.length !== 1 ? "s" : ""}
+                    Total: {turnosFormateados.length} turno{turnosFormateados.length !== 1 ? "s" : ""}
                   </p>
                 </div>
-                {turnos.length > 0 && (
-                  <ExportarTurnosButtons turnos={turnos as any} />
+                {turnosFormateados.length > 0 && (
+                  <ExportarTurnosButtons turnos={turnosFormateados as any} />
                 )}
               </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="p-6">
                 <AppointmentTable
-                  turnos={turnos as any}
+                  turnos={turnosFormateados as any}
                   basePath="/dashboard/secretaria/turnos"
                   showEliminar
                 />
@@ -186,8 +171,6 @@ export default async function SecretariaTurnosPage({
             </CardContent>
           </Card>
         </div>
-
-        {/* Panel lateral - Resumen del día */}
         <div className="shrink-0">
           <DaySummaryPanel
             turnosConfirmados={turnosConfirmados}

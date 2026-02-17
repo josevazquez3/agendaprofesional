@@ -4,9 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getUsers } from "@/lib/user-helpers"
 import Link from "next/link"
-import { Users, Plus, Edit } from "lucide-react"
+import { Plus, Edit } from "lucide-react"
 import { DeleteUserButton } from "@/components/admin/DeleteUserButton"
 
 export default async function AdminUsuariosPage() {
@@ -16,41 +15,28 @@ export default async function AdminUsuariosPage() {
     redirect("/auth/login")
   }
 
-  // Obtener usuarios usando helper
-  const usuariosRaw = await getUsers({
+  const usuariosRaw = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      profesional: {
+        select: { id: true, especialidad: true },
+      },
+    },
   })
 
-  // Obtener profesionales para cada usuario
-  const usuarios = await Promise.all(
-    usuariosRaw.map(async (usuario) => {
-      let profesional = null
-      if (usuario.role === "PROFESIONAL") {
-        const prof = await prisma.$queryRawUnsafe<Array<{
-          id: string
-          userId: string
-          especialidad: string
-        }>>(
-          `SELECT id, userId, especialidad FROM Profesional WHERE userId = ? LIMIT 1`,
-          usuario.id
-        )
-        if (prof.length > 0) {
-          profesional = {
-            id: prof[0].id,
-            especialidad: prof[0].especialidad,
-            user: {
-              nombre: usuario.nombre,
-              email: usuario.email,
-            },
-          }
+  const usuarios = usuariosRaw.map((usuario) => ({
+    ...usuario,
+    profesional: usuario.profesional
+      ? {
+          id: usuario.profesional.id,
+          especialidad: usuario.profesional.especialidad,
+          user: {
+            nombre: usuario.nombre,
+            email: usuario.email,
+          },
         }
-      }
-      return {
-        ...usuario,
-        profesional,
-      }
-    })
-  )
+      : null,
+  }))
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {

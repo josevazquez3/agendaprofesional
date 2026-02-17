@@ -4,8 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageHeader } from "@/components/ui/page-header"
 import { MetricCard } from "@/components/dashboard/metric-card"
-import { countTurnos, getTurnos } from "@/lib/turno-helpers"
-import { countUsers } from "@/lib/user-helpers"
 import { prisma } from "@/lib/prisma"
 import {
   Calendar,
@@ -17,6 +15,9 @@ import {
   BarChart3,
 } from "lucide-react"
 import { startOfMonth, endOfMonth, subDays } from "date-fns"
+
+const DIAS_NOMBRE = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+const sinEliminados = { eliminadoAt: null }
 
 export default async function SecretariaReportesPage() {
   const session = await getServerSession(authOptions)
@@ -30,70 +31,63 @@ export default async function SecretariaReportesPage() {
   const finMes = endOfMonth(hoy)
   const hace30Dias = subDays(hoy, 30)
 
-  // Estadísticas generales
-  const totalPacientes = await countUsers({ role: "PACIENTE" })
-  const turnosMes = await countTurnos({
-    fecha: { gte: inicioMes, lte: finMes },
-  })
-  const turnosCompletados = await countTurnos({
-    estado: "COMPLETADO",
-    fecha: { gte: inicioMes, lte: finMes },
-  })
-  const turnosCancelados = await countTurnos({
-    estado: "CANCELADO",
-    fecha: { gte: inicioMes, lte: finMes },
-  })
-  const turnosPendientes = await countTurnos({
-    estado: "PENDIENTE",
-  })
+  const [
+    totalPacientes,
+    turnosMes,
+    turnosCompletados,
+    turnosCancelados,
+    turnosPendientes,
+    turnosUltimos30Dias,
+    turnosMesParaDia,
+    turnosPorEstadoRows,
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: "PACIENTE" } }),
+    prisma.turno.count({
+      where: { fecha: { gte: inicioMes, lte: finMes }, ...sinEliminados },
+    }),
+    prisma.turno.count({
+      where: {
+        estado: "COMPLETADO",
+        fecha: { gte: inicioMes, lte: finMes },
+        ...sinEliminados,
+      },
+    }),
+    prisma.turno.count({
+      where: {
+        estado: "CANCELADO",
+        fecha: { gte: inicioMes, lte: finMes },
+        ...sinEliminados,
+      },
+    }),
+    prisma.turno.count({
+      where: { estado: "PENDIENTE", ...sinEliminados },
+    }),
+    prisma.turno.count({
+      where: { fecha: { gte: hace30Dias, lte: hoy }, ...sinEliminados },
+    }),
+    prisma.turno.findMany({
+      where: { fecha: { gte: inicioMes, lte: finMes }, ...sinEliminados },
+      select: { fecha: true },
+    }),
+    prisma.turno.groupBy({
+      by: ["estado"],
+      where: { fecha: { gte: inicioMes, lte: finMes }, ...sinEliminados },
+      _count: { id: true },
+    }),
+  ])
 
-  // Estadísticas de los últimos 30 días
-  const turnosUltimos30Dias = await countTurnos({
-    fecha: { gte: hace30Dias, lte: hoy },
-  })
+  const turnosPorDia = DIAS_NOMBRE.map((dia, i) => ({
+    dia,
+    cantidad: turnosMesParaDia.filter((t) => new Date(t.fecha).getDay() === i).length,
+  }))
 
-  // Obtener turnos por día de la semana
-  const turnosPorDia = await prisma.$queryRawUnsafe<Array<{
-    dia: string
-    cantidad: bigint | number
-  }>>(
-    `SELECT 
-      CASE CAST(strftime('%w', fecha) AS INTEGER)
-        WHEN 0 THEN 'Domingo'
-        WHEN 1 THEN 'Lunes'
-        WHEN 2 THEN 'Martes'
-        WHEN 3 THEN 'Miércoles'
-        WHEN 4 THEN 'Jueves'
-        WHEN 5 THEN 'Viernes'
-        WHEN 6 THEN 'Sábado'
-      END as dia,
-      COUNT(*) as cantidad
-    FROM Turno
-    WHERE fecha >= ? AND fecha <= ?
-    GROUP BY CAST(strftime('%w', fecha) AS INTEGER)
-    ORDER BY CAST(strftime('%w', fecha) AS INTEGER)`,
-    inicioMes.toISOString().split('T')[0],
-    finMes.toISOString().split('T')[0]
-  )
+  const turnosPorEstado = turnosPorEstadoRows.map((r) => ({
+    estado: r.estado,
+    cantidad: r._count.id,
+  }))
 
-  // Obtener turnos por estado
-  const turnosPorEstado = await prisma.$queryRawUnsafe<Array<{
-    estado: string
-    cantidad: bigint | number
-  }>>(
-    `SELECT estado, COUNT(*) as cantidad
-    FROM Turno
-    WHERE fecha >= ? AND fecha <= ?
-    GROUP BY estado`,
-    inicioMes.toISOString().split('T')[0],
-    finMes.toISOString().split('T')[0]
-  )
-
-  // Calcular tasa de completitud
   const tasaCompletitud =
     turnosMes > 0 ? Math.round((turnosCompletados / turnosMes) * 100) : 0
-
-  // Calcular tasa de cancelación
   const tasaCancelacion =
     turnosMes > 0 ? Math.round((turnosCancelados / turnosMes) * 100) : 0
 
@@ -104,7 +98,6 @@ export default async function SecretariaReportesPage() {
         subtitle="Análisis del rendimiento de turnos"
       />
 
-      {/* Métricas principales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Pacientes"
@@ -132,7 +125,6 @@ export default async function SecretariaReportesPage() {
         />
       </div>
 
-      {/* Estadísticas de turnos */}
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
           <CardHeader>
@@ -144,16 +136,13 @@ export default async function SecretariaReportesPage() {
           <CardContent>
             <div className="space-y-4">
               {turnosPorEstado.map((item) => {
-                const cantidad = typeof item.cantidad === 'bigint' ? Number(item.cantidad) : item.cantidad
-                const porcentaje = turnosMes > 0 ? Math.round((cantidad / turnosMes) * 100) : 0
+                const porcentaje = turnosMes > 0 ? Math.round((item.cantidad / turnosMes) * 100) : 0
                 return (
                   <div key={item.estado} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-[#0F172A]">
-                        {item.estado}
-                      </span>
+                      <span className="text-sm font-medium text-[#0F172A]">{item.estado}</span>
                       <span className="text-sm text-[#64748B]">
-                        {cantidad} ({porcentaje}%)
+                        {item.cantidad} ({porcentaje}%)
                       </span>
                     </div>
                     <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
@@ -179,16 +168,13 @@ export default async function SecretariaReportesPage() {
           <CardContent>
             <div className="space-y-4">
               {turnosPorDia.map((item) => {
-                const cantidad = typeof item.cantidad === 'bigint' ? Number(item.cantidad) : item.cantidad
-                const maxCantidad = Math.max(...turnosPorDia.map(t => typeof t.cantidad === 'bigint' ? Number(t.cantidad) : t.cantidad))
-                const porcentaje = maxCantidad > 0 ? Math.round((cantidad / maxCantidad) * 100) : 0
+                const maxCantidad = Math.max(...turnosPorDia.map((t) => t.cantidad))
+                const porcentaje = maxCantidad > 0 ? Math.round((item.cantidad / maxCantidad) * 100) : 0
                 return (
                   <div key={item.dia} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-[#0F172A]">
-                        {item.dia}
-                      </span>
-                      <span className="text-sm text-[#64748B]">{cantidad}</span>
+                      <span className="text-sm font-medium text-[#0F172A]">{item.dia}</span>
+                      <span className="text-sm text-[#64748B]">{item.cantidad}</span>
                     </div>
                     <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
                       <div
@@ -204,7 +190,6 @@ export default async function SecretariaReportesPage() {
         </Card>
       </div>
 
-      {/* Resumen del mes */}
       <div className="grid lg:grid-cols-3 gap-6">
         <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
           <CardHeader>
@@ -216,27 +201,21 @@ export default async function SecretariaReportesPage() {
                 <CheckCircle className="h-5 w-5 text-[#10B981]" />
                 <span className="text-sm text-[#64748B]">Completados</span>
               </div>
-              <span className="text-lg font-semibold text-[#0F172A]">
-                {turnosCompletados}
-              </span>
+              <span className="text-lg font-semibold text-[#0F172A]">{turnosCompletados}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <XCircle className="h-5 w-5 text-[#EF4444]" />
                 <span className="text-sm text-[#64748B]">Cancelados</span>
               </div>
-              <span className="text-lg font-semibold text-[#0F172A]">
-                {turnosCancelados}
-              </span>
+              <span className="text-lg font-semibold text-[#0F172A]">{turnosCancelados}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-[#F59E0B]" />
                 <span className="text-sm text-[#64748B]">Pendientes</span>
               </div>
-              <span className="text-lg font-semibold text-[#0F172A]">
-                {turnosPendientes}
-              </span>
+              <span className="text-lg font-semibold text-[#0F172A]">{turnosPendientes}</span>
             </div>
           </CardContent>
         </Card>
@@ -246,9 +225,7 @@ export default async function SecretariaReportesPage() {
             <CardTitle className="text-lg">Últimos 30 Días</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-[#0F172A] mb-2">
-              {turnosUltimos30Dias}
-            </div>
+            <div className="text-3xl font-bold text-[#0F172A] mb-2">{turnosUltimos30Dias}</div>
             <p className="text-sm text-[#64748B]">Turnos totales</p>
           </CardContent>
         </Card>
@@ -261,9 +238,7 @@ export default async function SecretariaReportesPage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm text-[#64748B]">Completitud</span>
-                <span className="text-sm font-semibold text-[#10B981]">
-                  {tasaCompletitud}%
-                </span>
+                <span className="text-sm font-semibold text-[#10B981]">{tasaCompletitud}%</span>
               </div>
               <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
                 <div
@@ -275,9 +250,7 @@ export default async function SecretariaReportesPage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm text-[#64748B]">Cancelación</span>
-                <span className="text-sm font-semibold text-[#EF4444]">
-                  {tasaCancelacion}%
-                </span>
+                <span className="text-sm font-semibold text-[#EF4444]">{tasaCancelacion}%</span>
               </div>
               <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
                 <div

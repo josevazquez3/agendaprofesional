@@ -3,7 +3,6 @@ import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { prisma } from "@/lib/prisma"
-import { getObrasSociales } from "@/lib/obra-social-helpers"
 import { Heart, CheckCircle, XCircle } from "lucide-react"
 
 export default async function SecretariaObrasSocialesPage() {
@@ -13,9 +12,13 @@ export default async function SecretariaObrasSocialesPage() {
     redirect("/auth/login")
   }
 
-  const obrasSociales = await getObrasSociales({
-    includeCounts: true,
+  const obrasSociales = await prisma.obraSocial.findMany({
     orderBy: { nombre: "asc" },
+    include: {
+      _count: {
+        select: { pacientes: true, turnos: true },
+      },
+    },
   })
 
   return (
@@ -59,60 +62,46 @@ export default async function SecretariaObrasSocialesPage() {
                   <CardContent className="space-y-4">
                     {obraSocial.codigo && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Código:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Código:</strong></p>
                         <p className="text-gray-800">{obraSocial.codigo}</p>
                       </div>
                     )}
                     {obraSocial.descripcion && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Descripción:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Descripción:</strong></p>
                         <p className="text-gray-800">{obraSocial.descripcion}</p>
                       </div>
                     )}
                     {obraSocial.telefono && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Teléfono:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Teléfono:</strong></p>
                         <p className="text-gray-800">{obraSocial.telefono}</p>
                       </div>
                     )}
                     {obraSocial.email && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Email:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Email:</strong></p>
                         <p className="text-gray-800">{obraSocial.email}</p>
                       </div>
                     )}
                     {obraSocial.direccion && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Dirección:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Dirección:</strong></p>
                         <p className="text-gray-800">{obraSocial.direccion}</p>
                       </div>
                     )}
-                    {obraSocial._count && (
-                      <div className="flex items-center gap-4 pt-2 border-t">
-                        <div className="text-sm text-gray-600">
-                          <strong>Pacientes:</strong> {obraSocial._count.pacientes}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          <strong>Turnos:</strong> {obraSocial._count.turnos}
-                        </div>
+                    <div className="flex items-center gap-4 pt-2 border-t">
+                      <div className="text-sm text-gray-600">
+                        <strong>Pacientes:</strong> {obraSocial._count.pacientes}
                       </div>
-                    )}
+                      <div className="text-sm text-gray-600">
+                        <strong>Turnos:</strong> {obraSocial._count.turnos}
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2 pt-2 border-t">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          obraSocial.activa
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                          obraSocial.activa ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                         }`}
                       >
                         {obraSocial.activa ? "Activa" : "Inactiva"}

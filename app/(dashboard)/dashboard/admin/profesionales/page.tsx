@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getProfesionales } from "@/lib/profesional-helpers"
 import Link from "next/link"
 import { User, Plus, Edit, Building } from "lucide-react"
 import Image from "next/image"
@@ -17,68 +16,46 @@ export default async function AdminProfesionalesPage() {
     redirect("/auth/login")
   }
 
-  // Obtener profesionales usando helper
-  const profesionalesRaw = await getProfesionales({
-    includeUser: true,
-    includeUserFields: ["nombre", "email", "telefono", "dni", "fotoPerfil"],
+  const profesionales = await prisma.profesional.findMany({
+    include: {
+      user: {
+        select: {
+          id: true,
+          nombre: true,
+          email: true,
+          telefono: true,
+          dni: true,
+          fotoPerfil: true,
+        },
+      },
+      consultorios: {
+        include: {
+          consultorio: { select: { nombre: true, direccion: true } },
+        },
+      },
+      horarios: { where: { activo: true } },
+      aranceles: {
+        where: { activo: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+    orderBy: { createdAt: "desc" },
   })
 
-  // Obtener relaciones usando SQL raw
-  const profesionales = await Promise.all(
-    profesionalesRaw.map(async (prof) => {
-      const [consultoriosRaw, horariosRaw, arancelesRaw] = await Promise.all([
-        prisma.$queryRawUnsafe<Array<{
-          id: string
-          consultorioId: string
-          nombre: string
-          direccion: string
-        }>>(
-          `SELECT cp.id, cp.consultorioId, c.nombre, c.direccion
-           FROM ConsultorioProfesional cp
-           INNER JOIN Consultorio c ON cp.consultorioId = c.id
-           WHERE cp.profesionalId = ?`,
-          prof.id
-        ),
-        prisma.$queryRawUnsafe<Array<{
-          id: string
-          diaSemana: string
-          horaInicio: string
-          horaFin: string
-        }>>(
-          `SELECT id, diaSemana, horaInicio, horaFin
-           FROM HorarioDisponible
-           WHERE profesionalId = ? AND activo = 1`,
-          prof.id
-        ),
-        prisma.$queryRawUnsafe<Array<{
-          id: string
-          monto: number
-          descripcion: string | null
-        }>>(
-          `SELECT id, monto, descripcion
-           FROM Arancel
-           WHERE profesionalId = ? AND activo = 1
-           ORDER BY createdAt DESC
-           LIMIT 1`,
-          prof.id
-        ),
-      ])
-
-      return {
-        ...prof,
-        user: prof.user!,
-        consultorios: consultoriosRaw.map((cp) => ({
-          id: cp.id,
-          consultorio: {
-            nombre: cp.nombre,
-            direccion: cp.direccion,
-          },
-        })),
-        horarios: horariosRaw,
-        aranceles: arancelesRaw,
-      }
-    })
-  )
+  const profesionalesFormateados = profesionales.map((prof) => ({
+    ...prof,
+    user: prof.user!,
+    consultorios: prof.consultorios.map((cp) => ({
+      id: cp.id,
+      consultorio: {
+        nombre: cp.consultorio.nombre,
+        direccion: cp.consultorio.direccion,
+      },
+    })),
+    horarios: prof.horarios,
+    aranceles: prof.aranceles,
+  }))
 
   return (
     <div className="space-y-6">
@@ -101,17 +78,17 @@ export default async function AdminProfesionalesPage() {
         <CardHeader>
           <CardTitle>Listado de Profesionales</CardTitle>
           <CardDescription>
-            Total de profesionales: {profesionales.length}
+            Total de profesionales: {profesionalesFormateados.length}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {profesionales.length === 0 ? (
+          {profesionalesFormateados.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No hay profesionales registrados
             </div>
           ) : (
             <div className="space-y-4">
-              {profesionales.map((profesional) => (
+              {profesionalesFormateados.map((profesional) => (
                 <Card key={profesional.id}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
@@ -146,33 +123,23 @@ export default async function AdminProfesionalesPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                           <div>
-                            <p className="text-sm text-gray-600 mb-1">
-                              <strong>Email:</strong>
-                            </p>
+                            <p className="text-sm text-gray-600 mb-1"><strong>Email:</strong></p>
                             <p className="text-gray-800">{profesional.user.email}</p>
                           </div>
                           {profesional.user.telefono && (
                             <div>
-                              <p className="text-sm text-gray-600 mb-1">
-                                <strong>Teléfono:</strong>
-                              </p>
-                              <p className="text-gray-800">
-                                {profesional.user.telefono}
-                              </p>
+                              <p className="text-sm text-gray-600 mb-1"><strong>Teléfono:</strong></p>
+                              <p className="text-gray-800">{profesional.user.telefono}</p>
                             </div>
                           )}
                           {profesional.user.dni && (
                             <div>
-                              <p className="text-sm text-gray-600 mb-1">
-                                <strong>DNI:</strong>
-                              </p>
+                              <p className="text-sm text-gray-600 mb-1"><strong>DNI:</strong></p>
                               <p className="text-gray-800">{profesional.user.dni}</p>
                             </div>
                           )}
                           <div>
-                            <p className="text-sm text-gray-600 mb-1">
-                              <strong>Atiende Obra Social:</strong>
-                            </p>
+                            <p className="text-sm text-gray-600 mb-1"><strong>Atiende Obra Social:</strong></p>
                             <p className="text-gray-800">
                               {profesional.atiendeObraSocial ? "Sí" : "No"}
                             </p>
@@ -181,9 +148,7 @@ export default async function AdminProfesionalesPage() {
 
                         {profesional.aranceles.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-1">
-                              <strong>Arancel:</strong>
-                            </p>
+                            <p className="text-sm text-gray-600 mb-1"><strong>Arancel:</strong></p>
                             <p className="text-gray-800">
                               ${profesional.aranceles[0].monto}
                               {profesional.aranceles[0].descripcion &&
@@ -194,17 +159,14 @@ export default async function AdminProfesionalesPage() {
 
                         {profesional.horarios.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-2">
-                              <strong>Horarios de Atención:</strong>
-                            </p>
+                            <p className="text-sm text-gray-600 mb-2"><strong>Horarios de Atención:</strong></p>
                             <div className="flex flex-wrap gap-2">
                               {profesional.horarios.map((horario) => (
                                 <span
                                   key={horario.id}
                                   className="px-2 py-1 bg-blue-50 text-blue-800 rounded text-xs"
                                 >
-                                  {horario.diaSemana}: {horario.horaInicio} -{" "}
-                                  {horario.horaFin}
+                                  {horario.diaSemana}: {horario.horaInicio} - {horario.horaFin}
                                 </span>
                               ))}
                             </div>
@@ -213,9 +175,7 @@ export default async function AdminProfesionalesPage() {
 
                         {profesional.consultorios.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-2">
-                              <strong>Consultorios:</strong>
-                            </p>
+                            <p className="text-sm text-gray-600 mb-2"><strong>Consultorios:</strong></p>
                             <div className="flex flex-wrap gap-2">
                               {profesional.consultorios.map((cp) => (
                                 <span
@@ -236,9 +196,7 @@ export default async function AdminProfesionalesPage() {
                           profesionalId={profesional.id}
                           nombreProfesional={profesional.user.nombre}
                         />
-                        <Link
-                          href={`/dashboard/admin/profesionales/${profesional.id}/editar`}
-                        >
+                        <Link href={`/dashboard/admin/profesionales/${profesional.id}/editar`}>
                           <Button variant="outline" size="sm">
                             <Edit className="h-4 w-4 mr-2" />
                             Editar

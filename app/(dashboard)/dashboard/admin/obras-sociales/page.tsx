@@ -4,9 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getObrasSociales } from "@/lib/obra-social-helpers"
 import Link from "next/link"
-import { Heart, Plus, Edit, Trash2, CheckCircle, XCircle } from "lucide-react"
+import { Heart, Plus, Edit, CheckCircle, XCircle } from "lucide-react"
 import { DeleteObraSocialButton } from "@/components/admin/DeleteObraSocialButton"
 
 export default async function AdminObrasSocialesPage() {
@@ -16,9 +15,13 @@ export default async function AdminObrasSocialesPage() {
     redirect("/auth/login")
   }
 
-  const obrasSociales = await getObrasSociales({
-    includeCounts: true,
+  const obrasSociales = await prisma.obraSocial.findMany({
     orderBy: { nombre: "asc" },
+    include: {
+      _count: {
+        select: { pacientes: true, turnos: true },
+      },
+    },
   })
 
   return (
@@ -70,60 +73,46 @@ export default async function AdminObrasSocialesPage() {
                   <CardContent className="space-y-4">
                     {obraSocial.codigo && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Código:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Código:</strong></p>
                         <p className="text-gray-800">{obraSocial.codigo}</p>
                       </div>
                     )}
                     {obraSocial.descripcion && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Descripción:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Descripción:</strong></p>
                         <p className="text-gray-800">{obraSocial.descripcion}</p>
                       </div>
                     )}
                     {obraSocial.telefono && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Teléfono:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Teléfono:</strong></p>
                         <p className="text-gray-800">{obraSocial.telefono}</p>
                       </div>
                     )}
                     {obraSocial.email && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Email:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Email:</strong></p>
                         <p className="text-gray-800">{obraSocial.email}</p>
                       </div>
                     )}
                     {obraSocial.direccion && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          <strong>Dirección:</strong>
-                        </p>
+                        <p className="text-sm text-gray-600 mb-1"><strong>Dirección:</strong></p>
                         <p className="text-gray-800">{obraSocial.direccion}</p>
                       </div>
                     )}
-                    {obraSocial._count && (
-                      <div className="flex items-center gap-4 pt-2 border-t">
-                        <div className="text-sm text-gray-600">
-                          <strong>Pacientes:</strong> {obraSocial._count.pacientes}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          <strong>Turnos:</strong> {obraSocial._count.turnos}
-                        </div>
+                    <div className="flex items-center gap-4 pt-2 border-t">
+                      <div className="text-sm text-gray-600">
+                        <strong>Pacientes:</strong> {obraSocial._count.pacientes}
                       </div>
-                    )}
+                      <div className="text-sm text-gray-600">
+                        <strong>Turnos:</strong> {obraSocial._count.turnos}
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2 pt-2 border-t">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          obraSocial.activa
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                          obraSocial.activa ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                         }`}
                       >
                         {obraSocial.activa ? "Activa" : "Inactiva"}
@@ -131,10 +120,7 @@ export default async function AdminObrasSocialesPage() {
                     </div>
                     {session.user.role === "ADMIN" && (
                       <div className="flex gap-2 pt-4 border-t">
-                        <Link
-                          href={`/dashboard/admin/obras-sociales/${obraSocial.id}/editar`}
-                          className="flex-1"
-                        >
+                        <Link href={`/dashboard/admin/obras-sociales/${obraSocial.id}/editar`} className="flex-1">
                           <Button variant="outline" size="sm" className="w-full">
                             <Edit className="h-4 w-4 mr-2" />
                             Editar

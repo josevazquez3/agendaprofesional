@@ -4,9 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getUsers, countUsers } from "@/lib/user-helpers"
-import { getProfesionales } from "@/lib/profesional-helpers"
-import { getObrasSociales } from "@/lib/obra-social-helpers"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { PatientFilters } from "@/components/patients/patient-filters"
@@ -28,17 +25,33 @@ export default async function AdminPacientesPage({
     redirect("/auth/login")
   }
 
-  // Obtener pacientes con última visita usando helper
-  const pacientes = await getUsers({
-    role: "PACIENTE",
-    search: searchParams.search,
-    obraSocialId: searchParams.obraSocialId,
-    includeObraSocial: true,
-    includeUltimaVisita: true,
+  const where: Parameters<typeof prisma.user.findMany>[0]["where"] = { role: "PACIENTE" }
+  if (searchParams.search) {
+    const term = searchParams.search.trim()
+    where.OR = [
+      { nombre: { contains: term, mode: "insensitive" } },
+      { email: { contains: term, mode: "insensitive" } },
+      { dni: { contains: term, mode: "insensitive" } },
+    ]
+  }
+  if (searchParams.obraSocialId) {
+    where.obraSocialId = searchParams.obraSocialId
+  }
+
+  const pacientes = await prisma.user.findMany({
+    where,
     orderBy: { nombre: "asc" },
+    include: {
+      obraSocialRel: { select: { nombre: true } },
+      pacienteTurnos: {
+        where: { estado: { in: ["COMPLETADO", "CONFIRMADO"] } },
+        orderBy: { fecha: "desc" },
+        take: 1,
+        select: { fecha: true },
+      },
+    },
   })
 
-  // Formatear pacientes con última visita
   const pacientesFormateados = pacientes.map((paciente) => ({
     id: paciente.id,
     nombre: paciente.nombre,
@@ -48,68 +61,53 @@ export default async function AdminPacientesPage({
     obraSocial: paciente.obraSocial,
     obraSocialRel: paciente.obraSocialRel,
     ultimaVisita:
-      paciente.pacienteTurnos && paciente.pacienteTurnos.length > 0
-        ? paciente.pacienteTurnos[0].fecha
-        : null,
+      paciente.pacienteTurnos?.length > 0 ? paciente.pacienteTurnos[0].fecha : null,
   }))
 
-  // Obtener obras sociales para filtros
-  const obrasSocialesRaw = await getObrasSociales({
-    activa: true,
+  const obrasSociales = await prisma.obraSocial.findMany({
+    where: { activa: true },
     orderBy: { nombre: "asc" },
+    select: { id: true, nombre: true },
   })
-  const obrasSociales = obrasSocialesRaw.map((os) => ({
-    id: os.id,
-    nombre: os.nombre,
-  }))
 
-  // Obtener profesionales para filtros
-  const profesionalesRaw = await getProfesionales({
-    includeUser: true,
-    includeUserFields: ["nombre"],
+  const profesionales = await prisma.profesional.findMany({
+    select: {
+      id: true,
+      especialidad: true,
+      user: { select: { nombre: true } },
+    },
   })
-  
-  // Formatear profesionales para el componente
-  const profesionales = profesionalesRaw
-    .filter((p) => p.user) // Solo incluir profesionales con usuario
+
+  const profesionalesParaFiltro = profesionales
+    .filter((p) => p.user)
     .map((p) => ({
       id: p.id,
       user: { nombre: p.user!.nombre },
       especialidad: p.especialidad,
     }))
 
-  // Calcular estadísticas
-  const totalPacientes = pacientes.length
+  const totalPacientes = pacientesFormateados.length
 
   const inicioMes = new Date()
   inicioMes.setDate(1)
   inicioMes.setHours(0, 0, 0, 0)
 
-  const nuevosEsteMes = await countUsers({
-    role: "PACIENTE",
-    createdAt: {
-      gte: inicioMes,
+  const nuevosEsteMes = await prisma.user.count({
+    where: {
+      role: "PACIENTE",
+      createdAt: { gte: inicioMes },
     },
   })
 
-  // Pacientes frecuentes: aquellos con más de 3 turnos completados usando SQL raw
-  const pacientesConTurnosRaw = await prisma.$queryRawUnsafe<Array<{
-    pacienteId: string
-    count: bigint
-  }>>(
-    `SELECT pacienteId, COUNT(*) as count 
-     FROM Turno 
-     WHERE estado = 'COMPLETADO' 
-     GROUP BY pacienteId`
-  )
-
-  const pacientesFrecuentes = pacientesConTurnosRaw.filter(
-    (p) => Number(p.count) >= 3
-  ).length
+  const pacientesFrecuentesAgg = await prisma.turno.groupBy({
+    by: ["pacienteId"],
+    where: { estado: "COMPLETADO" },
+    _count: { id: true },
+  })
+  const pacientesFrecuentes = pacientesFrecuentesAgg.filter((p) => p._count.id >= 3).length
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold text-[#0F172A] font-inter">
@@ -127,15 +125,12 @@ export default async function AdminPacientesPage({
         </Link>
       </div>
 
-      {/* Toolbar superior */}
       <PatientFilters
         obrasSociales={obrasSociales}
-        profesionales={profesionales}
+        profesionales={profesionalesParaFiltro}
       />
 
-      {/* Contenido principal: más espacio para el listado */}
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
-        {/* Tabla de pacientes */}
         <div className="min-w-0">
           <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
             <CardHeader className="border-b border-[#E2E8F0]">
@@ -161,8 +156,6 @@ export default async function AdminPacientesPage({
             </CardContent>
           </Card>
         </div>
-
-        {/* Panel lateral - Resumen */}
         <div className="shrink-0">
           <PatientSummaryPanel
             totalPacientes={totalPacientes}

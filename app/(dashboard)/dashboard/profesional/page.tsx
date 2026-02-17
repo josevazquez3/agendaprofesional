@@ -4,8 +4,6 @@ import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
-import { getProfesionalByUserId } from "@/lib/profesional-helpers"
-import { getTurnos, countTurnos } from "@/lib/turno-helpers"
 import { Calendar, Users, Clock, FileText } from "lucide-react"
 import Link from "next/link"
 import { PageHeader } from "@/components/ui/page-header"
@@ -23,8 +21,9 @@ export default async function ProfesionalDashboard() {
     redirect("/auth/login")
   }
 
-  // Obtener profesional
-  const profesional = await getProfesionalByUserId(session.user.id)
+  const profesional = await prisma.profesional.findUnique({
+    where: { userId: session.user.id },
+  })
 
   if (!profesional) {
     redirect("/dashboard")
@@ -34,79 +33,90 @@ export default async function ProfesionalDashboard() {
   hoy.setHours(0, 0, 0, 0)
   const mañana = new Date(hoy)
   mañana.setDate(mañana.getDate() + 1)
+  const hace30Dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
-  // Turnos de hoy
-  const turnosHoy = await getTurnos({
-    profesionalId: profesional.id,
-    fecha: { gte: hoy, lt: mañana },
-    estado: ["PENDIENTE", "CONFIRMADO"],
-    orderBy: { hora: "asc" },
-  })
+  const [turnosHoy, proximosTurnos, pacientesRecientesData, cancelacionesDelDia] = await Promise.all([
+    prisma.turno.findMany({
+      where: {
+        profesionalId: profesional.id,
+        fecha: { gte: hoy, lt: mañana },
+        estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+        eliminadoAt: null,
+      },
+      orderBy: { hora: "asc" },
+      include: {
+        paciente: { select: { id: true, nombre: true } },
+      },
+    }),
+    prisma.turno.findMany({
+      where: {
+        profesionalId: profesional.id,
+        fecha: { gte: hoy },
+        estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+        eliminadoAt: null,
+      },
+      orderBy: { fecha: "asc" },
+      take: 5,
+      include: {
+        paciente: { select: { id: true, nombre: true } },
+      },
+    }),
+    prisma.turno.findMany({
+      where: {
+        profesionalId: profesional.id,
+        fecha: { gte: hace30Dias },
+        estado: "COMPLETADO",
+        eliminadoAt: null,
+      },
+      take: 100,
+      include: {
+        paciente: { select: { id: true, nombre: true } },
+      },
+    }),
+    prisma.turno.count({
+      where: {
+        profesionalId: profesional.id,
+        fecha: { gte: hoy, lt: mañana },
+        estado: "CANCELADO",
+        eliminadoAt: null,
+      },
+    }),
+  ])
 
-  // Próximos turnos (siguientes 7 días)
-  const proximosTurnos = await getTurnos({
-    profesionalId: profesional.id,
-    fecha: { gte: hoy },
-    estado: ["PENDIENTE", "CONFIRMADO"],
-    orderBy: { fecha: "asc" },
-    take: 5,
-  })
-
-  // Pacientes recientes (últimos 30 días) - obtener turnos completados
-  const pacientesRecientesData = await getTurnos({
-    profesionalId: profesional.id,
-    fecha: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-    estado: "COMPLETADO",
-    take: 100, // Obtener más para luego filtrar únicos
-  })
-
-  // Filtrar pacientes únicos
-  const pacientesUnicos = new Map()
-  pacientesRecientesData.forEach(turno => {
+  const pacientesUnicos = new Map<string, { paciente: { id: string; nombre: string } }>()
+  pacientesRecientesData.forEach((turno) => {
     if (turno.paciente && !pacientesUnicos.has(turno.pacienteId)) {
       pacientesUnicos.set(turno.pacienteId, {
         paciente: {
           id: turno.pacienteId,
-          nombre: turno.paciente?.nombre ?? "—",
-        }
+          nombre: turno.paciente.nombre ?? "—",
+        },
       })
     }
   })
   const pacientesRecientes = Array.from(pacientesUnicos.values()).slice(0, 5)
 
-  // Próximo turno
   const proximoTurno = proximosTurnos.length > 0 ? proximosTurnos[0] : null
 
-  // Cálculos operativos para profesional
   const ahora = new Date()
   const en2Horas = new Date(ahora.getTime() + 2 * 60 * 60 * 1000)
   const hoyString = hoy.toISOString().split("T")[0]
 
-  // Turnos próximos 2 horas del profesional
   const turnosProximos2Horas = turnosHoy.filter((turno) => {
     const turnoFecha = new Date(turno.fecha).toISOString().split("T")[0]
     return turnoFecha === hoyString && turno.hora >= ahora.toTimeString().slice(0, 5) && turno.hora <= en2Horas.toTimeString().slice(0, 5)
   }).length
 
-  // Pacientes en espera (turnos confirmados que ya pasaron su hora)
   const pacientesEnEspera = turnosHoy.filter((turno) => {
     const turnoFecha = new Date(turno.fecha).toISOString().split("T")[0]
     return turnoFecha === hoyString && turno.estado === "CONFIRMADO" && turno.hora <= ahora.toTimeString().slice(0, 5)
   }).length
 
-  // Turnos atrasados
   const hace15Min = new Date(ahora.getTime() - 15 * 60 * 1000)
   const turnosAtrasados = turnosHoy.filter((turno) => {
     const turnoFecha = new Date(turno.fecha).toISOString().split("T")[0]
     return turnoFecha === hoyString && turno.estado === "CONFIRMADO" && turno.hora <= hace15Min.toTimeString().slice(0, 5)
   }).length
-
-  // Cancelaciones del día
-  const cancelacionesDelDia = await countTurnos({
-    profesionalId: profesional.id,
-    fecha: { gte: hoy, lt: mañana },
-    estado: "CANCELADO",
-  })
 
   return (
     <div className="space-y-6">
