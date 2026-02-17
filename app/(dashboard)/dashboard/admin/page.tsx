@@ -2,8 +2,6 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { countTurnos, getTurnos } from "@/lib/turno-helpers"
-import { countProfesionales } from "@/lib/profesional-helpers"
 import { MetricCard } from "@/components/dashboard/metric-card"
 import { PageHeader } from "@/components/ui/page-header"
 import { CardContainer } from "@/components/ui/card-container"
@@ -19,6 +17,8 @@ import {
 import Link from "next/link"
 import { format } from "date-fns"
 
+const sinEliminados = { eliminadoAt: null as const }
+
 export default async function AdminDashboard() {
   let session
   try {
@@ -32,33 +32,37 @@ export default async function AdminDashboard() {
     redirect("/auth/login")
   }
 
-  // Estadísticas
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
   const mañana = new Date(hoy)
   mañana.setDate(mañana.getDate() + 1)
 
-  const turnosHoy = await countTurnos({
-    fecha: { gte: hoy, lt: mañana },
-  })
-
-  const pacientesAtendidos = await countTurnos({
-    estado: "COMPLETADO",
-  })
-
-  const profesionalesActivos = await countProfesionales()
-
-  const turnosPendientes = await countTurnos({
-    estado: "PENDIENTE",
-  })
-
-  // Próximos turnos
-  const proximosTurnos = await getTurnos({
-    fecha: { gte: hoy },
-    estado: ["PENDIENTE", "CONFIRMADO"],
-    take: 5,
-    orderBy: { fecha: "asc" },
-  })
+  const [turnosHoy, pacientesAtendidos, profesionalesActivos, turnosPendientes, proximosTurnos] =
+    await Promise.all([
+      prisma.turno.count({
+        where: { fecha: { gte: hoy, lt: mañana }, ...sinEliminados },
+      }),
+      prisma.turno.count({
+        where: { estado: "COMPLETADO", ...sinEliminados },
+      }),
+      prisma.profesional.count(),
+      prisma.turno.count({
+        where: { estado: "PENDIENTE", ...sinEliminados },
+      }),
+      prisma.turno.findMany({
+        where: {
+          fecha: { gte: hoy },
+          estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+          ...sinEliminados,
+        },
+        orderBy: { fecha: "asc" },
+        take: 5,
+        include: {
+          paciente: { select: { nombre: true, email: true } },
+          profesional: { include: { user: { select: { nombre: true, email: true } } } },
+        },
+      }),
+    ])
 
   return (
     <div className="space-y-6">
