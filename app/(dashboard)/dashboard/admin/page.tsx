@@ -17,7 +17,7 @@ import {
 import Link from "next/link"
 import { format } from "date-fns"
 
-const sinEliminados = { eliminadoAt: null as const }
+const sinEliminados = { eliminadoAt: null }
 
 export default async function AdminDashboard() {
   let session
