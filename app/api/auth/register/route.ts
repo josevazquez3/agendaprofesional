@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getUserByEmail, getUserByDni } from "@/lib/user-helpers"
 import bcrypt from "bcryptjs"
 
 export async function POST(request: Request) {
@@ -26,9 +25,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar si el email ya existe
-    const existingUser = await getUserByEmail(email)
+    const emailNormalized = String(email).trim().toLowerCase()
 
+    // Verificar si el email ya existe (solo Prisma, sin SMTP ni envío de correo)
+    const existingUser = await prisma.user.findUnique({
+      where: { email: emailNormalized },
+    })
     if (existingUser) {
       return NextResponse.json(
         { error: "El email ya está registrado" },
@@ -37,9 +39,10 @@ export async function POST(request: Request) {
     }
 
     // Verificar si el DNI ya existe (si se proporciona)
-    if (dni) {
-      const existingDni = await getUserByDni(dni)
-
+    if (dni && String(dni).trim()) {
+      const existingDni = await prisma.user.findFirst({
+        where: { dni: String(dni).trim() },
+      })
       if (existingDni) {
         return NextResponse.json(
           { error: "El DNI ya está registrado" },
@@ -48,20 +51,18 @@ export async function POST(request: Request) {
       }
     }
 
-    // Hash de la contraseña
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Crear usuario
     const user = await prisma.user.create({
       data: {
-        nombre,
-        email,
+        nombre: String(nombre).trim(),
+        email: emailNormalized,
         password: hashedPassword,
-        dni: dni || null,
-        telefono: telefono || null,
+        dni: dni && String(dni).trim() ? String(dni).trim() : null,
+        telefono: telefono ? String(telefono).trim() : null,
         fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : null,
-        direccion: direccion || null,
-        obraSocial: obraSocial || null,
+        direccion: direccion ? String(direccion).trim() : null,
+        obraSocial: obraSocial ? String(obraSocial).trim() : null,
         role,
       },
     })
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
       },
       { status: 201 }
     )
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error en registro:", error)
     return NextResponse.json(
       { error: "Error al registrar usuario" },
