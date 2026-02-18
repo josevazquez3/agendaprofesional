@@ -41,26 +41,67 @@ export default async function AdminTurnosPage({
       })()
     : undefined
 
-  const where: Parameters<typeof prisma.turno.findMany>[0]["where"] = { ...sinEliminados }
-  if (searchParams.profesionalId) where.profesionalId = searchParams.profesionalId
-  if (searchParams.estado) where.estado = searchParams.estado
-  if (fechaFilter) where.fecha = fechaFilter
-
-  const turnos = await prisma.turno.findMany({
-    where,
-    orderBy: { fecha: "asc" },
-    take: 100,
+  let turnos: Awaited<ReturnType<typeof prisma.turno.findMany<{
     include: {
-      paciente: { select: { id: true, nombre: true, email: true } },
-      profesional: {
-        select: {
-          id: true,
-          especialidad: true,
-          user: { select: { id: true, nombre: true, email: true } },
+      paciente: { select: { id: true; nombre: true; email: true } };
+      profesional: { select: { id: true; especialidad: true; user: { select: { id: true; nombre: true; email: true } } } };
+    };
+  }>>>
+  let profesionales: Array<{ id: string; especialidad: string; user: { nombre: string | null } | null }>
+  let turnosConfirmados: number
+  let turnosPendientes: number
+  let turnosCancelados: number
+  const fechaFiltro = searchParams.fecha ? new Date(searchParams.fecha) : new Date()
+  fechaFiltro.setHours(0, 0, 0, 0)
+  const finDia = new Date(fechaFiltro)
+  finDia.setHours(23, 59, 59, 999)
+
+  try {
+    const [turnosData, profesionalesData, turnosDelDia] = await Promise.all([
+      prisma.turno.findMany({
+        where: {
+          ...sinEliminados,
+          ...(searchParams.profesionalId ? { profesionalId: searchParams.profesionalId } : {}),
+          ...(searchParams.estado ? { estado: searchParams.estado } : {}),
+          ...(fechaFilter ? { fecha: fechaFilter } : {}),
         },
-      },
-    },
-  })
+        orderBy: { fecha: "asc" },
+        take: 100,
+        include: {
+          paciente: { select: { id: true, nombre: true, email: true } },
+          profesional: {
+            select: {
+              id: true,
+              especialidad: true,
+              user: { select: { id: true, nombre: true, email: true } },
+            },
+          },
+        },
+      }),
+      prisma.profesional.findMany({
+        select: { id: true, especialidad: true, user: { select: { nombre: true } } },
+      }),
+      prisma.turno.findMany({
+        where: {
+          fecha: { gte: fechaFiltro, lte: finDia },
+          ...sinEliminados,
+        },
+        select: { estado: true },
+      }),
+    ])
+    turnos = turnosData
+    profesionales = profesionalesData
+    turnosConfirmados = turnosDelDia.filter((t) => t.estado === "CONFIRMADO").length
+    turnosPendientes = turnosDelDia.filter((t) => t.estado === "PENDIENTE").length
+    turnosCancelados = turnosDelDia.filter((t) => t.estado === "CANCELADO").length
+  } catch (err) {
+    console.error("[Admin turnos] Error cargando datos:", err)
+    turnos = []
+    profesionales = []
+    turnosConfirmados = 0
+    turnosPendientes = 0
+    turnosCancelados = 0
+  }
 
   let turnosFiltrados = turnos.map((t) => ({
     id: t.id,
@@ -98,36 +139,11 @@ export default async function AdminTurnosPage({
     )
   }
 
-  const profesionales = await prisma.profesional.findMany({
-    select: {
-      id: true,
-      especialidad: true,
-      user: { select: { nombre: true } },
-    },
-  })
-
   const profesionalesParaFiltro = profesionales.map((p) => ({
     id: p.id,
     especialidad: p.especialidad,
     user: { nombre: p.user?.nombre ?? "" },
   }))
-
-  const fechaFiltro = searchParams.fecha ? new Date(searchParams.fecha) : new Date()
-  fechaFiltro.setHours(0, 0, 0, 0)
-  const finDia = new Date(fechaFiltro)
-  finDia.setHours(23, 59, 59, 999)
-
-  const turnosDelDia = await prisma.turno.findMany({
-    where: {
-      fecha: { gte: fechaFiltro, lte: finDia },
-      ...sinEliminados,
-    },
-    select: { estado: true },
-  })
-
-  const turnosConfirmados = turnosDelDia.filter((t) => t.estado === "CONFIRMADO").length
-  const turnosPendientes = turnosDelDia.filter((t) => t.estado === "PENDIENTE").length
-  const turnosCancelados = turnosDelDia.filter((t) => t.estado === "CANCELADO").length
 
   return (
     <div className="space-y-6">

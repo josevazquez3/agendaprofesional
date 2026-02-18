@@ -31,28 +31,30 @@ export default async function SecretariaTurnosPage({
     redirect("/auth/login")
   }
 
-  const where: Parameters<typeof prisma.turno.findMany>[0]["where"] = { ...sinEliminados }
-  if (searchParams.profesionalId) where.profesionalId = searchParams.profesionalId
-  if (searchParams.estado) where.estado = searchParams.estado
-  if (searchParams.fecha) {
-    const fecha = new Date(searchParams.fecha)
-    const inicioDia = new Date(fecha)
-    inicioDia.setHours(0, 0, 0, 0)
-    const finDia = new Date(fecha)
-    finDia.setHours(23, 59, 59, 999)
-    where.fecha = { gte: inicioDia, lte: finDia }
-  }
-  if (searchParams.search) {
-    where.paciente = {
-      nombre: { contains: searchParams.search, mode: "insensitive" },
-    }
-  }
-  if (searchParams.especialidad) {
-    where.profesional = { especialidad: searchParams.especialidad }
-  }
+  const fechaFilterSecretaria = searchParams.fecha
+    ? (() => {
+        const fecha = new Date(searchParams.fecha!)
+        const inicioDia = new Date(fecha)
+        inicioDia.setHours(0, 0, 0, 0)
+        const finDia = new Date(fecha)
+        finDia.setHours(23, 59, 59, 999)
+        return { gte: inicioDia, lte: finDia }
+      })()
+    : undefined
 
   const turnos = await prisma.turno.findMany({
-    where,
+    where: {
+      ...sinEliminados,
+      ...(searchParams.profesionalId ? { profesionalId: searchParams.profesionalId } : {}),
+      ...(searchParams.estado ? { estado: searchParams.estado } : {}),
+      ...(fechaFilterSecretaria ? { fecha: fechaFilterSecretaria } : {}),
+      ...(searchParams.search
+        ? { paciente: { nombre: { contains: searchParams.search, mode: "insensitive" } } }
+        : {}),
+      ...(searchParams.especialidad
+        ? { profesional: { especialidad: searchParams.especialidad } }
+        : {}),
+    },
     orderBy: { fecha: "asc" },
     take: 100,
     include: {

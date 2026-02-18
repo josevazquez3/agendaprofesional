@@ -25,21 +25,21 @@ export default async function AdminPacientesPage({
     redirect("/auth/login")
   }
 
-  const where: Parameters<typeof prisma.user.findMany>[0]["where"] = { role: "PACIENTE" }
-  if (searchParams.search) {
-    const term = searchParams.search.trim()
-    where.OR = [
-      { nombre: { contains: term, mode: "insensitive" } },
-      { email: { contains: term, mode: "insensitive" } },
-      { dni: { contains: term, mode: "insensitive" } },
-    ]
-  }
-  if (searchParams.obraSocialId) {
-    where.obraSocialId = searchParams.obraSocialId
-  }
-
+  const term = searchParams.search?.trim()
   const pacientes = await prisma.user.findMany({
-    where,
+    where: {
+      role: "PACIENTE",
+      ...(term
+        ? {
+            OR: [
+              { nombre: { contains: term, mode: "insensitive" } },
+              { email: { contains: term, mode: "insensitive" } },
+              { dni: { contains: term, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+      ...(searchParams.obraSocialId ? { obraSocialId: searchParams.obraSocialId } : {}),
+    },
     orderBy: { nombre: "asc" },
     include: {
       obraSocialRel: { select: { nombre: true } },
