@@ -77,10 +77,10 @@ export default function EditarProfesionalPage() {
         fetch(`/api/profesionales/${profesionalId}`),
         fetchConsultorios(),
       ])
+      const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error("Error al cargar profesional")
+        throw new Error((data as { error?: string }).error || "Error al cargar profesional")
       }
-      const data = await response.json()
 
       setClinicId(data.clinicId ?? null)
       setConsultoriosAsignados(data.consultoriosAsignados ?? [])

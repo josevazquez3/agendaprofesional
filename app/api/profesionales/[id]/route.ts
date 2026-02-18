@@ -6,10 +6,13 @@ import { getProfesionalById } from "@/lib/profesional-helpers"
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = await Promise.resolve(context.params)
+    if (!id) {
+      return NextResponse.json({ error: "ID de profesional no válido" }, { status: 400 })
+    }
     const session = await getServerSession(authOptions)
 
     if (!session) {
@@ -51,10 +54,11 @@ export async function GET(
       aranceles,
       consultoriosAsignados,
     })
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error al obtener profesional"
     console.error("Error obteniendo profesional:", error)
     return NextResponse.json(
-      { error: "Error al obtener profesional" },
+      { error: message },
       { status: 500 }
     )
   }
