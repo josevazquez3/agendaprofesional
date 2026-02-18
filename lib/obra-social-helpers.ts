@@ -172,39 +172,16 @@ export async function getObrasSociales(options?: {
 }
 
 /**
- * Obtener una obra social por ID usando SQL raw
+ * Obtener una obra social por ID (Prisma, compatible con PostgreSQL)
  */
 export async function getObraSocialById(
   id: string
 ): Promise<ObraSocialWithRelations | null> {
   try {
-    const query = `
-      SELECT 
-        id, nombre, codigo, descripcion, telefono, email, direccion, 
-        activa, createdAt, updatedAt
-      FROM ObraSocial
-      WHERE id = ?
-      LIMIT 1
-    `
-
-    const result = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      codigo: string | null
-      descripcion: string | null
-      telefono: string | null
-      email: string | null
-      direccion: string | null
-      activa: number | boolean
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(query, id)
-
-    if (result.length === 0) {
-      return null
-    }
-
-    const os = result[0]
+    const os = await prisma.obraSocial.findUnique({
+      where: { id },
+    })
+    if (!os) return null
     return {
       id: os.id,
       nombre: os.nombre,
@@ -213,9 +190,9 @@ export async function getObraSocialById(
       telefono: os.telefono,
       email: os.email,
       direccion: os.direccion,
-      activa: typeof os.activa === 'number' ? os.activa === 1 : os.activa,
-      createdAt: safeDate(os.createdAt) || new Date(),
-      updatedAt: safeDate(os.updatedAt) || new Date(),
+      activa: os.activa,
+      createdAt: os.createdAt,
+      updatedAt: os.updatedAt,
     }
   } catch (error) {
     console.error("Error en getObraSocialById:", error)
@@ -224,39 +201,17 @@ export async function getObraSocialById(
 }
 
 /**
- * Obtener una obra social por nombre usando SQL raw
+ * Obtener una obra social por nombre (Prisma). Requiere clinicId por @@unique([clinicId, nombre]).
  */
 export async function getObraSocialByNombre(
-  nombre: string
+  nombre: string,
+  clinicId: string
 ): Promise<ObraSocialWithRelations | null> {
   try {
-    const query = `
-      SELECT 
-        id, nombre, codigo, descripcion, telefono, email, direccion, 
-        activa, createdAt, updatedAt
-      FROM ObraSocial
-      WHERE nombre = ?
-      LIMIT 1
-    `
-
-    const result = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      codigo: string | null
-      descripcion: string | null
-      telefono: string | null
-      email: string | null
-      direccion: string | null
-      activa: number | boolean
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(query, nombre)
-
-    if (result.length === 0) {
-      return null
-    }
-
-    const os = result[0]
+    const os = await prisma.obraSocial.findUnique({
+      where: { clinicId_nombre: { clinicId, nombre } },
+    })
+    if (!os) return null
     return {
       id: os.id,
       nombre: os.nombre,
@@ -265,9 +220,9 @@ export async function getObraSocialByNombre(
       telefono: os.telefono,
       email: os.email,
       direccion: os.direccion,
-      activa: typeof os.activa === 'number' ? os.activa === 1 : os.activa,
-      createdAt: safeDate(os.createdAt) || new Date(),
-      updatedAt: safeDate(os.updatedAt) || new Date(),
+      activa: os.activa,
+      createdAt: os.createdAt,
+      updatedAt: os.updatedAt,
     }
   } catch (error) {
     console.error("Error en getObraSocialByNombre:", error)
@@ -276,39 +231,17 @@ export async function getObraSocialByNombre(
 }
 
 /**
- * Obtener una obra social por código usando SQL raw
+ * Obtener una obra social por código en una clínica (Prisma)
  */
 export async function getObraSocialByCodigo(
-  codigo: string
+  codigo: string,
+  clinicId: string
 ): Promise<ObraSocialWithRelations | null> {
   try {
-    const query = `
-      SELECT 
-        id, nombre, codigo, descripcion, telefono, email, direccion, 
-        activa, createdAt, updatedAt
-      FROM ObraSocial
-      WHERE codigo = ?
-      LIMIT 1
-    `
-
-    const result = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      codigo: string | null
-      descripcion: string | null
-      telefono: string | null
-      email: string | null
-      direccion: string | null
-      activa: number | boolean
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(query, codigo)
-
-    if (result.length === 0) {
-      return null
-    }
-
-    const os = result[0]
+    const os = await prisma.obraSocial.findFirst({
+      where: { codigo, clinicId },
+    })
+    if (!os) return null
     return {
       id: os.id,
       nombre: os.nombre,
@@ -317,9 +250,9 @@ export async function getObraSocialByCodigo(
       telefono: os.telefono,
       email: os.email,
       direccion: os.direccion,
-      activa: typeof os.activa === 'number' ? os.activa === 1 : os.activa,
-      createdAt: safeDate(os.createdAt) || new Date(),
-      updatedAt: safeDate(os.updatedAt) || new Date(),
+      activa: os.activa,
+      createdAt: os.createdAt,
+      updatedAt: os.updatedAt,
     }
   } catch (error) {
     console.error("Error en getObraSocialByCodigo:", error)

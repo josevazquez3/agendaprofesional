@@ -43,6 +43,9 @@ export default async function AdminConsultoriosPage() {
         <div>
           <h1 className="text-3xl font-bold">Gestión de Consultorios</h1>
           <p className="text-gray-600 mt-2">Administra los consultorios del sistema</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Para asignar un consultorio a un profesional: use el botón <strong>Profesionales</strong> en cada consultorio, o vaya a <strong>Profesionales → Editar</strong> y en la sección &quot;Consultorios asignados&quot; agregue los consultorios.
+          </p>
         </div>
         <Link href="/dashboard/secretaria/consultorios/nuevo">
           <Button>

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getObrasSociales, getObraSocialByNombre, getObraSocialByCodigo, getObraSocialById } from "@/lib/obra-social-helpers"
+import { getActiveClinic } from "@/lib/clinic-context"
 
 // GET - Listar todas las obras sociales
 export async function GET() {
@@ -56,9 +57,16 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar si ya existe una obra social con el mismo nombre
-    const existeNombre = await getObraSocialByNombre(nombre)
+    const clinic = await getActiveClinic()
+    if (!clinic) {
+      return NextResponse.json(
+        { error: "No se pudo determinar la clínica activa" },
+        { status: 400 }
+      )
+    }
 
+    // Verificar si ya existe una obra social con el mismo nombre en esta clínica
+    const existeNombre = await getObraSocialByNombre(nombre, clinic.id)
     if (existeNombre) {
       return NextResponse.json(
         { error: "Ya existe una obra social con ese nombre" },
@@ -66,10 +74,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar si ya existe una obra social con el mismo código (si se proporciona)
     if (codigo) {
-      const existeCodigo = await getObraSocialByCodigo(codigo)
-
+      const existeCodigo = await getObraSocialByCodigo(codigo, clinic.id)
       if (existeCodigo) {
         return NextResponse.json(
           { error: "Ya existe una obra social con ese código" },
@@ -78,26 +84,18 @@ export async function POST(request: Request) {
       }
     }
 
-    // Crear obra social usando SQL raw
-    const id = `os_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const ahora = new Date().toISOString()
-    
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO ObraSocial (id, nombre, codigo, descripcion, telefono, email, direccion, activa, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      id,
-      nombre,
-      codigo || null,
-      descripcion || null,
-      telefono || null,
-      email || null,
-      direccion || null,
-      activa !== undefined ? (activa ? 1 : 0) : 1,
-      ahora,
-      ahora
-    )
-
-    const obraSocial = await getObraSocialById(id)
+    const obraSocial = await prisma.obraSocial.create({
+      data: {
+        clinicId: clinic.id,
+        nombre: nombre.trim(),
+        codigo: codigo?.trim() || null,
+        descripcion: descripcion?.trim() || null,
+        telefono: telefono?.trim() || null,
+        email: email?.trim() || null,
+        direccion: direccion?.trim() || null,
+        activa: activa !== undefined ? !!activa : true,
+      },
+    })
 
     return NextResponse.json(obraSocial, { status: 201 })
   } catch (error: any) {

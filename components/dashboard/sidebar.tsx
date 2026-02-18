@@ -14,6 +14,7 @@ import {
   ChevronRight,
   FileText,
   BarChart3,
+  Building2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -63,6 +64,11 @@ export function Sidebar({
             icon: UserCircle,
           },
           {
+            href: "/dashboard/admin/consultorios",
+            label: "Consultorios",
+            icon: Building2,
+          },
+          {
             href: "/dashboard/admin/reportes",
             label: "Reportes",
             icon: BarChart3,
@@ -96,6 +102,11 @@ export function Sidebar({
             href: "/dashboard/secretaria/profesionales",
             label: "Profesionales",
             icon: UserCircle,
+          },
+          {
+            href: "/dashboard/secretaria/consultorios",
+            label: "Consultorios",
+            icon: Building2,
           },
           {
             href: "/dashboard/secretaria/reportes",
