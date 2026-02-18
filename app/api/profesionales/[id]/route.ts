@@ -6,16 +6,17 @@ import { getProfesionalById } from "@/lib/profesional-helpers"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const profesional = await getProfesionalById(params.id, {
+    const profesional = await getProfesionalById(id, {
       includeUser: true,
       includeUserFields: ["nombre", "email", "telefono", "dni", "obraSocial", "fotoPerfil"],
     })
@@ -29,17 +30,17 @@ export async function GET(
 
     const [aranceles, consultoriosAsignados, profesionalConClinic] = await Promise.all([
       prisma.arancel.findMany({
-        where: { profesionalId: params.id, activo: true },
+        where: { profesionalId: id, activo: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.consultorioProfesional.findMany({
-        where: { profesionalId: params.id },
+        where: { profesionalId: id },
         include: {
           consultorio: { select: { id: true, nombre: true, direccion: true } },
         },
       }),
       prisma.profesional.findUnique({
-        where: { id: params.id },
+        where: { id },
         select: { clinicId: true },
       }),
     ])
