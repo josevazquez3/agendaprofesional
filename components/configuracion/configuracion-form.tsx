@@ -590,7 +590,7 @@ export function ConfiguracionForm() {
         </CardContent>
       </Card>
 
-      {/* Backup */}
+      {/* Backup (solo manual) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -598,195 +598,127 @@ export function ConfiguracionForm() {
             Backup y Mantenimiento
           </CardTitle>
           <CardDescription>
-            Configura las copias de seguridad automáticas
+            Configura dónde se guardan las copias de seguridad. Los backups se realizan de forma manual desde la sección Backups.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="backupAutomatico">Backup automático</Label>
-            <input
-              type="checkbox"
-              id="backupAutomatico"
-              checked={config.backupAutomatico}
-              onChange={(e) => updateConfig("backupAutomatico", e.target.checked)}
-              className="h-4 w-4"
+          <div>
+            <Label htmlFor="backupRetencionDias">
+              Retención de backups (días)
+            </Label>
+            <Input
+              id="backupRetencionDias"
+              type="number"
+              value={config.backupRetencionDias}
+              onChange={(e) =>
+                updateConfig("backupRetencionDias", parseInt(e.target.value))
+              }
+              min={7}
+              max={365}
+              className="mt-1"
             />
+            <p className="text-xs text-[#64748B] mt-1">
+              Cuántos días conservar los backups generados manualmente
+            </p>
           </div>
-          {config.backupAutomatico && (
-            <>
-              <div>
-                <Label htmlFor="backupFrecuencia">Frecuencia</Label>
-                <select
-                  id="backupFrecuencia"
-                  value={config.backupFrecuencia}
-                  onChange={(e) => updateConfig("backupFrecuencia", e.target.value)}
-                  className="flex h-10 w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
-                >
-                  <option value="daily">Diario</option>
-                  <option value="weekly">Semanal</option>
-                  <option value="monthly">Mensual</option>
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="backupHora">Hora del backup</Label>
-                <Input
-                  id="backupHora"
-                  type="time"
-                  value={config.backupHora}
-                  onChange={(e) => updateConfig("backupHora", e.target.value)}
-                />
-              </div>
-              {config.backupFrecuencia === "weekly" && (
-                <div>
-                  <Label htmlFor="backupDiaSemana">Día de la semana</Label>
-                  <select
-                    id="backupDiaSemana"
-                    value={config.backupDiaSemana}
-                    onChange={(e) =>
-                      updateConfig("backupDiaSemana", parseInt(e.target.value))
-                    }
-                    className="flex h-10 w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
+          <div className="pt-2 border-t border-[#E2E8F0]">
+            <Label htmlFor="backupStorageType" className="text-base font-semibold">
+              Tipo de Almacenamiento
+            </Label>
+            <select
+              id="backupStorageType"
+              value={config.backupStorageType}
+              onChange={(e) => updateConfig("backupStorageType", e.target.value)}
+              className="flex h-10 w-full mt-2 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
+            >
+              <option value="local">Almacenamiento Local</option>
+              <option value="s3">Amazon S3</option>
+              <option value="gcs">Google Cloud Storage</option>
+            </select>
+            <p className="text-xs text-[#64748B] mt-1">
+              Selecciona dónde se guardarán los backups manuales
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="backupStoragePath">
+              Ruta de Almacenamiento
+            </Label>
+            <div className="flex gap-2 mt-1">
+              <Input
+                id="backupStoragePath"
+                type="text"
+                value={config.backupStoragePath}
+                onChange={(e) => updateConfig("backupStoragePath", e.target.value)}
+                placeholder={config.backupStorageType === "local" ? "./backups" : "mi-bucket-backups"}
+                className="flex-1"
+              />
+              {config.backupStorageType === "local" && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleBrowseFolder}
+                    className="border-[#E2E8F0] hover:bg-[#F8FAFC]"
+                    title="Seleccionar carpeta"
                   >
-                    <option value="0">Lunes</option>
-                    <option value="1">Martes</option>
-                    <option value="2">Miércoles</option>
-                    <option value="3">Jueves</option>
-                    <option value="4">Viernes</option>
-                    <option value="5">Sábado</option>
-                    <option value="6">Domingo</option>
-                  </select>
-                </div>
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCreateFolder}
+                    disabled={creatingFolder || !config.backupStoragePath}
+                    className="border-[#E2E8F0] hover:bg-[#F8FAFC]"
+                    title="Crear carpeta si no existe"
+                  >
+                    {creatingFolder ? (
+                      "Creando..."
+                    ) : (
+                      <>
+                        <FolderPlus className="h-4 w-4 mr-1" />
+                        Crear Carpeta
+                      </>
+                    )}
+                  </Button>
+                </>
               )}
-              {config.backupFrecuencia === "monthly" && (
-                <div>
-                  <Label htmlFor="backupDiaMes">Día del mes</Label>
-                  <Input
-                    id="backupDiaMes"
-                    type="number"
-                    value={config.backupDiaMes}
-                    onChange={(e) =>
-                      updateConfig("backupDiaMes", parseInt(e.target.value))
-                    }
-                    min={1}
-                    max={31}
-                  />
-                </div>
-              )}
-              <div>
-                <Label htmlFor="backupRetencionDias">
-                  Retención de backups (días)
-                </Label>
-                <Input
-                  id="backupRetencionDias"
-                  type="number"
-                  value={config.backupRetencionDias}
-                  onChange={(e) =>
-                    updateConfig("backupRetencionDias", parseInt(e.target.value))
-                  }
-                  min={7}
-                  max={365}
-                />
-              </div>
-              <div className="pt-4 border-t">
-                <Label htmlFor="backupStorageType" className="text-base font-semibold">
-                  Tipo de Almacenamiento
-                </Label>
-                <select
-                  id="backupStorageType"
-                  value={config.backupStorageType}
-                  onChange={(e) => updateConfig("backupStorageType", e.target.value)}
-                  className="flex h-10 w-full mt-2 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
-                >
-                  <option value="local">Almacenamiento Local</option>
-                  <option value="s3">Amazon S3</option>
-                  <option value="gcs">Google Cloud Storage</option>
-                </select>
-                <p className="text-xs text-[#64748B] mt-1">
-                  Selecciona dónde se guardarán los backups
+            </div>
+            {folderCreated && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <p className="text-sm text-green-800">
+                  Carpeta creada exitosamente en: {config.backupStoragePath}
                 </p>
               </div>
-              <div>
-                <Label htmlFor="backupStoragePath">
-                  Ruta de Almacenamiento
-                </Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    id="backupStoragePath"
-                    type="text"
-                    value={config.backupStoragePath}
-                    onChange={(e) => updateConfig("backupStoragePath", e.target.value)}
-                    placeholder={config.backupStorageType === "local" ? "./backups" : "mi-bucket-backups"}
-                    className="flex-1"
-                  />
-                  {config.backupStorageType === "local" && (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleBrowseFolder}
-                        className="border-[#E2E8F0] hover:bg-[#F8FAFC]"
-                        title="Seleccionar carpeta"
-                      >
-                        <FolderOpen className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleCreateFolder}
-                        disabled={creatingFolder || !config.backupStoragePath}
-                        className="border-[#E2E8F0] hover:bg-[#F8FAFC]"
-                        title="Crear carpeta si no existe"
-                      >
-                        {creatingFolder ? (
-                          "Creando..."
-                        ) : (
-                          <>
-                            <FolderPlus className="h-4 w-4 mr-1" />
-                            Crear Carpeta
-                          </>
-                        )}
-                      </Button>
-                    </>
-                  )}
-                </div>
-                {folderCreated && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <p className="text-sm text-green-800">
-                      Carpeta creada exitosamente en: {config.backupStoragePath}
-                    </p>
-                  </div>
-                )}
+            )}
+            <p className="text-xs text-[#64748B] mt-2">
+              {config.backupStorageType === "local" && (
+                <>Ruta relativa o absoluta donde se guardarán los backups. Ejemplo: <code className="bg-[#F1F5F9] px-1 rounded">./backups</code> o <code className="bg-[#F1F5F9] px-1 rounded">C:\backups\agendaprofesional</code></>
+              )}
+              {config.backupStorageType === "s3" && (
+                <>Nombre del bucket de S3. Ejemplo: <code className="bg-[#F1F5F9] px-1 rounded">mi-bucket-backups</code></>
+              )}
+              {config.backupStorageType === "gcs" && (
+                <>Nombre del bucket de GCS. Ejemplo: <code className="bg-[#F1F5F9] px-1 rounded">mi-bucket-backups</code></>
+              )}
+            </p>
+            <div className="mt-3 p-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg">
+              <p className="text-sm font-medium text-[#0F172A] mb-1">
+                📁 Ubicación actual de backups:
+              </p>
+              <p className="text-sm text-[#64748B] font-mono break-all">
+                {config.backupStorageType === "local"
+                  ? config.backupStoragePath || "./backups"
+                  : `${config.backupStorageType.toUpperCase()}: ${config.backupStoragePath || "no configurado"}`
+                }
+              </p>
+              {config.backupStorageType === "local" && (
                 <p className="text-xs text-[#64748B] mt-2">
-                  {config.backupStorageType === "local" && (
-                    <>Ruta relativa o absoluta donde se guardarán los backups. Ejemplo: <code className="bg-[#F1F5F9] px-1 rounded">./backups</code> o <code className="bg-[#F1F5F9] px-1 rounded">C:\backups\agendaprofesional</code></>
-                  )}
-                  {config.backupStorageType === "s3" && (
-                    <>Nombre del bucket de S3. Ejemplo: <code className="bg-[#F1F5F9] px-1 rounded">mi-bucket-backups</code></>
-                  )}
-                  {config.backupStorageType === "gcs" && (
-                    <>Nombre del bucket de GCS. Ejemplo: <code className="bg-[#F1F5F9] px-1 rounded">mi-bucket-backups</code></>
-                  )}
+                  Los backups se guardarán en: <strong>{config.backupStoragePath || "./backups"}</strong>
                 </p>
-                <div className="mt-3 p-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg">
-                  <p className="text-sm font-medium text-[#0F172A] mb-1">
-                    📁 Ubicación actual de backups:
-                  </p>
-                  <p className="text-sm text-[#64748B] font-mono break-all">
-                    {config.backupStorageType === "local" 
-                      ? config.backupStoragePath || "./backups"
-                      : `${config.backupStorageType.toUpperCase()}: ${config.backupStoragePath || "no configurado"}`
-                    }
-                  </p>
-                  {config.backupStorageType === "local" && (
-                    <p className="text-xs text-[#64748B] mt-2">
-                      Los backups se guardarán en: <strong>{config.backupStoragePath || "./backups"}</strong>
-                    </p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

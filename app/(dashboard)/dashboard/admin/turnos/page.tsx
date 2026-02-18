@@ -103,11 +103,12 @@ export default async function AdminTurnosPage({
     turnosCancelados = 0
   }
 
+  // Serializar fechas a ISO para evitar error de serialización Server→Client (Date no es serializable)
   let turnosFiltrados = turnos.map((t) => ({
     id: t.id,
     pacienteId: t.pacienteId,
     profesionalId: t.profesionalId,
-    fecha: t.fecha,
+    fecha: t.fecha instanceof Date ? t.fecha.toISOString() : String(t.fecha),
     hora: t.hora,
     estado: t.estado,
     motivo: t.motivo,
@@ -200,7 +201,7 @@ export default async function AdminTurnosPage({
             turnosConfirmados={turnosConfirmados}
             turnosPendientes={turnosPendientes}
             turnosCancelados={turnosCancelados}
-            fecha={fechaFiltro}
+            fecha={fechaFiltro.toISOString()}
           />
         </div>
       </div>

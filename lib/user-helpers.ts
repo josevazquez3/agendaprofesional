@@ -397,51 +397,45 @@ export async function getUserById(
 }
 
 /**
- * Obtener un usuario por email usando SQL raw
+ * Obtener un usuario por email (Prisma, compatible con PostgreSQL)
  */
 export async function getUserByEmail(email: string): Promise<UserWithRelations | null> {
   try {
-    const result = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      dni: string | null
-      email: string
-      telefono: string | null
-      fechaNacimiento: string | bigint | number | null
-      direccion: string | null
-      fotoPerfil: string | null
-      obraSocial: string | null
-      obraSocialId: string | null
-      role: string
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(
-      `SELECT id, nombre, dni, email, telefono, fechaNacimiento, direccion, 
-       fotoPerfil, obraSocial, obraSocialId, role, createdAt, updatedAt
-       FROM User WHERE email = ? LIMIT 1`,
-      email
-    )
-
-    if (result.length === 0) {
-      return null
-    }
-
-    const user = result[0]
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        nombre: true,
+        dni: true,
+        email: true,
+        telefono: true,
+        fechaNacimiento: true,
+        direccion: true,
+        fotoPerfil: true,
+        obraSocial: true,
+        obraSocialId: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        obraSocialRel: { select: { nombre: true } },
+      },
+    })
+    if (!user) return null
     return {
       id: user.id,
       nombre: user.nombre,
       dni: user.dni,
       email: user.email,
       telefono: user.telefono,
-      fechaNacimiento: safeDate(user.fechaNacimiento),
+      fechaNacimiento: user.fechaNacimiento,
       direccion: user.direccion,
       fotoPerfil: user.fotoPerfil,
       obraSocial: user.obraSocial,
       obraSocialId: user.obraSocialId,
       role: user.role,
-      createdAt: safeDate(user.createdAt) || new Date(),
-      updatedAt: safeDate(user.updatedAt) || new Date(),
-      obraSocialRel: null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      obraSocialRel: user.obraSocialRel ?? null,
       pacienteTurnos: [],
     }
   } catch (error) {
@@ -451,51 +445,45 @@ export async function getUserByEmail(email: string): Promise<UserWithRelations |
 }
 
 /**
- * Obtener un usuario por DNI usando SQL raw
+ * Obtener un usuario por DNI (Prisma, compatible con PostgreSQL)
  */
 export async function getUserByDni(dni: string): Promise<UserWithRelations | null> {
   try {
-    const result = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      dni: string | null
-      email: string
-      telefono: string | null
-      fechaNacimiento: string | bigint | number | null
-      direccion: string | null
-      fotoPerfil: string | null
-      obraSocial: string | null
-      obraSocialId: string | null
-      role: string
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(
-      `SELECT id, nombre, dni, email, telefono, fechaNacimiento, direccion, 
-       fotoPerfil, obraSocial, obraSocialId, role, createdAt, updatedAt
-       FROM User WHERE dni = ? LIMIT 1`,
-      dni
-    )
-
-    if (result.length === 0) {
-      return null
-    }
-
-    const user = result[0]
+    const user = await prisma.user.findUnique({
+      where: { dni },
+      select: {
+        id: true,
+        nombre: true,
+        dni: true,
+        email: true,
+        telefono: true,
+        fechaNacimiento: true,
+        direccion: true,
+        fotoPerfil: true,
+        obraSocial: true,
+        obraSocialId: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        obraSocialRel: { select: { nombre: true } },
+      },
+    })
+    if (!user) return null
     return {
       id: user.id,
       nombre: user.nombre,
       dni: user.dni,
       email: user.email,
       telefono: user.telefono,
-      fechaNacimiento: safeDate(user.fechaNacimiento),
+      fechaNacimiento: user.fechaNacimiento,
       direccion: user.direccion,
       fotoPerfil: user.fotoPerfil,
       obraSocial: user.obraSocial,
       obraSocialId: user.obraSocialId,
       role: user.role,
-      createdAt: safeDate(user.createdAt) || new Date(),
-      updatedAt: safeDate(user.updatedAt) || new Date(),
-      obraSocialRel: null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      obraSocialRel: user.obraSocialRel ?? null,
       pacienteTurnos: [],
     }
   } catch (error) {

@@ -8,16 +8,18 @@ interface DaySummaryPanelProps {
   turnosConfirmados: number
   turnosPendientes: number
   turnosCancelados: number
-  fecha?: Date
+  /** ISO date string or Date (string evita problemas de serialización Server→Client) */
+  fecha?: Date | string
 }
 
 export function DaySummaryPanel({
   turnosConfirmados,
   turnosPendientes,
   turnosCancelados,
-  fecha = new Date(),
+  fecha,
 }: DaySummaryPanelProps) {
   const totalTurnos = turnosConfirmados + turnosPendientes + turnosCancelados
+  const fechaDate = fecha ? (typeof fecha === "string" ? new Date(fecha) : fecha) : new Date()
 
   return (
     <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
@@ -26,7 +28,7 @@ export function DaySummaryPanel({
           Resumen del día
         </CardTitle>
         <p className="text-sm text-[#64748B] mt-1">
-          {fecha.toLocaleDateString("es-ES", {
+          {fechaDate.toLocaleDateString("es-ES", {
             weekday: "long",
             year: "numeric",
             month: "long",

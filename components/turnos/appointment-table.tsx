@@ -14,7 +14,8 @@ import { EliminarTurnosModal } from "./EliminarTurnosModal"
 
 interface Turno {
   id: string
-  fecha: Date
+  /** ISO string desde Server Component para evitar error de serialización */
+  fecha: Date | string
   hora: string
   estado: string
   motivoEliminacion?: string | null
