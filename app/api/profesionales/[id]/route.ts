@@ -27,15 +27,28 @@ export async function GET(
       )
     }
 
-    // Obtener aranceles usando SQL raw
-    const aranceles = await prisma.$queryRawUnsafe<Array<any>>(
-      `SELECT * FROM Arancel WHERE profesionalId = ? AND activo = 1 ORDER BY createdAt DESC`,
-      profesional.id
-    )
+    const [aranceles, consultoriosAsignados, profesionalConClinic] = await Promise.all([
+      prisma.arancel.findMany({
+        where: { profesionalId: params.id, activo: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.consultorioProfesional.findMany({
+        where: { profesionalId: params.id },
+        include: {
+          consultorio: { select: { id: true, nombre: true, direccion: true } },
+        },
+      }),
+      prisma.profesional.findUnique({
+        where: { id: params.id },
+        select: { clinicId: true },
+      }),
+    ])
 
     return NextResponse.json({
       ...profesional,
+      clinicId: profesionalConClinic?.clinicId ?? null,
       aranceles,
+      consultoriosAsignados,
     })
   } catch (error) {
     console.error("Error obteniendo profesional:", error)

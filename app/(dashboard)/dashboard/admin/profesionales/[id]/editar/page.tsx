@@ -8,7 +8,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import Image from "next/image"
-import { Upload, X, User } from "lucide-react"
+import { Upload, X, User, MapPin, Plus } from "lucide-react"
+
+type ConsultorioAsignado = {
+  id: string
+  consultorioId: string
+  consultorio: { id: string; nombre: string; direccion: string }
+}
+type ConsultorioOption = { id: string; nombre: string; direccion: string; clinicId: string }
 
 export default function EditarProfesionalPage() {
   const router = useRouter()
@@ -18,6 +25,11 @@ export default function EditarProfesionalPage() {
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState("")
+  const [clinicId, setClinicId] = useState<string | null>(null)
+  const [consultoriosAsignados, setConsultoriosAsignados] = useState<ConsultorioAsignado[]>([])
+  const [listConsultorios, setListConsultorios] = useState<ConsultorioOption[]>([])
+  const [consultorioSelect, setConsultorioSelect] = useState("")
+  const [loadingConsultorio, setLoadingConsultorio] = useState(false)
   const [formData, setFormData] = useState({
     nombre: "",
     email: "",
@@ -38,17 +50,42 @@ export default function EditarProfesionalPage() {
     fetchProfesional()
   }, [profesionalId])
 
+  const fetchConsultorios = async () => {
+    try {
+      const res = await fetch("/api/consultorios")
+      if (res.ok) {
+        const list = await res.json()
+        setListConsultorios(
+          Array.isArray(list)
+            ? list.map((c: any) => ({
+                id: c.id,
+                nombre: c.nombre,
+                direccion: c.direccion || "",
+                clinicId: c.clinicId || "",
+              }))
+            : []
+        )
+      }
+    } catch {
+      setListConsultorios([])
+    }
+  }
+
   const fetchProfesional = async () => {
     try {
-      const response = await fetch(`/api/profesionales/${profesionalId}`)
+      const [response, _] = await Promise.all([
+        fetch(`/api/profesionales/${profesionalId}`),
+        fetchConsultorios(),
+      ])
       if (!response.ok) {
         throw new Error("Error al cargar profesional")
       }
       const data = await response.json()
-      
-      // Obtener arancel activo si existe
+
+      setClinicId(data.clinicId ?? null)
+      setConsultoriosAsignados(data.consultoriosAsignados ?? [])
+
       const arancelActivo = data.aranceles?.find((a: any) => a.activo) || null
-      
       setFormData({
         nombre: data.user.nombre || "",
         email: data.user.email || "",
@@ -67,6 +104,65 @@ export default function EditarProfesionalPage() {
     } catch (error: any) {
       setError(error.message || "Error al cargar profesional")
       setLoadingData(false)
+    }
+  }
+
+  const consultoriosDisponibles = listConsultorios.filter(
+    (c) =>
+      (!clinicId || c.clinicId === clinicId) &&
+      !consultoriosAsignados.some((a) => a.consultorio.id === c.id)
+  )
+
+  const handleAsignarConsultorio = async () => {
+    if (!consultorioSelect) return
+    setLoadingConsultorio(true)
+    setError("")
+    try {
+      const res = await fetch("/api/consultorios/asociar-profesional", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consultorioId: consultorioSelect,
+          profesionalId,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error al asignar")
+      const con = listConsultorios.find((c) => c.id === consultorioSelect)
+      if (con) {
+        setConsultoriosAsignados((prev) => [
+          ...prev,
+          {
+            id: "",
+            consultorioId: con.id,
+            consultorio: { id: con.id, nombre: con.nombre, direccion: con.direccion },
+          },
+        ])
+        setConsultorioSelect("")
+      }
+    } catch (e: any) {
+      setError(e.message || "Error al asignar consultorio")
+    } finally {
+      setLoadingConsultorio(false)
+    }
+  }
+
+  const handleDesasignarConsultorio = async (consultorioId: string) => {
+    setLoadingConsultorio(true)
+    setError("")
+    try {
+      const res = await fetch("/api/consultorios/desasociar-profesional", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consultorioId, profesionalId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error al quitar")
+      setConsultoriosAsignados((prev) => prev.filter((a) => a.consultorio.id !== consultorioId))
+    } catch (e: any) {
+      setError(e.message || "Error al quitar consultorio")
+    } finally {
+      setLoadingConsultorio(false)
     }
   }
 
@@ -382,6 +478,80 @@ export default function EditarProfesionalPage() {
                       />
                     </div>
                   </div>
+                )}
+              </div>
+
+              <div className="space-y-2 md:col-span-2 border-t pt-6">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Consultorios asignados
+                </Label>
+                <p className="text-sm text-gray-500">
+                  Asigna los consultorios donde atiende este profesional. Podrás elegir el consultorio al crear cada turno.
+                </p>
+                {consultoriosAsignados.length > 0 && (
+                  <ul className="space-y-2 mt-2">
+                    {consultoriosAsignados.map((a) => (
+                      <li
+                        key={a.consultorio.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
+                      >
+                        <div>
+                          <span className="font-medium">{a.consultorio.nombre}</span>
+                          {a.consultorio.direccion && (
+                            <p className="text-sm text-gray-500">{a.consultorio.direccion}</p>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={loadingConsultorio}
+                          onClick={() => handleDesasignarConsultorio(a.consultorio.id)}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                        >
+                          Quitar
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex flex-wrap items-end gap-2 mt-3">
+                  <div className="flex-1 min-w-[200px]">
+                    <Label htmlFor="consultorioSelect" className="sr-only">
+                      Agregar consultorio
+                    </Label>
+                    <select
+                      id="consultorioSelect"
+                      value={consultorioSelect}
+                      onChange={(e) => setConsultorioSelect(e.target.value)}
+                      className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={loadingConsultorio}
+                    >
+                      <option value="">Seleccionar consultorio...</option>
+                      {consultoriosDisponibles.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                          {c.direccion ? ` — ${c.direccion}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    type="button"
+                    disabled={!consultorioSelect || loadingConsultorio}
+                    onClick={handleAsignarConsultorio}
+                    variant="outline"
+                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Asignar consultorio
+                  </Button>
+                </div>
+                {consultoriosDisponibles.length === 0 && listConsultorios.length > 0 && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Todos los consultorios de la clínica ya están asignados a este profesional.
+                  </p>
                 )}
               </div>
             </div>

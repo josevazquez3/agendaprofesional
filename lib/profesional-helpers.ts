@@ -119,7 +119,7 @@ export async function getProfesionales(options?: {
 }
 
 /**
- * Obtener un profesional por ID usando SQL raw
+ * Obtener un profesional por ID (Prisma, compatible con PostgreSQL)
  */
 export async function getProfesionalById(
   id: string,
@@ -129,65 +129,34 @@ export async function getProfesionalById(
   }
 ): Promise<ProfesionalWithRelations | null> {
   try {
-    const query = `
-      SELECT 
-        id, userId, especialidad, matricula, atiendeObraSocial, createdAt, updatedAt
-      FROM Profesional
-      WHERE id = ?
-      LIMIT 1
-    `
-
-    const result = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      userId: string
-      especialidad: string
-      matricula: string | null
-      atiendeObraSocial: number | boolean
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(query, id)
-
-    if (result.length === 0) {
-      return null
-    }
-
-    const prof = result[0]
-
-    // Obtener datos de usuario si se requiere
-    let user = undefined
-    if (options?.includeUser) {
-      const userFields = options.includeUserFields || ["nombre"]
-      const fields = userFields.join(", ")
-      
-      const usuarios = await prisma.$queryRawUnsafe<Array<{
-        id: string
-        nombre: string
-        email?: string
-        telefono?: string
-        dni?: string
-        fotoPerfil?: string
-        obraSocial?: string
-      }>>(
-        `SELECT id, ${fields} FROM User WHERE id = ? LIMIT 1`,
-        prof.userId
-      )
-      
-      if (usuarios.length > 0) {
-        user = usuarios[0]
-      }
-    }
-
+    const prof = await prisma.profesional.findUnique({
+      where: { id },
+      include: {
+        user: options?.includeUser
+          ? {
+              select: {
+                id: true,
+                nombre: true,
+                email: true,
+                telefono: true,
+                dni: true,
+                fotoPerfil: true,
+                obraSocial: true,
+              },
+            }
+          : false,
+      },
+    })
+    if (!prof) return null
     return {
       id: prof.id,
       userId: prof.userId,
       especialidad: prof.especialidad,
       matricula: prof.matricula,
-      atiendeObraSocial: typeof prof.atiendeObraSocial === 'number' 
-        ? prof.atiendeObraSocial === 1 
-        : prof.atiendeObraSocial,
-      createdAt: safeDate(prof.createdAt) || new Date(),
-      updatedAt: safeDate(prof.updatedAt) || new Date(),
-      user,
+      atiendeObraSocial: prof.atiendeObraSocial,
+      createdAt: prof.createdAt,
+      updatedAt: prof.updatedAt,
+      user: prof.user ?? undefined,
     }
   } catch (error) {
     console.error("Error en getProfesionalById:", error)
@@ -196,7 +165,7 @@ export async function getProfesionalById(
 }
 
 /**
- * Obtener un profesional por userId usando SQL raw
+ * Obtener un profesional por userId (Prisma, compatible con PostgreSQL)
  */
 export async function getProfesionalByUserId(
   userId: string,
@@ -206,65 +175,34 @@ export async function getProfesionalByUserId(
   }
 ): Promise<ProfesionalWithRelations | null> {
   try {
-    const query = `
-      SELECT 
-        id, userId, especialidad, matricula, atiendeObraSocial, createdAt, updatedAt
-      FROM Profesional
-      WHERE userId = ?
-      LIMIT 1
-    `
-
-    const result = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      userId: string
-      especialidad: string
-      matricula: string | null
-      atiendeObraSocial: number | boolean
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(query, userId)
-
-    if (result.length === 0) {
-      return null
-    }
-
-    const prof = result[0]
-
-    // Obtener datos de usuario si se requiere
-    let user = undefined
-    if (options?.includeUser) {
-      const userFields = options.includeUserFields || ["nombre"]
-      const fields = userFields.join(", ")
-      
-      const usuarios = await prisma.$queryRawUnsafe<Array<{
-        id: string
-        nombre: string
-        email?: string
-        telefono?: string
-        dni?: string
-        fotoPerfil?: string
-        obraSocial?: string
-      }>>(
-        `SELECT id, ${fields} FROM User WHERE id = ? LIMIT 1`,
-        prof.userId
-      )
-      
-      if (usuarios.length > 0) {
-        user = usuarios[0]
-      }
-    }
-
+    const prof = await prisma.profesional.findUnique({
+      where: { userId },
+      include: {
+        user: options?.includeUser
+          ? {
+              select: {
+                id: true,
+                nombre: true,
+                email: true,
+                telefono: true,
+                dni: true,
+                fotoPerfil: true,
+                obraSocial: true,
+              },
+            }
+          : false,
+      },
+    })
+    if (!prof) return null
     return {
       id: prof.id,
       userId: prof.userId,
       especialidad: prof.especialidad,
       matricula: prof.matricula,
-      atiendeObraSocial: typeof prof.atiendeObraSocial === 'number' 
-        ? prof.atiendeObraSocial === 1 
-        : prof.atiendeObraSocial,
-      createdAt: safeDate(prof.createdAt) || new Date(),
-      updatedAt: safeDate(prof.updatedAt) || new Date(),
-      user,
+      atiendeObraSocial: prof.atiendeObraSocial,
+      createdAt: prof.createdAt,
+      updatedAt: prof.updatedAt,
+      user: prof.user ?? undefined,
     }
   } catch (error) {
     console.error("Error en getProfesionalByUserId:", error)
