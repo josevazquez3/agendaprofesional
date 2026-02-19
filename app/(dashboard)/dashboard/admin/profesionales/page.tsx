@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
+import { getActiveClinic } from "@/lib/clinic-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { prisma } from "@/lib/prisma"
@@ -16,7 +17,9 @@ export default async function AdminProfesionalesPage() {
     redirect("/auth/login")
   }
 
+  const clinic = await getActiveClinic()
   const profesionales = await prisma.profesional.findMany({
+    where: clinic ? { clinicId: clinic.id } : undefined,
     include: {
       user: {
         select: {

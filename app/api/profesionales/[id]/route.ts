@@ -18,22 +18,40 @@ export async function GET(
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const prof = await prisma.profesional.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            telefono: true,
-            dni: true,
-            fotoPerfil: true,
-            obraSocial: true,
+    // Aceptar tanto id de Profesional como userId (por si el enlace viene de usuarios u otro flujo)
+    const prof =
+      (await prisma.profesional.findUnique({
+        where: { id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              telefono: true,
+              dni: true,
+              fotoPerfil: true,
+              obraSocial: true,
+            },
           },
         },
-      },
-    })
+      })) ??
+      (await prisma.profesional.findUnique({
+        where: { userId: id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              telefono: true,
+              dni: true,
+              fotoPerfil: true,
+              obraSocial: true,
+            },
+          },
+        },
+      }))
 
     if (!prof) {
       return NextResponse.json(
@@ -41,6 +59,8 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    const profesionalId = prof.id
 
     if (!prof.user) {
       return NextResponse.json(
@@ -67,17 +87,17 @@ export async function GET(
     try {
       const [arancelesRes, consultoriosRes, profClinic] = await Promise.all([
         prisma.arancel.findMany({
-          where: { profesionalId: id, activo: true },
+          where: { profesionalId: profesionalId, activo: true },
           orderBy: { createdAt: "desc" },
         }),
         prisma.consultorioProfesional.findMany({
-          where: { profesionalId: id },
+          where: { profesionalId: profesionalId },
           include: {
             consultorio: { select: { id: true, nombre: true, direccion: true } },
           },
         }),
         prisma.profesional.findUnique({
-          where: { id },
+          where: { id: profesionalId },
           select: { clinicId: true },
         }),
       ])

@@ -84,6 +84,7 @@ export default function EditarProfesionalPage() {
       }
 
       const user = data.user ?? {}
+      setError("")
       setClinicId(data.clinicId ?? null)
       setConsultoriosAsignados(Array.isArray(data.consultoriosAsignados) ? data.consultoriosAsignados : [])
 
