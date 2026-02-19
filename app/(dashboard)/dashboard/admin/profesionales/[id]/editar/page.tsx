@@ -80,7 +80,12 @@ export default function EditarProfesionalPage() {
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
         const serverError = (data as { error?: string }).error
-        throw new Error(serverError || "Error al cargar profesional")
+        const msg =
+          serverError ||
+          (response.status === 500
+            ? "Error del servidor (500). Revisa la consola del servidor (terminal donde corre npm run dev) para ver el detalle."
+            : "Error al cargar profesional")
+        throw new Error(msg)
       }
 
       const user = data.user ?? {}

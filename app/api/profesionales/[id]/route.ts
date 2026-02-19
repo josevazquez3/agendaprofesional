@@ -8,12 +8,21 @@ export async function GET(
   context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
-    const { id } = await Promise.resolve(context.params)
-    if (!id) {
+    const resolvedParams = await Promise.resolve(context.params)
+    const id = resolvedParams?.id
+    if (!id || typeof id !== "string") {
       return NextResponse.json({ error: "ID de profesional no válido" }, { status: 400 })
     }
-    const session = await getServerSession(authOptions)
-
+    let session = null
+    try {
+      session = await getServerSession(authOptions)
+    } catch (authErr) {
+      console.error("[GET /api/profesionales/[id]] Error obteniendo sesión:", authErr)
+      return NextResponse.json(
+        { error: "Error de autenticación. Comprueba NEXTAUTH_SECRET y cookies." },
+        { status: 500 }
+      )
+    }
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
@@ -116,7 +125,8 @@ export async function GET(
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
-    console.error("Error obteniendo profesional:", error)
+    const stack = error instanceof Error ? error.stack : undefined
+    console.error("[GET /api/profesionales/[id]] Error:", message, stack ?? "")
     return NextResponse.json(
       { error: message },
       { status: 500 }
