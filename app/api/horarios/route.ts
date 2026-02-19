@@ -136,6 +136,33 @@ export async function PATCH(request: Request) {
     const body = await request.json()
     const { id, activo } = body
 
+    if (!id) {
+      return NextResponse.json(
+        { error: "id es requerido" },
+        { status: 400 }
+      )
+    }
+
+    if (session.user.role === "PROFESIONAL") {
+      const prof = await getProfesionalByUserId(session.user.id)
+      if (!prof) {
+        return NextResponse.json(
+          { error: "Profesional no encontrado" },
+          { status: 404 }
+        )
+      }
+      const horarioExistente = await prisma.horarioDisponible.findUnique({
+        where: { id },
+        select: { profesionalId: true },
+      })
+      if (!horarioExistente || horarioExistente.profesionalId !== prof.id) {
+        return NextResponse.json(
+          { error: "No puede modificar este horario" },
+          { status: 403 }
+        )
+      }
+    }
+
     const horario = await prisma.horarioDisponible.update({
       where: { id },
       data: { activo },

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getProfesionalByUserId } from "@/lib/profesional-helpers"
 
 export async function GET(request: Request) {
   try {
@@ -12,13 +13,33 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url)
-    const profesionalId = searchParams.get("profesionalId")
+    let profesionalId = searchParams.get("profesionalId")
+
+    // Admin/Secretaria pueden pasar profesionalId; el profesional usa el suyo
+    if (!profesionalId && session.user.role === "PROFESIONAL") {
+      const prof = await getProfesionalByUserId(session.user.id)
+      if (!prof) {
+        return NextResponse.json(
+          { error: "Profesional no encontrado" },
+          { status: 404 }
+        )
+      }
+      profesionalId = prof.id
+    }
 
     if (!profesionalId) {
       return NextResponse.json(
-        { error: "profesionalId es requerido" },
+        { error: "profesionalId es requerido (o inicie sesión como profesional)" },
         { status: 400 }
       )
+    }
+
+    // Profesional solo puede ver sus propios bloqueos
+    if (session.user.role === "PROFESIONAL") {
+      const prof = await getProfesionalByUserId(session.user.id)
+      if (!prof || prof.id !== profesionalId) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+      }
     }
 
     // Obtener horarios del profesional
@@ -59,15 +80,26 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (
-      !session ||
-      (session.user.role !== "SECRETARIA" && session.user.role !== "ADMIN")
-    ) {
+    if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
     const body = await request.json()
-    const { profesionalId, diaSemana, fecha, horaInicio, horaFin, motivo } = body
+    let { profesionalId: profesionalIdParam, diaSemana, fecha, horaInicio, horaFin, motivo } = body
+
+    let profesionalId = profesionalIdParam
+    if (session.user.role === "PROFESIONAL") {
+      const prof = await getProfesionalByUserId(session.user.id)
+      if (!prof) {
+        return NextResponse.json(
+          { error: "Profesional no encontrado" },
+          { status: 404 }
+        )
+      }
+      profesionalId = prof.id
+    } else if (session.user.role !== "SECRETARIA" && session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    }
 
     if (!profesionalId || !diaSemana || !fecha || !horaInicio || !horaFin) {
       return NextResponse.json(
@@ -119,10 +151,7 @@ export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (
-      !session ||
-      (session.user.role !== "SECRETARIA" && session.user.role !== "ADMIN")
-    ) {
+    if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
@@ -134,6 +163,22 @@ export async function DELETE(request: Request) {
         { error: "bloqueoId es requerido" },
         { status: 400 }
       )
+    }
+
+    if (session.user.role === "PROFESIONAL") {
+      const bloqueo = await prisma.bloqueoHorario.findUnique({
+        where: { id: bloqueoId },
+        include: { horarioDisponible: { select: { profesionalId: true } } },
+      })
+      if (!bloqueo) {
+        return NextResponse.json({ error: "Bloqueo no encontrado" }, { status: 404 })
+      }
+      const prof = await getProfesionalByUserId(session.user.id)
+      if (!prof || prof.id !== bloqueo.horarioDisponible.profesionalId) {
+        return NextResponse.json({ error: "No puede eliminar este bloqueo" }, { status: 403 })
+      }
+    } else if (session.user.role !== "SECRETARIA" && session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
     await prisma.bloqueoHorario.delete({

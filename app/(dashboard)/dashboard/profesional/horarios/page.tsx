@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Calendar, XCircle } from "lucide-react"
+import { BloqueoDiaModal } from "@/components/secretaria/BloqueoDiaModal"
 
 const DIAS_SEMANA = [
   { value: "LUNES", label: "Lunes" },
@@ -18,7 +20,10 @@ const DIAS_SEMANA = [
 
 export default function ProfesionalHorariosPage() {
   const [horarios, setHorarios] = useState<any[]>([])
+  const [bloqueos, setBloqueos] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [showBloqueoModal, setShowBloqueoModal] = useState(false)
+  const [diaBloqueo, setDiaBloqueo] = useState("")
   const [formData, setFormData] = useState({
     diaSemana: "",
     horaInicio: "",
@@ -30,13 +35,53 @@ export default function ProfesionalHorariosPage() {
     fetchHorarios()
   }, [])
 
+  useEffect(() => {
+    if (horarios.length > 0) {
+      fetchBloqueos()
+    } else {
+      setBloqueos([])
+    }
+  }, [horarios.length])
+
   const fetchHorarios = async () => {
     try {
       const response = await fetch("/api/horarios")
       const data = await response.json()
-      setHorarios(data)
+      setHorarios(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Error cargando horarios:", error)
+      setHorarios([])
+    }
+  }
+
+  const fetchBloqueos = async () => {
+    try {
+      const response = await fetch("/api/horarios/bloqueos")
+      const data = await response.json()
+      setBloqueos(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error("Error cargando bloqueos:", error)
+      setBloqueos([])
+    }
+  }
+
+  const handleBloquearDia = (dia: string) => {
+    setDiaBloqueo(dia)
+    setShowBloqueoModal(true)
+  }
+
+  const handleEliminarBloqueo = async (bloqueoId: string) => {
+    if (!confirm("¿Eliminar este bloqueo?")) return
+    try {
+      const response = await fetch("/api/horarios/bloqueos", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bloqueoId }),
+      })
+      if (!response.ok) throw new Error("Error al eliminar bloqueo")
+      await fetchBloqueos()
+    } catch (error) {
+      alert("Error al eliminar bloqueo")
     }
   }
 
@@ -176,18 +221,21 @@ export default function ProfesionalHorariosPage() {
       <Card>
         <CardHeader>
           <CardTitle>Horarios Configurados</CardTitle>
+          <CardDescription>
+            Días y franjas en que atiende. Use &quot;Bloquear día&quot; para feriados, licencias o ausencias.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {horarios.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No hay horarios configurados
+              No hay horarios configurados. Agregue al menos un día y horario arriba.
             </div>
           ) : (
             <div className="space-y-4">
               {horarios.map((horario) => (
                 <div
                   key={horario.id}
-                  className="flex justify-between items-center p-4 border rounded-lg"
+                  className="flex flex-wrap justify-between items-center gap-2 p-4 border rounded-lg"
                 >
                   <div>
                     <p className="font-semibold">
@@ -197,19 +245,97 @@ export default function ProfesionalHorariosPage() {
                       {horario.horaInicio} - {horario.horaFin} ({horario.duracionTurno} min)
                     </p>
                   </div>
-                  <Button
-                    variant={horario.activo ? "destructive" : "default"}
-                    size="sm"
-                    onClick={() => toggleHorario(horario.id, horario.activo)}
-                  >
-                    {horario.activo ? "Desactivar" : "Activar"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBloquearDia(horario.diaSemana)}
+                    >
+                      <Calendar className="h-4 w-4 mr-1" />
+                      Bloquear día
+                    </Button>
+                    <Button
+                      variant={horario.activo ? "destructive" : "default"}
+                      size="sm"
+                      onClick={() => toggleHorario(horario.id, horario.activo)}
+                    >
+                      {horario.activo ? "Desactivar" : "Activar"}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {horarios.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Días bloqueados</CardTitle>
+            <CardDescription>
+              Fechas en que no atiende (feriados, licencias, enfermedad, etc.)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {bloqueos.length === 0 ? (
+              <div className="text-center py-6 text-gray-500 text-sm">
+                No hay días bloqueados
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {bloqueos.map((bloqueo) => (
+                  <div
+                    key={bloqueo.id}
+                    className="flex justify-between items-center p-3 border rounded-lg bg-gray-50"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {new Date(bloqueo.fecha).toLocaleDateString("es-AR", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {bloqueo.horaInicio} - {bloqueo.horaFin}
+                        {bloqueo.motivo ? ` · ${bloqueo.motivo}` : ""}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleEliminarBloqueo(bloqueo.id)}
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {showBloqueoModal && horarios[0]?.profesionalId && (
+        <BloqueoDiaModal
+          profesionalId={horarios[0].profesionalId}
+          diaSemana={diaBloqueo}
+          onClose={() => {
+            setShowBloqueoModal(false)
+            setDiaBloqueo("")
+          }}
+          onSuccess={() => {
+            fetchBloqueos()
+            setShowBloqueoModal(false)
+            setDiaBloqueo("")
+          }}
+        />
+      )}
     </div>
   )
 }
