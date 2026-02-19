@@ -40,18 +40,11 @@ export async function PUT(
     }
 
     if (session.user.role === "PROFESIONAL") {
-      // Obtener profesional del usuario
-      const profesional = await prisma.$queryRawUnsafe<Array<{
-        id: string
-        userId: string
-      }>>(
-        `SELECT id, userId FROM Profesional WHERE userId = ? LIMIT 1`,
-        session.user.id
-      )
-      if (
-        profesional.length === 0 ||
-        turno.profesionalId !== profesional[0].id
-      ) {
+      const prof = await prisma.profesional.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true },
+      })
+      if (!prof || turno.profesionalId !== prof.id) {
         // Si el profesional no es el dueño del turno, no puede editarlo (SECRETARIA/ADMIN no entran en este bloque)
         return NextResponse.json(
           { error: "No tiene permisos para editar este turno" },

@@ -50,40 +50,15 @@ export async function POST(request: Request) {
     const ahora = new Date()
     const ahoraISO = ahora.toISOString()
 
-    try {
-      // Actualizar turno usando SQL raw
-      const result = await prisma.$executeRawUnsafe(
-        `UPDATE Turno 
-         SET estado = ?, canceladoAt = ?, motivoCancelacion = ?, updatedAt = ?
-         WHERE id = ?`,
-        "CANCELADO",
-        ahoraISO,
+    const turnoCancelado = await prisma.turno.update({
+      where: { id: turnoId },
+      data: {
+        estado: "CANCELADO",
+        canceladoAt: ahora,
         motivoCancelacion,
-        ahoraISO,
-        turnoId
-      )
-    } catch (error: any) {
-      console.error("Error al actualizar turno:", error?.message)
-      throw new Error(`Error al actualizar turno: ${error.message || String(error)}`)
-    }
-    
-    // Obtener el turno actualizado
-    const turnoCanceladoRaw = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      estado: string
-      canceladoAt: string | null
-      motivoCancelacion: string | null
-    }>>(
-      `SELECT id, estado, canceladoAt, motivoCancelacion FROM Turno WHERE id = ? LIMIT 1`,
-      turnoId
-    )
-    
-    const turnoCancelado = turnoCanceladoRaw.length > 0 ? {
-      id: turnoCanceladoRaw[0].id,
-      estado: turnoCanceladoRaw[0].estado,
-      canceladoAt: turnoCanceladoRaw[0].canceladoAt ? new Date(turnoCanceladoRaw[0].canceladoAt) : null,
-      motivoCancelacion: turnoCanceladoRaw[0].motivoCancelacion,
-    } : null
+      },
+      select: { id: true, estado: true, canceladoAt: true, motivoCancelacion: true },
+    })
 
     const fechaFormateada = new Date(turno.fecha).toLocaleDateString("es-AR", {
       weekday: "long",
@@ -109,14 +84,11 @@ export async function POST(request: Request) {
       })
     }
 
-    // WhatsApp al paciente (obtener teléfono desde la base de datos)
-    const pacienteRaw = await prisma.$queryRawUnsafe<Array<{
-      telefono: string | null
-    }>>(
-      `SELECT telefono FROM User WHERE id = ? LIMIT 1`,
-      turno.pacienteId
-    )
-    const telefonoPaciente = pacienteRaw.length > 0 ? pacienteRaw[0].telefono : null
+    const pacienteUser = await prisma.user.findUnique({
+      where: { id: turno.pacienteId },
+      select: { telefono: true },
+    })
+    const telefonoPaciente = pacienteUser?.telefono ?? null
     
     if (telefonoPaciente) {
       const whatsappMessage = generateTurnoCancellationWhatsApp(
@@ -140,22 +112,10 @@ export async function POST(request: Request) {
       })
     }
 
-    // Obtener secretarias y admin para notificar usando SQL raw
-    const secretariasYAdminRaw = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      email: string
-      role: string
-    }>>(
-      `SELECT id, nombre, email, role FROM User WHERE role IN ('SECRETARIA', 'ADMIN')`
-    )
-
-    const secretariasYAdmin = secretariasYAdminRaw.map((u) => ({
-      id: u.id,
-      nombre: u.nombre,
-      email: u.email,
-      role: u.role,
-    }))
+    const secretariasYAdmin = await prisma.user.findMany({
+      where: { role: { in: ["SECRETARIA", "ADMIN"] } },
+      select: { id: true, nombre: true, email: true, role: true },
+    })
 
     // Crear notificaciones in-app
     const notificaciones = [

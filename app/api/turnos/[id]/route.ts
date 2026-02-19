@@ -33,18 +33,11 @@ export async function GET(
     }
 
     if (session.user.role === "PROFESIONAL") {
-      // Obtener profesional del usuario
-      const profesional = await prisma.$queryRawUnsafe<Array<{
-        id: string
-        userId: string
-      }>>(
-        `SELECT id, userId FROM Profesional WHERE userId = ? LIMIT 1`,
-        session.user.id
-      )
-      if (
-        profesional.length === 0 ||
-        turno.profesionalId !== profesional[0].id
-      ) {
+      const prof = await prisma.profesional.findUnique({
+        where: { userId: session.user.id },
+        select: { id: true },
+      })
+      if (!prof || turno.profesionalId !== prof.id) {
         return NextResponse.json(
           { error: "No autorizado" },
           { status: 403 }

@@ -26,21 +26,13 @@ export async function GET(
       )
     }
 
-    // Obtener profesional si existe
     let profesional = null
     if (userRaw.role === "PROFESIONAL") {
-      const prof = await prisma.$queryRawUnsafe<Array<{
-        id: string
-        userId: string
-        especialidad: string
-        matricula: string | null
-      }>>(
-        `SELECT id, userId, especialidad, matricula FROM Profesional WHERE userId = ? LIMIT 1`,
-        id
-      )
-      if (prof.length > 0) {
-        profesional = prof[0]
-      }
+      const prof = await prisma.profesional.findUnique({
+        where: { userId: id },
+        select: { id: true, userId: true, especialidad: true, matricula: true },
+      })
+      if (prof) profesional = prof
     }
 
     const user = {
@@ -94,21 +86,13 @@ export async function PUT(
       )
     }
 
-    // Obtener profesional si existe
     let profesional = null
     if (existingUser.role === "PROFESIONAL") {
-      const prof = await prisma.$queryRawUnsafe<Array<{
-        id: string
-        userId: string
-        especialidad: string
-        matricula: string | null
-      }>>(
-        `SELECT id, userId, especialidad, matricula FROM Profesional WHERE userId = ? LIMIT 1`,
-        id
-      )
-      if (prof.length > 0) {
-        profesional = prof[0]
-      }
+      const prof = await prisma.profesional.findUnique({
+        where: { userId: id },
+        select: { id: true, userId: true, especialidad: true, matricula: true },
+      })
+      if (prof) profesional = prof
     }
 
     // Verificar si el email ya está en uso por otro usuario

@@ -38,7 +38,7 @@ function safeDate(value: string | bigint | number | null | undefined): Date | nu
 }
 
 /**
- * Obtener obras sociales usando SQL raw
+ * Obtener obras sociales (Prisma, compatible con PostgreSQL)
  */
 export async function getObrasSociales(options?: {
   activa?: boolean
@@ -46,110 +46,20 @@ export async function getObrasSociales(options?: {
   orderBy?: { nombre?: "asc" | "desc" }
 }): Promise<ObraSocialWithRelations[]> {
   try {
-    let whereClause = ""
-    const params: any[] = []
-
-    if (options?.activa !== undefined) {
-      whereClause = "WHERE activa = ?"
-      params.push(options.activa ? 1 : 0)
-    }
-
-    let orderByClause = "ORDER BY nombre ASC"
-    if (options?.orderBy?.nombre) {
-      orderByClause = `ORDER BY nombre ${options.orderBy.nombre.toUpperCase()}`
-    }
-
-    const query = `
-      SELECT 
-        id, nombre, codigo, descripcion, telefono, email, direccion, 
-        activa, createdAt, updatedAt
-      FROM ObraSocial
-      ${whereClause}
-      ${orderByClause}
-    `
-
-    const obrasSociales = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      codigo: string | null
-      descripcion: string | null
-      telefono: string | null
-      email: string | null
-      direccion: string | null
-      activa: number | boolean
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(query, ...params)
-
-    if (obrasSociales.length === 0) {
-      return []
-    }
-
-    // Obtener conteos si se requiere
-    let countsMap = new Map<string, { pacientes: number; turnos: number }>()
-    if (options?.includeCounts) {
-      const obraSocialIds = obrasSociales.map((os) => os.id)
-      if (obraSocialIds.length > 0) {
-        const placeholders = obraSocialIds.map(() => "?").join(",")
-        
-        // Contar pacientes
-        const pacientesCounts = await prisma.$queryRawUnsafe<Array<{
-          obraSocialId: string
-          count: bigint | number
-        }>>(
-          `SELECT obraSocialId, COUNT(*) as count
-           FROM User
-           WHERE obraSocialId IN (${placeholders}) AND role = 'PACIENTE'
-           GROUP BY obraSocialId`,
-          ...obraSocialIds
-        )
-
-        // Contar turnos - obtener nombres de obras sociales primero
-        const nombresObrasSociales = obrasSociales.map((os) => os.nombre)
-        let turnosCounts: Array<{ obraSocial: string | null; count: bigint | number }> = []
-        if (nombresObrasSociales.length > 0) {
-          const nombrePlaceholders = nombresObrasSociales.map(() => "?").join(",")
-          turnosCounts = await prisma.$queryRawUnsafe<Array<{
-            obraSocial: string | null
-            count: bigint | number
-          }>>(
-            `SELECT obraSocial, COUNT(*) as count
-             FROM Turno
-             WHERE obraSocial IN (${nombrePlaceholders})
-             GROUP BY obraSocial`,
-            ...nombresObrasSociales
-          )
-        }
-
-        // Crear mapas de conteos
-        pacientesCounts.forEach((pc) => {
-          const count = typeof pc.count === 'bigint' ? Number(pc.count) : pc.count
-          if (!countsMap.has(pc.obraSocialId)) {
-            countsMap.set(pc.obraSocialId, { pacientes: 0, turnos: 0 })
+    const obrasSociales = await prisma.obraSocial.findMany({
+      where: options?.activa !== undefined ? { activa: options.activa } : undefined,
+      orderBy: { nombre: options?.orderBy?.nombre ?? "asc" },
+      include: options?.includeCounts
+        ? {
+            _count: {
+              select: {
+                pacientes: true,
+                turnos: true,
+              },
+            },
           }
-          countsMap.get(pc.obraSocialId)!.pacientes = count
-        })
-
-        // Mapear nombres de obras sociales a IDs para turnos
-        const nombreToIdMap = new Map(
-          obrasSociales.map((os) => [os.nombre, os.id])
-        )
-        turnosCounts.forEach((tc) => {
-          if (tc.obraSocial) {
-            const obraSocialId = nombreToIdMap.get(tc.obraSocial)
-            if (obraSocialId) {
-              const count = typeof tc.count === 'bigint' ? Number(tc.count) : tc.count
-              if (!countsMap.has(obraSocialId)) {
-                countsMap.set(obraSocialId, { pacientes: 0, turnos: 0 })
-              }
-              countsMap.get(obraSocialId)!.turnos = count
-            }
-          }
-        })
-      }
-    }
-
-    // Formatear resultados
+        : undefined,
+    })
     return obrasSociales.map((os) => ({
       id: os.id,
       nombre: os.nombre,
@@ -158,11 +68,11 @@ export async function getObrasSociales(options?: {
       telefono: os.telefono,
       email: os.email,
       direccion: os.direccion,
-      activa: typeof os.activa === 'number' ? os.activa === 1 : os.activa,
-      createdAt: safeDate(os.createdAt) || new Date(),
-      updatedAt: safeDate(os.updatedAt) || new Date(),
-      _count: options?.includeCounts && countsMap.has(os.id)
-        ? countsMap.get(os.id)!
+      activa: os.activa,
+      createdAt: os.createdAt,
+      updatedAt: os.updatedAt,
+      _count: options?.includeCounts && "_count" in os && os._count
+        ? { pacientes: os._count.pacientes, turnos: os._count.turnos }
         : undefined,
     }))
   } catch (error) {

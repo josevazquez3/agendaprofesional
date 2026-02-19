@@ -20,24 +20,14 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          const users = await prisma.$queryRaw<Array<{
-            id: string
-            email: string
-            password: string
-            nombre: string
-            role: string
-          }>>`
-            SELECT id, email, password, nombre, role 
-            FROM "User" 
-            WHERE email = ${credentials.email}
-            LIMIT 1
-          `
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+            select: { id: true, email: true, password: true, nombre: true, role: true },
+          })
 
-          if (!users || users.length === 0) {
+          if (!user) {
             return null
           }
-
-          const user = users[0]
 
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
@@ -49,17 +39,12 @@ export const authOptions: NextAuthOptions = {
           }
 
           try {
-            const clinicUsers = await prisma.$queryRaw<Array<{
-              clinicId: string
-            }>>`
-              SELECT "clinicId" 
-              FROM "ClinicUser" 
-              WHERE "userId" = ${user.id} AND activo = true
-              LIMIT 1
-            `
-            
-            if (clinicUsers && clinicUsers.length > 0) {
-              await logLogin(clinicUsers[0].clinicId, user.id, req as any)
+            const clinicUser = await prisma.clinicUser.findFirst({
+              where: { userId: user.id, activo: true },
+              select: { clinicId: true },
+            })
+            if (clinicUser) {
+              await logLogin(clinicUser.clinicId, user.id, req as any)
             }
           } catch (auditError) {
             // Ignorar completamente errores de auditoría

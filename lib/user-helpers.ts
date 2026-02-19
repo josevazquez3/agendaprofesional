@@ -43,7 +43,7 @@ export interface UserWithRelations {
 }
 
 /**
- * Obtener usuarios con filtros usando SQL raw
+ * Obtener usuarios con filtros (Prisma, compatible con PostgreSQL)
  */
 export async function getUsers(where: {
   role?: string
@@ -57,175 +57,91 @@ export async function getUsers(where: {
   skip?: number
 }): Promise<UserWithRelations[]> {
   try {
-    // Construir WHERE clause
-    const conditions: string[] = []
-    const params: any[] = []
-
-    if (where.role) {
-      conditions.push("role = ?")
-      params.push(where.role)
-    }
-
+    const andConditions: Record<string, unknown>[] = []
+    if (where.role) andConditions.push({ role: where.role })
+    if (where.obraSocialId) andConditions.push({ obraSocialId: where.obraSocialId })
     if (where.search) {
-      // Dividir la búsqueda en palabras individuales para buscar por nombre y apellido
-      const searchTerms = where.search.trim().split(/\s+/).filter(term => term.length > 0)
-      
+      const searchTerms = where.search.trim().split(/\s+/).filter((t) => t.length > 0)
+      const searchPattern = where.search.trim()
       if (searchTerms.length > 0) {
-        // Construir condiciones para buscar cada palabra en el nombre
-        const nombreConditions: string[] = []
-        const searchPatterns: string[] = []
-        
-        // Para cada término de búsqueda, buscar en el nombre completo
-        searchTerms.forEach((term) => {
-          nombreConditions.push(`nombre LIKE ?`)
-          searchPatterns.push(`%${term}%`)
+        andConditions.push({
+          OR: [
+            { AND: searchTerms.map((term) => ({ nombre: { contains: term, mode: "insensitive" as const } })) },
+            { dni: { contains: searchPattern, mode: "insensitive" as const } },
+            { email: { contains: searchPattern, mode: "insensitive" as const } },
+          ],
         })
-        
-        // Combinar todas las condiciones: todas las palabras deben estar en el nombre
-        // O buscar en DNI o email
-        conditions.push(
-          `((${nombreConditions.join(' AND ')}) OR dni LIKE ? OR email LIKE ?)`
-        )
-        
-        // Agregar todos los parámetros: primero los patrones de nombre, luego DNI y email
-        const dniEmailPattern = `%${where.search}%`
-        params.push(...searchPatterns, dniEmailPattern, dniEmailPattern)
       } else {
-        // Si no hay términos válidos, usar búsqueda simple
-        const searchPattern = `%${where.search}%`
-        conditions.push(
-          "(nombre LIKE ? OR dni LIKE ? OR email LIKE ?)"
-        )
-        params.push(searchPattern, searchPattern, searchPattern)
-      }
-    }
-
-    if (where.obraSocialId) {
-      conditions.push("obraSocialId = ?")
-      params.push(where.obraSocialId)
-    }
-
-    // Si se requiere filtrar por profesional, necesitamos hacer JOIN con Turno
-    // Por ahora, lo omitimos si no es necesario
-
-    const whereClause =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
-
-    // Construir ORDER BY
-    let orderByClause = "ORDER BY nombre ASC"
-    if (where.orderBy) {
-      if (where.orderBy.nombre) {
-        orderByClause = `ORDER BY nombre ${where.orderBy.nombre.toUpperCase()}`
-      } else if (where.orderBy.createdAt) {
-        orderByClause = `ORDER BY createdAt ${where.orderBy.createdAt.toUpperCase()}`
-      }
-    }
-
-    // Construir LIMIT y OFFSET
-    let limitClause = ""
-    if (where.take) {
-      limitClause = `LIMIT ${where.take}`
-      if (where.skip) {
-        limitClause += ` OFFSET ${where.skip}`
-      }
-    }
-
-    // Query principal
-    const query = `
-      SELECT 
-        id, nombre, dni, email, telefono, fechaNacimiento, direccion, 
-        fotoPerfil, obraSocial, obraSocialId, role, createdAt, updatedAt
-      FROM User
-      ${whereClause}
-      ${orderByClause}
-      ${limitClause}
-    `
-
-    const users = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      dni: string | null
-      email: string
-      telefono: string | null
-      fechaNacimiento: string | bigint | number | null
-      direccion: string | null
-      fotoPerfil: string | null
-      obraSocial: string | null
-      obraSocialId: string | null
-      role: string
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(query, ...params)
-
-    if (users.length === 0) {
-      return []
-    }
-
-    // Obtener obraSocial si se requiere
-    let obraSocialMap = new Map<string, { nombre: string }>()
-    if (where.includeObraSocial) {
-      const obraSocialIds = users
-        .map((u) => u.obraSocialId)
-        .filter((id): id is string => id !== null)
-      if (obraSocialIds.length > 0) {
-        const placeholders = obraSocialIds.map(() => "?").join(",")
-        const obrasSociales = await prisma.$queryRawUnsafe<Array<{
-          id: string
-          nombre: string
-        }>>(
-          `SELECT id, nombre FROM ObraSocial WHERE id IN (${placeholders})`,
-          ...obraSocialIds
-        )
-        obrasSociales.forEach((os) => {
-          obraSocialMap.set(os.id, { nombre: os.nombre })
+        andConditions.push({
+          OR: [
+            { nombre: { contains: searchPattern, mode: "insensitive" as const } },
+            { dni: { contains: searchPattern, mode: "insensitive" as const } },
+            { email: { contains: searchPattern, mode: "insensitive" as const } },
+          ],
         })
       }
     }
+    const whereClause = andConditions.length > 0 ? { AND: andConditions } : {}
+    const orderBy = where.orderBy?.nombre
+      ? { nombre: where.orderBy.nombre }
+      : where.orderBy?.createdAt
+        ? { createdAt: where.orderBy.createdAt }
+        : { nombre: "asc" as const }
 
-    // Obtener última visita si se requiere
+    const users = await prisma.user.findMany({
+      where: whereClause,
+      orderBy,
+      take: where.take ?? undefined,
+      skip: where.skip ?? undefined,
+      select: {
+        id: true,
+        nombre: true,
+        dni: true,
+        email: true,
+        telefono: true,
+        fechaNacimiento: true,
+        direccion: true,
+        fotoPerfil: true,
+        obraSocial: true,
+        obraSocialId: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        ...(where.includeObraSocial && { obraSocialRel: { select: { nombre: true } } }),
+      },
+    })
+
     let ultimaVisitaMap = new Map<string, Date>()
-    if (where.includeUltimaVisita) {
+    if (where.includeUltimaVisita && users.length > 0) {
       const userIds = users.map((u) => u.id)
-      if (userIds.length > 0) {
-        const placeholders = userIds.map(() => "?").join(",")
-        const turnos = await prisma.$queryRawUnsafe<Array<{
-          pacienteId: string
-          fecha: string | bigint | number
-        }>>(
-          `SELECT pacienteId, MAX(fecha) as fecha 
-           FROM Turno 
-           WHERE pacienteId IN (${placeholders}) 
-             AND estado IN ('COMPLETADO', 'CONFIRMADO')
-           GROUP BY pacienteId`,
-          ...userIds
-        )
-        turnos.forEach((t) => {
-          const fecha = safeDate(t.fecha)
-          if (fecha) {
-            ultimaVisitaMap.set(t.pacienteId, fecha)
-          }
-        })
-      }
+      const turnos = await prisma.turno.groupBy({
+        by: ["pacienteId"],
+        where: {
+          pacienteId: { in: userIds },
+          estado: { in: ["COMPLETADO", "CONFIRMADO"] },
+        },
+        _max: { fecha: true },
+      })
+      turnos.forEach((t) => {
+        if (t._max.fecha) ultimaVisitaMap.set(t.pacienteId, t._max.fecha)
+      })
     }
 
-    // Formatear resultados
     return users.map((user) => ({
       id: user.id,
       nombre: user.nombre,
       dni: user.dni,
       email: user.email,
       telefono: user.telefono,
-      fechaNacimiento: safeDate(user.fechaNacimiento as string | number | bigint | null),
+      fechaNacimiento: user.fechaNacimiento,
       direccion: user.direccion,
       fotoPerfil: user.fotoPerfil,
       obraSocial: user.obraSocial,
       obraSocialId: user.obraSocialId,
       role: user.role,
-      createdAt: safeDate(user.createdAt as string | number | bigint) ?? new Date(0),
-      updatedAt: safeDate(user.updatedAt as string | number | bigint) ?? new Date(0),
-      obraSocialRel: user.obraSocialId
-        ? obraSocialMap.get(user.obraSocialId) || null
-        : null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      obraSocialRel: "obraSocialRel" in user && user.obraSocialRel ? { nombre: (user.obraSocialRel as { nombre: string }).nombre } : null,
       pacienteTurnos:
         where.includeUltimaVisita && ultimaVisitaMap.has(user.id)
           ? [{ fecha: ultimaVisitaMap.get(user.id)! }]
@@ -238,7 +154,7 @@ export async function getUsers(where: {
 }
 
 /**
- * Contar usuarios con filtros usando SQL raw
+ * Contar usuarios con filtros (Prisma, compatible con PostgreSQL)
  */
 export async function countUsers(where: {
   role?: string
@@ -247,70 +163,22 @@ export async function countUsers(where: {
   createdAt?: { gte?: Date }
 }): Promise<number> {
   try {
-    const conditions: string[] = []
-    const params: any[] = []
-
-    if (where.role) {
-      conditions.push("role = ?")
-      params.push(where.role)
-    }
-
+    const andConditions: Record<string, unknown>[] = []
+    if (where.role) andConditions.push({ role: where.role })
+    if (where.obraSocialId) andConditions.push({ obraSocialId: where.obraSocialId })
+    if (where.createdAt?.gte) andConditions.push({ createdAt: { gte: where.createdAt.gte } })
     if (where.search) {
-      // Dividir la búsqueda en palabras individuales para buscar por nombre y apellido
-      const searchTerms = where.search.trim().split(/\s+/).filter(term => term.length > 0)
-      
-      if (searchTerms.length > 0) {
-        // Construir condiciones para buscar cada palabra en el nombre
-        const nombreConditions: string[] = []
-        const searchPatterns: string[] = []
-        
-        // Para cada término de búsqueda, buscar en el nombre completo
-        searchTerms.forEach((term) => {
-          nombreConditions.push(`nombre LIKE ?`)
-          searchPatterns.push(`%${term}%`)
-        })
-        
-        // Combinar todas las condiciones: todas las palabras deben estar en el nombre
-        // O buscar en DNI o email
-        conditions.push(
-          `((${nombreConditions.join(' AND ')}) OR dni LIKE ? OR email LIKE ?)`
-        )
-        
-        // Agregar todos los parámetros: primero los patrones de nombre, luego DNI y email
-        const dniEmailPattern = `%${where.search}%`
-        params.push(...searchPatterns, dniEmailPattern, dniEmailPattern)
-      } else {
-        // Si no hay términos válidos, usar búsqueda simple
-        const searchPattern = `%${where.search}%`
-        conditions.push(
-          "(nombre LIKE ? OR dni LIKE ? OR email LIKE ?)"
-        )
-        params.push(searchPattern, searchPattern, searchPattern)
-      }
+      const searchPattern = where.search.trim()
+      andConditions.push({
+        OR: [
+          { nombre: { contains: searchPattern, mode: "insensitive" as const } },
+          { dni: { contains: searchPattern, mode: "insensitive" as const } },
+          { email: { contains: searchPattern, mode: "insensitive" as const } },
+        ],
+      })
     }
-
-    if (where.obraSocialId) {
-      conditions.push("obraSocialId = ?")
-      params.push(where.obraSocialId)
-    }
-
-    if (where.createdAt?.gte) {
-      conditions.push("createdAt >= ?")
-      params.push(where.createdAt.gte.toISOString())
-    }
-
-    const whereClause =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
-
-    const query = `SELECT COUNT(*) as count FROM User ${whereClause}`
-
-    const result = await prisma.$queryRawUnsafe<Array<{ count: bigint | number }>>(
-      query,
-      ...params
-    )
-
-    const count = result[0]?.count
-    return typeof count === 'bigint' ? Number(count) : (count || 0)
+    const whereClause = andConditions.length > 0 ? { AND: andConditions } : {}
+    return prisma.user.count({ where: whereClause })
   } catch (error) {
     console.error("Error en countUsers:", error)
     throw error
@@ -318,7 +186,7 @@ export async function countUsers(where: {
 }
 
 /**
- * Obtener un usuario por ID usando SQL raw
+ * Obtener un usuario por ID (Prisma, compatible con PostgreSQL)
  */
 export async function getUserById(
   id: string,
@@ -327,67 +195,41 @@ export async function getUserById(
   }
 ): Promise<UserWithRelations | null> {
   try {
-    const query = `
-      SELECT 
-        id, nombre, dni, email, telefono, fechaNacimiento, direccion, 
-        fotoPerfil, obraSocial, obraSocialId, role, createdAt, updatedAt
-      FROM User
-      WHERE id = ?
-      LIMIT 1
-    `
-
-    const result = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      dni: string | null
-      email: string
-      telefono: string | null
-      fechaNacimiento: string | bigint | number | null
-      direccion: string | null
-      fotoPerfil: string | null
-      obraSocial: string | null
-      obraSocialId: string | null
-      role: string
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(query, id)
-
-    if (result.length === 0) {
-      return null
-    }
-
-    const user = result[0]
-
-    // Obtener obraSocial si se requiere
-    let obraSocialRel = null
-    if (options?.includeObraSocial && user.obraSocialId) {
-      const obraSocial = await prisma.$queryRawUnsafe<Array<{
-        id: string
-        nombre: string
-      }>>(
-        `SELECT id, nombre FROM ObraSocial WHERE id = ? LIMIT 1`,
-        user.obraSocialId
-      )
-      if (obraSocial.length > 0) {
-        obraSocialRel = { nombre: obraSocial[0].nombre }
-      }
-    }
-
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nombre: true,
+        dni: true,
+        email: true,
+        telefono: true,
+        fechaNacimiento: true,
+        direccion: true,
+        fotoPerfil: true,
+        obraSocial: true,
+        obraSocialId: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        ...(options?.includeObraSocial && { obraSocialRel: { select: { nombre: true } } }),
+      },
+    })
+    if (!user) return null
     return {
       id: user.id,
       nombre: user.nombre,
       dni: user.dni,
       email: user.email,
       telefono: user.telefono,
-      fechaNacimiento: safeDate(user.fechaNacimiento),
+      fechaNacimiento: user.fechaNacimiento,
       direccion: user.direccion,
       fotoPerfil: user.fotoPerfil,
       obraSocial: user.obraSocial,
       obraSocialId: user.obraSocialId,
       role: user.role,
-      createdAt: safeDate(user.createdAt) || new Date(),
-      updatedAt: safeDate(user.updatedAt) || new Date(),
-      obraSocialRel: obraSocialRel,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      obraSocialRel: "obraSocialRel" in user && user.obraSocialRel ? { nombre: (user.obraSocialRel as { nombre: string }).nombre } : null,
       pacienteTurnos: [],
     }
   } catch (error) {

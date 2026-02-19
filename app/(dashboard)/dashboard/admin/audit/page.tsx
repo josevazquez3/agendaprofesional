@@ -22,35 +22,19 @@ export default async function AuditPage() {
     redirect("/dashboard")
   }
 
-  // Obtener usuarios de la clínica para el filtro usando SQL raw
-  // Nota: clinicId no existe en la tabla User directamente, se obtiene vía ClinicUser
-  const clinicUsers = await prisma.$queryRawUnsafe<Array<{
-    userId: string
-  }>>(
-    `SELECT userId FROM ClinicUser WHERE clinicId = ? AND activo = 1`,
-    clinic.id
-  )
-
+  const clinicUsers = await prisma.clinicUser.findMany({
+    where: { clinicId: clinic.id, activo: true },
+    select: { userId: true },
+  })
   const userIds = clinicUsers.map((cu) => cu.userId)
-  let users: Array<{
-    id: string
-    nombre: string
-    email: string
-    role: string
-  }> = []
-
-  if (userIds.length > 0) {
-    const placeholders = userIds.map(() => "?").join(",")
-    users = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      email: string
-      role: string
-    }>>(
-      `SELECT id, nombre, email, role FROM User WHERE id IN (${placeholders}) ORDER BY nombre ASC`,
-      ...userIds
-    )
-  }
+  const users =
+    userIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          orderBy: { nombre: "asc" },
+          select: { id: true, nombre: true, email: true, role: true },
+        })
+      : []
 
   // Obtener logs iniciales (últimos 50)
   const initialLogs = await prisma.auditLog.findMany({

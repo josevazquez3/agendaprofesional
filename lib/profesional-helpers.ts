@@ -40,77 +40,40 @@ function safeDate(value: string | bigint | number | null | undefined): Date | nu
 }
 
 /**
- * Obtener profesionales usando SQL raw
+ * Obtener profesionales (Prisma, compatible con PostgreSQL)
  */
 export async function getProfesionales(options?: {
   includeUser?: boolean
   includeUserFields?: string[]
 }): Promise<ProfesionalWithRelations[]> {
   try {
-    // Query principal sin clinicId
-    const query = `
-      SELECT 
-        id, userId, especialidad, matricula, atiendeObraSocial, createdAt, updatedAt
-      FROM Profesional
-      ORDER BY createdAt DESC
-    `
-
-    const profesionales = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      userId: string
-      especialidad: string
-      matricula: string | null
-      atiendeObraSocial: number | boolean
-      createdAt: string | bigint | number
-      updatedAt: string | bigint | number
-    }>>(query)
-
-    if (profesionales.length === 0) {
-      return []
-    }
-
-    // Obtener datos de usuarios si se requiere
-    let usuariosMap = new Map<string, any>()
-    if (options?.includeUser) {
-      const userIds = profesionales.map((p) => p.userId)
-      if (userIds.length > 0) {
-        const placeholders = userIds.map(() => "?").join(",")
-        const userFields = options.includeUserFields || ["nombre"]
-        const fields = userFields.join(", ")
-        
-        const usuarios = await prisma.$queryRawUnsafe<Array<{
-          id: string
-          nombre: string
-          email?: string
-          telefono?: string
-          dni?: string
-          fotoPerfil?: string
-          obraSocial?: string
-        }>>(
-          `SELECT id, ${fields} FROM User WHERE id IN (${placeholders})`,
-          ...userIds
-        )
-        
-        usuarios.forEach((u) => {
-          usuariosMap.set(u.id, u)
-        })
-      }
-    }
-
-    // Formatear resultados
-    return profesionales.map((prof) => ({
+    const list = await prisma.profesional.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: options?.includeUser
+          ? {
+              select: {
+                id: true,
+                nombre: true,
+                email: true,
+                telefono: true,
+                dni: true,
+                fotoPerfil: true,
+                obraSocial: true,
+              },
+            }
+          : false,
+      },
+    })
+    return list.map((prof) => ({
       id: prof.id,
       userId: prof.userId,
       especialidad: prof.especialidad,
       matricula: prof.matricula,
-      atiendeObraSocial: typeof prof.atiendeObraSocial === 'number' 
-        ? prof.atiendeObraSocial === 1 
-        : prof.atiendeObraSocial,
-      createdAt: safeDate(prof.createdAt) || new Date(),
-      updatedAt: safeDate(prof.updatedAt) || new Date(),
-      user: options?.includeUser && usuariosMap.has(prof.userId)
-        ? usuariosMap.get(prof.userId)
-        : undefined,
+      atiendeObraSocial: prof.atiendeObraSocial,
+      createdAt: prof.createdAt,
+      updatedAt: prof.updatedAt,
+      user: prof.user ?? undefined,
     }))
   } catch (error) {
     console.error("Error en getProfesionales:", error)
@@ -211,14 +174,11 @@ export async function getProfesionalByUserId(
 }
 
 /**
- * Contar profesionales usando SQL raw
+ * Contar profesionales (Prisma, compatible con PostgreSQL)
  */
 export async function countProfesionales(): Promise<number> {
   try {
-    const query = `SELECT COUNT(*) as count FROM Profesional`
-    const result = await prisma.$queryRawUnsafe<Array<{ count: bigint | number }>>(query)
-    const count = result[0]?.count
-    return typeof count === 'bigint' ? Number(count) : (count || 0)
+    return prisma.profesional.count()
   } catch (error) {
     console.error("Error en countProfesionales:", error)
     throw error

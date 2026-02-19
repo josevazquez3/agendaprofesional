@@ -60,21 +60,19 @@ export async function GET(
     }
 
     const [consultoriosRaw, horariosRaw, arancelesRaw] = await Promise.all([
-      prisma.$queryRawUnsafe<Array<{ nombre: string; direccion: string }>>(
-        `SELECT c.nombre, c.direccion
-         FROM ConsultorioProfesional cp
-         INNER JOIN Consultorio c ON cp.consultorioId = c.id
-         WHERE cp.profesionalId = ?`,
-        id
-      ),
-      prisma.$queryRawUnsafe<Array<{ diaSemana: string; horaInicio: string; horaFin: string }>>(
-        `SELECT diaSemana, horaInicio, horaFin FROM HorarioDisponible WHERE profesionalId = ? AND activo = 1`,
-        id
-      ),
-      prisma.$queryRawUnsafe<Array<{ monto: number; descripcion: string | null }>>(
-        `SELECT monto, descripcion FROM Arancel WHERE profesionalId = ? AND activo = 1 ORDER BY createdAt DESC LIMIT 1`,
-        id
-      ),
+      prisma.consultorioProfesional.findMany({
+        where: { profesionalId: id },
+        include: { consultorio: { select: { nombre: true, direccion: true } } },
+      }).then((list) => list.map((cp) => ({ nombre: cp.consultorio.nombre, direccion: cp.consultorio.direccion }))),
+      prisma.horarioDisponible.findMany({
+        where: { profesionalId: id, activo: true },
+        select: { diaSemana: true, horaInicio: true, horaFin: true },
+      }),
+      prisma.arancel.findFirst({
+        where: { profesionalId: id, activo: true },
+        orderBy: { createdAt: "desc" },
+        select: { monto: true, descripcion: true },
+      }).then((a) => (a ? [a] : [])),
     ])
 
     const nombre = String(profesional.user.nombre ?? "Profesional")

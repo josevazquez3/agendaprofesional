@@ -68,14 +68,12 @@ export async function POST(request: Request) {
           clinicId = clinic.id
         } else {
           // Intentar obtener la primera clínica del usuario
-          const clinicUserResult = await prisma.$queryRawUnsafe<Array<{
-            clinicId: string
-          }>>(
-            `SELECT clinicId FROM ClinicUser WHERE userId = ? AND activo = 1 LIMIT 1`,
-            session.user.id
-          )
-          if (clinicUserResult.length > 0) {
-            clinicId = clinicUserResult[0].clinicId
+          const clinicUserResult = await prisma.clinicUser.findFirst({
+            where: { userId: session.user.id, activo: true },
+            select: { clinicId: true },
+          })
+          if (clinicUserResult) {
+            clinicId = clinicUserResult.clinicId
           }
         }
       } catch (error) {
