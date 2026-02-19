@@ -60,21 +60,25 @@ export async function getObrasSociales(options?: {
           }
         : undefined,
     })
-    return obrasSociales.map((os) => ({
-      id: os.id,
-      nombre: os.nombre,
-      codigo: os.codigo,
-      descripcion: os.descripcion,
-      telefono: os.telefono,
-      email: os.email,
-      direccion: os.direccion,
-      activa: os.activa,
-      createdAt: os.createdAt,
-      updatedAt: os.updatedAt,
-      _count: options?.includeCounts && "_count" in os && os._count
-        ? { pacientes: os._count.pacientes, turnos: os._count.turnos }
-        : undefined,
-    }))
+    return obrasSociales.map((os) => {
+      const count =
+        options?.includeCounts && "_count" in os && os._count
+          ? (os._count as { pacientes: number; turnos: number })
+          : undefined
+      return {
+        id: os.id,
+        nombre: os.nombre,
+        codigo: os.codigo,
+        descripcion: os.descripcion,
+        telefono: os.telefono,
+        email: os.email,
+        direccion: os.direccion,
+        activa: os.activa,
+        createdAt: os.createdAt,
+        updatedAt: os.updatedAt,
+        _count: count ? { pacientes: count.pacientes, turnos: count.turnos } : undefined,
+      }
+    })
   } catch (error) {
     console.error("Error en getObrasSociales:", error)
     throw error

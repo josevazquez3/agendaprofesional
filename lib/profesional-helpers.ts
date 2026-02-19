@@ -17,11 +17,11 @@ export interface ProfesionalWithRelations {
   user?: {
     id?: string
     nombre: string
-    email?: string
-    telefono?: string
-    dni?: string
-    fotoPerfil?: string
-    obraSocial?: string
+    email?: string | null
+    telefono?: string | null
+    dni?: string | null
+    fotoPerfil?: string | null
+    obraSocial?: string | null
   }
 }
 
