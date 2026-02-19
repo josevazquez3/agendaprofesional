@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+export const dynamic = "force-dynamic"
+
 const DIAS_SEMANA: Record<number, string> = {
   0: "DOMINGO",
   1: "LUNES",

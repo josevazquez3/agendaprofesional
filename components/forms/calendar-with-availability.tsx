@@ -38,6 +38,13 @@ export function CalendarWithAvailability({
     }
   }, [profesionalId, currentMonth])
 
+  // Al abrir el calendario, recargar días para asegurar que se vean en azul
+  useEffect(() => {
+    if (showCalendar && profesionalId) {
+      fetchDiasDisponibles()
+    }
+  }, [showCalendar])
+
 
   const toDateKey = (d: Date) => {
     const y = d.getFullYear()
@@ -53,7 +60,6 @@ export function CalendarWithAvailability({
     }
     setFetchError(null)
     setLoading(true)
-    setDiasDisponibles({})
     try {
       const mesActual = currentMonth.getMonth() + 1
       const anioActual = currentMonth.getFullYear()
@@ -63,10 +69,12 @@ export function CalendarWithAvailability({
 
       const [resActual, resSiguiente] = await Promise.all([
         fetch(
-          `/api/horarios/dias-disponibles?profesionalId=${profesionalId}&mes=${mesActual}&anio=${anioActual}`
+          `/api/horarios/dias-disponibles?profesionalId=${profesionalId}&mes=${mesActual}&anio=${anioActual}`,
+          { cache: "no-store" }
         ),
         fetch(
-          `/api/horarios/dias-disponibles?profesionalId=${profesionalId}&mes=${mesSiguienteAjustado}&anio=${anioSiguiente}`
+          `/api/horarios/dias-disponibles?profesionalId=${profesionalId}&mes=${mesSiguienteAjustado}&anio=${anioSiguiente}`,
+          { cache: "no-store" }
         ),
       ])
 
