@@ -28,6 +28,7 @@ export function CalendarWithAvailability({
   const [hoveredDate, setHoveredDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showAllHours, setShowAllHours] = useState<string | null>(null)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   useEffect(() => {
     if (profesionalId) {
@@ -37,12 +38,23 @@ export function CalendarWithAvailability({
     }
   }, [profesionalId, currentMonth])
 
+
+  const toDateKey = (d: Date) => {
+    const y = d.getFullYear()
+    const m = d.getMonth() + 1
+    const day = d.getDate()
+    return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+  }
+
   const fetchDiasDisponibles = async () => {
-    if (!profesionalId) return
-    
+    if (!profesionalId) {
+      setFetchError(null)
+      return
+    }
+    setFetchError(null)
     setLoading(true)
+    setDiasDisponibles({})
     try {
-      // Cargar el mes actual y el siguiente
       const mesActual = currentMonth.getMonth() + 1
       const anioActual = currentMonth.getFullYear()
       const mesSiguiente = currentMonth.getMonth() + 2
@@ -58,21 +70,22 @@ export function CalendarWithAvailability({
         ),
       ])
 
+      const dataActual = await resActual.json().catch(() => ({}))
+      const dataSiguiente = await resSiguiente.json().catch(() => ({}))
+
       if (!resActual.ok || !resSiguiente.ok) {
-        throw new Error(`Error en la respuesta: ${resActual.status} o ${resSiguiente.status}`)
+        const msg = dataActual.error || dataSiguiente.error || `Error ${resActual.status || resSiguiente.status}`
+        setFetchError(typeof msg === "string" ? msg : "Error al cargar días")
       }
-
-      const dataActual = await resActual.json()
-      const dataSiguiente = await resSiguiente.json()
-
-      // Verificar si hay errores en las respuestas
-      if (dataActual.error || dataSiguiente.error) {
-        console.error("Error en API:", dataActual.error || dataSiguiente.error)
-        setDiasDisponibles({})
+      if (dataActual.error && !dataActual.diasDisponibles) {
+        setDiasDisponibles(dataSiguiente.diasDisponibles || {})
+        return
+      }
+      if (dataSiguiente.error && !dataSiguiente.diasDisponibles) {
+        setDiasDisponibles(dataActual.diasDisponibles || {})
         return
       }
 
-      // Combinar los días disponibles de ambos meses
       const diasCombinados = {
         ...(dataActual.diasDisponibles || {}),
         ...(dataSiguiente.diasDisponibles || {}),
@@ -80,7 +93,7 @@ export function CalendarWithAvailability({
       setDiasDisponibles(diasCombinados)
     } catch (error) {
       console.error("Error cargando días disponibles:", error)
-      // No establecer días disponibles si hay error, pero no bloquear la UI
+      setFetchError("Error de conexión al cargar días")
       setDiasDisponibles({})
     } finally {
       setLoading(false)
@@ -116,13 +129,12 @@ export function CalendarWithAvailability({
       })
     }
 
-    // Días del mes actual
+    // Días del mes actual: "disponible" = el profesional atiende ese día (aunque no queden slots)
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day)
-      // Formatear como YYYY-MM-DD sin usar toISOString para evitar problemas de zona horaria
-      const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      const horarios = diasDisponibles[dateKey] || []
-      const isAvailable = horarios.length > 0
+      const dateKey = toDateKey(date)
+      const horarios = diasDisponibles[dateKey] ?? []
+      const isAvailable = Object.prototype.hasOwnProperty.call(diasDisponibles, dateKey)
       days.push({
         date,
         isCurrentMonth: true,
@@ -131,15 +143,21 @@ export function CalendarWithAvailability({
       })
     }
 
-    // Días del mes siguiente para completar la cuadrícula
+    // Días del mes siguiente para completar la cuadrícula (también consultar disponibilidad)
     const remainingDays = 42 - days.length
+    const nextMonthNum = month + 1
+    const nextYear = nextMonthNum > 11 ? year + 1 : year
+    const nextMonth = nextMonthNum > 11 ? 0 : nextMonthNum
     for (let day = 1; day <= remainingDays; day++) {
-      const date = new Date(year, month + 1, day)
+      const date = new Date(nextYear, nextMonth, day)
+      const dateKey = toDateKey(date)
+      const horarios = diasDisponibles[dateKey] ?? []
+      const isAvailable = Object.prototype.hasOwnProperty.call(diasDisponibles, dateKey)
       days.push({
         date,
         isCurrentMonth: false,
-        isAvailable: false,
-        horarios: [],
+        isAvailable,
+        horarios,
       })
     }
 
@@ -153,19 +171,11 @@ export function CalendarWithAvailability({
     }
     
     // Crear la fecha sin problemas de zona horaria usando año, mes y día directamente
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const day = date.getDate()
-    
-    // Formatear como YYYY-MM-DD sin usar toISOString que puede cambiar el día por zona horaria
-    const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const dateKey = toDateKey(date)
     const horarios = diasDisponibles[dateKey] || []
-    
-    // Siempre permitir seleccionar el día si es válido (no pasado)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const clickedDate = new Date(year, month, day)
-    
+    const clickedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
     if (clickedDate >= today) {
       onChange(dateKey)
       // Cerrar el calendario después de seleccionar el día
@@ -298,21 +308,15 @@ export function CalendarWithAvailability({
             <div className="grid grid-cols-7 gap-1">
               {days.map((day, index) => {
                 // Formatear como YYYY-MM-DD sin usar toISOString para evitar problemas de zona horaria
-                const year = day.date.getFullYear()
-                const month = day.date.getMonth()
-                const dayNum = day.date.getDate()
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
-                
-                // Verificar si este día está en los días disponibles cargados
-                // Usar directamente diasDisponibles en lugar de day.isAvailable para asegurar datos actualizados
-                const horariosDelDia = diasDisponibles[dateKey] || []
-                const isAvailableDay = horariosDelDia.length > 0 && day.isCurrentMonth
+                const dateKey = toDateKey(day.date)
+                const horariosDelDia = diasDisponibles[dateKey] ?? []
+                const isAvailableDay = Object.prototype.hasOwnProperty.call(diasDisponibles, dateKey)
                 
                 const isPastDate = isPast(day.date)
                 const isTodayDate = isToday(day.date)
                 const isSelectedDate = isSelected(day.date)
-                // Permitir seleccionar cualquier día válido (no pasado, del mes actual)
-                const canSelect = !isPastDate && day.isCurrentMonth
+                // Permitir seleccionar cualquier día futuro en la grilla (mes actual o siguiente visible)
+                const canSelect = !isPastDate
                 const canShowTooltip = isAvailableDay && canSelect
 
                 return (
@@ -320,12 +324,13 @@ export function CalendarWithAvailability({
                     key={index}
                     className={cn(
                       "relative aspect-square flex items-center justify-center text-sm rounded transition-colors",
-                      !day.isCurrentMonth && "text-gray-300 cursor-default",
+                      !day.isCurrentMonth && !isAvailableDay && "text-gray-300 cursor-default",
+                      !day.isCurrentMonth && isAvailableDay && !isSelectedDate && "text-blue-800 bg-blue-100 border-2 border-blue-300 hover:bg-blue-200 cursor-pointer",
                       day.isCurrentMonth && isPastDate && "text-gray-400 cursor-not-allowed",
                       day.isCurrentMonth && !isPastDate && !isAvailableDay && !isSelectedDate && "text-gray-600 hover:bg-gray-100 cursor-pointer",
                       day.isCurrentMonth && !isPastDate && isAvailableDay && !isSelectedDate && "bg-blue-100 text-blue-800 font-medium border-2 border-blue-300 hover:bg-blue-200 cursor-pointer",
                       isSelectedDate && "bg-blue-600 text-white font-semibold cursor-pointer border-2 border-blue-700",
-                      isTodayDate && !isSelectedDate && day.isCurrentMonth && !isPastDate && "ring-2 ring-blue-400"
+                      isTodayDate && !isSelectedDate && !isPastDate && "ring-2 ring-blue-400"
                     )}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -373,6 +378,16 @@ export function CalendarWithAvailability({
             {loading && (
               <div className="mt-2 text-xs text-gray-500 text-center">
                 Cargando horarios...
+              </div>
+            )}
+            {fetchError && (
+              <div className="mt-2 p-2 text-xs text-red-700 bg-red-50 rounded text-center">
+                {fetchError}
+              </div>
+            )}
+            {!loading && !fetchError && Object.keys(diasDisponibles).length === 0 && (
+              <div className="mt-2 p-2 text-xs text-amber-700 bg-amber-50 rounded text-center">
+                Este profesional no tiene días de atención configurados. Agregue horarios en Editar profesional o en Configuración → Horarios.
               </div>
             )}
           </div>

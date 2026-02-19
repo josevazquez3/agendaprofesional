@@ -28,8 +28,8 @@ Estos archivos siguen usando `$queryRawUnsafe` / `$executeRawUnsafe` y deben pas
 | **app/api/turnos/crear/route.ts** | Varias consultas raw al crear turnos. |
 | **app/api/turnos/completar/route.ts** | — (hecho: clinicUser). |
 | **app/api/turnos/eliminar/route.ts** | ALTER TABLE (SQLite) y borrado; en Postgres suele hacerse por migraciones. |
-| **app/api/horarios/dias-disponibles/route.ts** | Horarios, turnos ocupados, bloqueos. |
-| **app/api/horarios/disponibles/route.ts** | Idem. |
+| ~~app/api/horarios/dias-disponibles/route.ts~~ | **Hecho:** Prisma + UTC. |
+| ~~app/api/horarios/disponibles/route.ts~~ | **Hecho:** Prisma + UTC. |
 | **app/api/historia-clinica/route.ts** | executeRawUnsafe. |
 | **app/api/historia-clinica/[id]/route.ts** | Varios executeRawUnsafe. |
 | **app/api/historia-clinica/exportar/pdf/route.ts** | Registros, profesionales, usuarios, archivos. |
@@ -44,4 +44,13 @@ Estos archivos siguen usando `$queryRawUnsafe` / `$executeRawUnsafe` y deben pas
 | **scripts/create-clinic-tables.ts** | Script de migración (SQLite). |
 | **scripts/migrate-clinic-id.ts** | Script de migración. |
 
-Recomendación: migrar primero **lib/turno-helpers.ts** y las rutas de **turnos** (crear, cancelar, completar, eliminar) y **horarios**; luego historia-clínica y páginas del dashboard.
+Recomendación: migrar primero **lib/turno-helpers.ts** y las rutas de **turnos** (crear, cancelar, completar, eliminar); luego historia-clínica y páginas del dashboard.
+
+---
+
+## Calendario y horarios al crear turno
+
+- Si **no se ven días en azul** ni horarios al elegir fecha: el profesional debe tener al menos un **HorarioDisponible** (día + rango de hora) en la base de datos.
+- Opciones:
+  1. **Editar profesional** → sección "Horarios de atención" → agregar día (ej. Lunes 09:00–13:00, duración 30 min).
+  2. Ejecutar el seed para crear un profesional de prueba con horario: `npm run db:seed`. Se crea "Profesional Prueba - Medicina General" con Lunes 09:00–13:00.

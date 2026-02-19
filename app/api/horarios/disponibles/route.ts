@@ -12,7 +12,7 @@ const DIAS_SEMANA: Record<number, string> = {
 }
 
 function obtenerDiaSemana(fecha: Date): string {
-  const dia = fecha.getDay()
+  const dia = fecha.getUTCDay()
   return DIAS_SEMANA[dia]
 }
 
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
         fechaNormalizada = `${a}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
       }
     }
-    const fechaObj = new Date(fechaNormalizada + "T12:00:00")
+    const fechaObj = new Date(fechaNormalizada + "T12:00:00Z")
 
     if (isNaN(fechaObj.getTime())) {
       return NextResponse.json(
@@ -67,49 +67,37 @@ export async function GET(request: Request) {
 
     const diaSemana = obtenerDiaSemana(fechaObj)
 
-    // Obtener horarios disponibles del profesional para ese día (SQL raw para evitar problemas con SQLite)
-    const horariosDisponiblesRaw = await prisma.$queryRawUnsafe<
-      Array<{ id: string; horaInicio: string; horaFin: string; duracionTurno: number }>
-    >(
-      `SELECT id, horaInicio, horaFin, duracionTurno FROM HorarioDisponible 
-       WHERE profesionalId = ? AND diaSemana = ? AND activo = 1`,
-      profesionalId,
-      diaSemana
-    )
-    const horariosDisponibles = horariosDisponiblesRaw.map((h) => ({
+    const diaInicio = new Date(fechaNormalizada + "T00:00:00.000Z")
+    const diaFin = new Date(fechaNormalizada + "T23:59:59.999Z")
+
+    const horariosDisponiblesList = await prisma.horarioDisponible.findMany({
+      where: { profesionalId, diaSemana, activo: true },
+      select: { horaInicio: true, horaFin: true, duracionTurno: true },
+    })
+    const horariosDisponibles = horariosDisponiblesList.map((h) => ({
       horaInicio: h.horaInicio,
       horaFin: h.horaFin,
-      duracionTurno: Number(h.duracionTurno),
+      duracionTurno: h.duracionTurno,
     }))
 
-    // Obtener turnos ya ocupados para esa fecha usando SQL raw
-    const fechaStr = fechaNormalizada
-    const turnosOcupadosRaw = await prisma.$queryRawUnsafe<Array<{ hora: string }>>(
-      `SELECT hora FROM Turno 
-       WHERE profesionalId = ? 
-         AND date(fecha) = date(?)
-         AND estado IN ('PENDIENTE', 'CONFIRMADO')`,
-      profesionalId,
-      fechaStr
-    )
-    const horasOcupadas = new Set(turnosOcupadosRaw.map((t) => t.hora))
+    const turnosOcupadosList = await prisma.turno.findMany({
+      where: {
+        profesionalId,
+        fecha: { gte: diaInicio, lte: diaFin },
+        estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+      },
+      select: { hora: true },
+    })
+    const horasOcupadas = new Set(turnosOcupadosList.map((t) => t.hora))
 
-    // Obtener bloqueos para esa fecha (por rango de día en SQL para evitar problemas de timezone)
-    const fechaInicioStr = fechaNormalizada + "T00:00:00"
-    const fechaFinStr = fechaNormalizada + "T23:59:59"
-    const bloqueosRaw = await prisma.$queryRawUnsafe<
-      Array<{ horaInicio: string; horaFin: string }>
-    >(
-      `SELECT b.horaInicio, b.horaFin FROM BloqueoHorario b
-       INNER JOIN HorarioDisponible h ON b.horarioDisponibleId = h.id
-       WHERE h.profesionalId = ?
-         AND b.fecha >= ?
-         AND b.fecha <= ?`,
-      profesionalId,
-      fechaInicioStr,
-      fechaFinStr
-    )
-    const bloqueos = bloqueosRaw.map((b) => ({ horaInicio: b.horaInicio, horaFin: b.horaFin }))
+    const bloqueosList = await prisma.bloqueoHorario.findMany({
+      where: {
+        horarioDisponible: { profesionalId },
+        fecha: { gte: diaInicio, lte: diaFin },
+      },
+      select: { horaInicio: true, horaFin: true },
+    })
+    const bloqueos = bloqueosList.map((b) => ({ horaInicio: b.horaInicio, horaFin: b.horaFin }))
 
     // Generar lista de horarios disponibles
     const horarios: string[] = []
@@ -146,7 +134,7 @@ export async function GET(request: Request) {
       diaSemana,
       profesionalId,
       totalHorariosConfigurados: horariosDisponibles.length,
-      turnosOcupados: turnosOcupadosRaw.length,
+      turnosOcupados: turnosOcupadosList.length,
       bloqueos: bloqueos.length,
     })
   } catch (error) {

@@ -48,149 +48,104 @@ export async function GET(request: Request) {
       )
     }
 
-    // Obtener horarios disponibles del profesional usando SQL raw
-    const horariosDisponiblesRaw = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      profesionalId: string
-      diaSemana: string
-      horaInicio: string
-      horaFin: string
-      duracionTurno: number
-      activo: boolean
-    }>>(
-      `SELECT id, profesionalId, diaSemana, horaInicio, horaFin, duracionTurno, activo
-       FROM HorarioDisponible
-       WHERE profesionalId = ? AND activo = 1`,
-      profesionalId
-    )
+    const horariosDisponiblesList = await prisma.horarioDisponible.findMany({
+      where: { profesionalId, activo: true },
+      select: {
+        id: true,
+        profesionalId: true,
+        diaSemana: true,
+        horaInicio: true,
+        horaFin: true,
+        duracionTurno: true,
+      },
+    })
 
-    if (horariosDisponiblesRaw.length === 0) {
+    if (horariosDisponiblesList.length === 0) {
       return NextResponse.json({
         diasDisponibles: {},
       })
     }
 
-    // Convertir a formato esperado
-    const horariosDisponibles = horariosDisponiblesRaw.map(h => ({
+    const horariosDisponibles = horariosDisponiblesList.map((h) => ({
       id: h.id,
       profesionalId: h.profesionalId,
       diaSemana: h.diaSemana,
       horaInicio: h.horaInicio,
       horaFin: h.horaFin,
-      duracionTurno: Number(h.duracionTurno),
-      activo: Boolean(h.activo),
+      duracionTurno: h.duracionTurno,
+      activo: true,
     }))
 
-    // Determinar el rango de fechas a verificar
-    const hoy = new Date()
-    hoy.setHours(0, 0, 0, 0)
-    
+    const now = new Date()
+    const hoyKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+
     let fechaInicio: Date
     let fechaFin: Date
-    
+
     if (mes && anio) {
-      fechaInicio = new Date(parseInt(anio), parseInt(mes) - 1, 1)
-      fechaFin = new Date(parseInt(anio), parseInt(mes), 0) // Último día del mes
+      fechaInicio = new Date(parseInt(anio), parseInt(mes) - 1, 1, 0, 0, 0, 0)
+      fechaFin = new Date(parseInt(anio), parseInt(mes), 0, 23, 59, 59, 999)
     } else {
-      // Por defecto, mostrar el mes actual y el siguiente
-      fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-      fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 2, 0)
+      const y = now.getFullYear()
+      const m = now.getMonth()
+      fechaInicio = new Date(y, m, 1, 0, 0, 0, 0)
+      fechaFin = new Date(y, m + 2, 0, 23, 59, 59, 999)
     }
 
-    fechaInicio.setHours(0, 0, 0, 0)
-    fechaFin.setHours(23, 59, 59, 999)
+    const fechaFinEnd = new Date(fechaFin)
+    fechaFinEnd.setHours(23, 59, 59, 999)
 
-    // Obtener turnos ocupados en el rango usando SQL raw
-    const fechaInicioStr = fechaInicio.toISOString().split('T')[0]
-    const fechaFinStr = fechaFin.toISOString().split('T')[0]
-    
-    const turnosOcupadosRaw = await prisma.$queryRawUnsafe<Array<{
-      fecha: string
-      hora: string
-    }>>(
-      `SELECT date(fecha) as fecha, hora FROM Turno 
-       WHERE profesionalId = ? 
-         AND date(fecha) >= date(?)
-         AND date(fecha) <= date(?)
-         AND estado IN ('PENDIENTE', 'CONFIRMADO')`,
-      profesionalId,
-      fechaInicioStr,
-      fechaFinStr
-    )
+    const turnosOcupadosList = await prisma.turno.findMany({
+      where: {
+        profesionalId,
+        fecha: { gte: fechaInicio, lte: fechaFinEnd },
+        estado: { in: ["PENDIENTE", "CONFIRMADO"] },
+      },
+      select: { fecha: true, hora: true },
+    })
 
-    // Crear un mapa de turnos ocupados por fecha
+    const toFechaKey = (d: Date) => {
+      const x = d instanceof Date ? d : new Date(d)
+      return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`
+    }
     const turnosOcupadosPorFecha = new Map<string, Set<string>>()
-    turnosOcupadosRaw.forEach((t) => {
-      // Normalizar la fecha (puede venir como string o Date)
-      let fechaKey = t.fecha.toString()
-      if (fechaKey.includes('T')) {
-        fechaKey = fechaKey.split('T')[0]
-      } else if (fechaKey.includes(' ')) {
-        fechaKey = fechaKey.split(' ')[0]
-      }
-      
-      if (!turnosOcupadosPorFecha.has(fechaKey)) {
-        turnosOcupadosPorFecha.set(fechaKey, new Set())
-      }
+    turnosOcupadosList.forEach((t) => {
+      const fechaKey = toFechaKey(t.fecha)
+      if (!turnosOcupadosPorFecha.has(fechaKey)) turnosOcupadosPorFecha.set(fechaKey, new Set())
       turnosOcupadosPorFecha.get(fechaKey)!.add(t.hora)
     })
 
-    // Obtener bloqueos en el rango
-    const bloqueosRaw = await prisma.$queryRawUnsafe<Array<{
-      fecha: string
-      horaInicio: string
-      horaFin: string
-    }>>(
-      `SELECT date(b.fecha) as fecha, b.horaInicio, b.horaFin
-       FROM BloqueoHorario b
-       INNER JOIN HorarioDisponible h ON b.horarioDisponibleId = h.id
-       WHERE h.profesionalId = ?
-         AND date(b.fecha) >= date(?)
-         AND date(b.fecha) <= date(?)`,
-      profesionalId,
-      fechaInicioStr,
-      fechaFinStr
-    )
-
-    // Crear un mapa de bloqueos por fecha
-    const bloqueosPorFecha = new Map<string, Array<{ inicio: string; fin: string }>>()
-    bloqueosRaw.forEach((b) => {
-      // Normalizar la fecha (puede venir como string o Date)
-      let fechaKey = b.fecha.toString()
-      if (fechaKey.includes('T')) {
-        fechaKey = fechaKey.split('T')[0]
-      } else if (fechaKey.includes(' ')) {
-        fechaKey = fechaKey.split(' ')[0]
-      }
-      
-      if (!bloqueosPorFecha.has(fechaKey)) {
-        bloqueosPorFecha.set(fechaKey, [])
-      }
-      bloqueosPorFecha.get(fechaKey)!.push({
-        inicio: b.horaInicio,
-        fin: b.horaFin,
-      })
+    const bloqueosList = await prisma.bloqueoHorario.findMany({
+      where: {
+        horarioDisponible: { profesionalId },
+        fecha: { gte: fechaInicio, lte: fechaFinEnd },
+      },
+      select: { fecha: true, horaInicio: true, horaFin: true },
     })
 
-    // Generar días disponibles con sus horarios
+    const bloqueosPorFecha = new Map<string, Array<{ inicio: string; fin: string }>>()
+    bloqueosList.forEach((b) => {
+      const fechaKey = toFechaKey(b.fecha)
+      if (!bloqueosPorFecha.has(fechaKey)) bloqueosPorFecha.set(fechaKey, [])
+      bloqueosPorFecha.get(fechaKey)!.push({ inicio: b.horaInicio, fin: b.horaFin })
+    })
+
+    // Generar días disponibles: claves YYYY-MM-DD en hora local del servidor (igual que el cliente)
     const diasDisponibles: Record<string, string[]> = {}
-    const fechaActual = new Date(fechaInicio)
+    const fechaActual = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), fechaInicio.getDate(), 0, 0, 0, 0)
 
     while (fechaActual <= fechaFin) {
-      // Solo considerar fechas futuras o de hoy
-      if (fechaActual < hoy) {
+      const year = fechaActual.getFullYear()
+      const month = fechaActual.getMonth() + 1
+      const day = fechaActual.getDate()
+      const fechaKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+
+      if (fechaKey < hoyKey) {
         fechaActual.setDate(fechaActual.getDate() + 1)
         continue
       }
 
       const diaSemana = obtenerDiaSemana(fechaActual)
-      // Formatear fecha como YYYY-MM-DD sin usar toISOString para evitar problemas de zona horaria
-      const year = fechaActual.getFullYear()
-      const month = fechaActual.getMonth() + 1
-      const day = fechaActual.getDate()
-      const fechaKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-
-      // Buscar horarios configurados para este día de la semana
       const horariosDelDia = horariosDisponibles.filter((h) => h.diaSemana === diaSemana)
 
       if (horariosDelDia.length > 0) {
@@ -204,28 +159,13 @@ export async function GET(request: Request) {
             horario.horaFin,
             horario.duracionTurno
           )
-
           for (const hora of horariosGenerados) {
-            // Verificar si está ocupado
-            if (horasOcupadas.has(hora)) {
-              continue
-            }
-
-            // Verificar si está bloqueado
-            const estaBloqueado = bloqueosDelDia.some((bloqueo) => {
-              return hora >= bloqueo.inicio && hora < bloqueo.fin
-            })
-
-            if (!estaBloqueado) {
-              horariosDisponiblesDelDia.push(hora)
-            }
+            if (horasOcupadas.has(hora)) continue
+            const estaBloqueado = bloqueosDelDia.some((b) => hora >= b.inicio && hora < b.fin)
+            if (!estaBloqueado) horariosDisponiblesDelDia.push(hora)
           }
         }
-
-        // Solo agregar el día si tiene horarios disponibles
-        if (horariosDisponiblesDelDia.length > 0) {
-          diasDisponibles[fechaKey] = horariosDisponiblesDelDia.sort()
-        }
+        diasDisponibles[fechaKey] = horariosDisponiblesDelDia.sort()
       }
 
       fechaActual.setDate(fechaActual.getDate() + 1)

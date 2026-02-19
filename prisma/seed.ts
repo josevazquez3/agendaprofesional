@@ -116,6 +116,82 @@ async function main() {
     console.log("  ✅ Suscripción trial creada")
   }
 
+  // Obtener clínica para crear profesional de prueba con horarios
+  const clinic = await prisma.clinic.findFirst({
+    where: { slug: "default" },
+  })
+
+  if (clinic) {
+    const profesionalEmail = "profesional@agendaprofesional.com"
+    let userProf = await prisma.user.findUnique({
+      where: { email: profesionalEmail },
+    })
+    if (!userProf) {
+      const profPassword = await bcrypt.hash("profesional123", 10)
+      userProf = await prisma.user.create({
+        data: {
+          email: profesionalEmail,
+          password: profPassword,
+          nombre: "Profesional Prueba",
+          role: "PROFESIONAL",
+        },
+      })
+      console.log("  ✅ Usuario profesional de prueba creado")
+    }
+
+    await prisma.clinicUser.upsert({
+      where: {
+        clinicId_userId: { clinicId: clinic.id, userId: userProf.id },
+      },
+      update: {},
+      create: {
+        clinicId: clinic.id,
+        userId: userProf.id,
+        role: "PROFESIONAL",
+        activo: true,
+      },
+    })
+
+    let profesional = await prisma.profesional.findFirst({
+      where: { userId: userProf.id, clinicId: clinic.id },
+    })
+    if (!profesional) {
+      profesional = await prisma.profesional.create({
+        data: {
+          userId: userProf.id,
+          clinicId: clinic.id,
+          especialidad: "Medicina General",
+          atiendeObraSocial: true,
+        },
+      })
+      console.log("  ✅ Profesional de prueba creado")
+    }
+
+    const horariosIniciales = [
+      { diaSemana: "LUNES", horaInicio: "09:00", horaFin: "13:00" },
+      { diaSemana: "MIERCOLES", horaInicio: "09:00", horaFin: "13:00" },
+      { diaSemana: "VIERNES", horaInicio: "09:00", horaFin: "17:00" },
+    ]
+    for (const h of horariosIniciales) {
+      const existe = await prisma.horarioDisponible.findFirst({
+        where: { profesionalId: profesional.id, diaSemana: h.diaSemana, activo: true },
+      })
+      if (!existe) {
+        await prisma.horarioDisponible.create({
+          data: {
+            profesionalId: profesional.id,
+            diaSemana: h.diaSemana,
+            horaInicio: h.horaInicio,
+            horaFin: h.horaFin,
+            duracionTurno: 30,
+            activo: true,
+          },
+        })
+        console.log(`  ✅ Horario de prueba creado (${h.diaSemana})`)
+      }
+    }
+  }
+
   console.log("✨ Seed completado exitosamente!")
 }
 

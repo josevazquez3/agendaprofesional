@@ -22,6 +22,8 @@ export default function ProfesionalHorariosPage() {
   const [horarios, setHorarios] = useState<any[]>([])
   const [bloqueos, setBloqueos] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingInitial, setLoadingInitial] = useState(true)
+  const [error, setError] = useState("")
   const [showBloqueoModal, setShowBloqueoModal] = useState(false)
   const [diaBloqueo, setDiaBloqueo] = useState("")
   const [formData, setFormData] = useState({
@@ -32,38 +34,47 @@ export default function ProfesionalHorariosPage() {
   })
 
   useEffect(() => {
-    fetchHorarios()
+    let cancelled = false
+    setLoadingInitial(true)
+    setError("")
+    fetch("/api/horarios")
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (cancelled) return
+        setLoadingInitial(false)
+        if (!ok) {
+          setError((data?.error as string) || "Error al cargar horarios")
+          setHorarios([])
+          return
+        }
+        setHorarios(Array.isArray(data) ? data : [])
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadingInitial(false)
+          setError("Error de conexión al cargar horarios")
+          setHorarios([])
+        }
+      })
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
-    if (horarios.length > 0) {
-      fetchBloqueos()
-    } else {
+    if (horarios.length === 0) {
       setBloqueos([])
+      return
     }
+    let cancelled = false
+    fetch("/api/horarios/bloqueos")
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (cancelled) return
+        if (!ok) return
+        setBloqueos(Array.isArray(data) ? data : [])
+      })
+      .catch(() => { if (!cancelled) setBloqueos([]) })
+    return () => { cancelled = true }
   }, [horarios.length])
-
-  const fetchHorarios = async () => {
-    try {
-      const response = await fetch("/api/horarios")
-      const data = await response.json()
-      setHorarios(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error("Error cargando horarios:", error)
-      setHorarios([])
-    }
-  }
-
-  const fetchBloqueos = async () => {
-    try {
-      const response = await fetch("/api/horarios/bloqueos")
-      const data = await response.json()
-      setBloqueos(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error("Error cargando bloqueos:", error)
-      setBloqueos([])
-    }
-  }
 
   const handleBloquearDia = (dia: string) => {
     setDiaBloqueo(dia)
@@ -85,21 +96,34 @@ export default function ProfesionalHorariosPage() {
     }
   }
 
+  const fetchHorarios = async () => {
+    const res = await fetch("/api/horarios")
+    const data = await res.json()
+    if (res.ok) setHorarios(Array.isArray(data) ? data : [])
+    else setError((data?.error as string) || "Error al cargar horarios")
+  }
+
+  const fetchBloqueos = async () => {
+    const res = await fetch("/api/horarios/bloqueos")
+    const data = await res.json()
+    if (res.ok) setBloqueos(Array.isArray(data) ? data : [])
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
+    setError("")
     try {
       const response = await fetch("/api/horarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       })
-
+      const data = await response.json()
       if (!response.ok) {
-        throw new Error("Error al crear horario")
+        setError((data?.error as string) || "Error al crear horario")
+        return
       }
-
       await fetchHorarios()
       setFormData({
         diaSemana: "",
@@ -107,34 +131,41 @@ export default function ProfesionalHorariosPage() {
         horaFin: "",
         duracionTurno: 30,
       })
-    } catch (error) {
-      alert("Error al crear horario")
+    } catch {
+      setError("Error de conexión")
     } finally {
       setLoading(false)
     }
   }
 
   const toggleHorario = async (horarioId: string, activo: boolean) => {
+    setError("")
     try {
       const response = await fetch("/api/horarios", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: horarioId, activo: !activo }),
       })
-
+      const data = await response.json()
       if (!response.ok) {
-        throw new Error("Error al actualizar horario")
+        setError((data?.error as string) || "Error al actualizar horario")
+        return
       }
-
       await fetchHorarios()
-    } catch (error) {
-      alert("Error al actualizar horario")
+    } catch {
+      setError("Error de conexión")
     }
   }
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Gestión de Horarios</h1>
+
+      {error && (
+        <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+          {error}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -177,7 +208,7 @@ export default function ProfesionalHorariosPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      duracionTurno: parseInt(e.target.value),
+                      duracionTurno: parseInt(e.target.value, 10) || 30,
                     })
                   }
                   required
@@ -226,7 +257,9 @@ export default function ProfesionalHorariosPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {horarios.length === 0 ? (
+          {loadingInitial ? (
+            <div className="text-center py-8 text-gray-500">Cargando horarios...</div>
+          ) : horarios.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No hay horarios configurados. Agregue al menos un día y horario arriba.
             </div>

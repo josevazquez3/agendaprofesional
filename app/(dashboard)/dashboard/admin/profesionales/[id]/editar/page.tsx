@@ -8,7 +8,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import Image from "next/image"
-import { Upload, X, User, MapPin, Plus } from "lucide-react"
+import { Upload, X, User, MapPin, Plus, Calendar, XCircle } from "lucide-react"
+import { BloqueoDiaModal } from "@/components/secretaria/BloqueoDiaModal"
+
+const DIAS_SEMANA = [
+  { value: "LUNES", label: "Lunes" },
+  { value: "MARTES", label: "Martes" },
+  { value: "MIERCOLES", label: "Miércoles" },
+  { value: "JUEVES", label: "Jueves" },
+  { value: "VIERNES", label: "Viernes" },
+  { value: "SABADO", label: "Sábado" },
+  { value: "DOMINGO", label: "Domingo" },
+]
 
 type ConsultorioAsignado = {
   id: string
@@ -30,6 +41,18 @@ export default function EditarProfesionalPage() {
   const [listConsultorios, setListConsultorios] = useState<ConsultorioOption[]>([])
   const [consultorioSelect, setConsultorioSelect] = useState("")
   const [loadingConsultorio, setLoadingConsultorio] = useState(false)
+  const [horarios, setHorarios] = useState<any[]>([])
+  const [bloqueos, setBloqueos] = useState<any[]>([])
+  const [horarioForm, setHorarioForm] = useState({
+    diaSemana: "",
+    horaInicio: "",
+    horaFin: "",
+    duracionTurno: 30,
+  })
+  const [loadingHorario, setLoadingHorario] = useState(false)
+  const [showBloqueoModal, setShowBloqueoModal] = useState(false)
+  const [diaBloqueo, setDiaBloqueo] = useState("")
+  const [profesionalIdForHorarios, setProfesionalIdForHorarios] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     nombre: "",
     email: "",
@@ -92,6 +115,7 @@ export default function EditarProfesionalPage() {
       setError("")
       setClinicId(data.clinicId ?? null)
       setConsultoriosAsignados(Array.isArray(data.consultoriosAsignados) ? data.consultoriosAsignados : [])
+      setProfesionalIdForHorarios(data.id ?? null)
 
       const arancelActivo = data.aranceles?.find((a: any) => a.activo) || null
       setFormData({
@@ -109,9 +133,108 @@ export default function EditarProfesionalPage() {
         fotoPerfil: user.fotoPerfil || "",
       })
       setLoadingData(false)
+      if (data.id) {
+        fetchHorarios(data.id)
+        fetchBloqueos(data.id)
+      }
     } catch (error: any) {
       setError(error?.message || "Error al cargar profesional")
       setLoadingData(false)
+    }
+  }
+
+  const idParaHorarios = profesionalIdForHorarios ?? profesionalId
+
+  const fetchHorarios = async (id?: string) => {
+    const pid = id ?? idParaHorarios
+    if (!pid) return
+    try {
+      const res = await fetch(`/api/horarios?profesionalId=${pid}`)
+      const data = await res.json()
+      setHorarios(res.ok && Array.isArray(data) ? data : [])
+    } catch {
+      setHorarios([])
+    }
+  }
+
+  const fetchBloqueos = async (id?: string) => {
+    const pid = id ?? idParaHorarios
+    if (!pid) return
+    try {
+      const res = await fetch(`/api/horarios/bloqueos?profesionalId=${pid}`)
+      const data = await res.json()
+      setBloqueos(res.ok && Array.isArray(data) ? data : [])
+    } catch {
+      setBloqueos([])
+    }
+  }
+
+  const handleAddHorario = async () => {
+    if (!horarioForm.diaSemana || !horarioForm.horaInicio || !horarioForm.horaFin) {
+      setError("Complete día, hora desde y hora hasta")
+      return
+    }
+    if (!idParaHorarios) {
+      setError("No se pudo identificar al profesional")
+      return
+    }
+    setLoadingHorario(true)
+    setError("")
+    try {
+      const res = await fetch("/api/horarios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...horarioForm,
+          profesionalId: idParaHorarios,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Error al agregar horario")
+      await fetchHorarios(idParaHorarios)
+      setHorarioForm({ diaSemana: "", horaInicio: "", horaFin: "", duracionTurno: 30 })
+    } catch (e: any) {
+      setError(e?.message || "Error al agregar horario")
+    } finally {
+      setLoadingHorario(false)
+    }
+  }
+
+  const toggleHorario = async (id: string, activo: boolean) => {
+    setError("")
+    try {
+      const res = await fetch("/api/horarios", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, activo: !activo }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Error al actualizar")
+      await fetchHorarios(idParaHorarios)
+    } catch (e: any) {
+      setError(e?.message || "Error al actualizar horario")
+    }
+  }
+
+  const handleBloquearDia = (dia: string) => {
+    setDiaBloqueo(dia)
+    setShowBloqueoModal(true)
+  }
+
+  const handleEliminarBloqueo = async (bloqueoId: string) => {
+    if (!confirm("¿Eliminar este bloqueo?")) return
+    setError("")
+    try {
+      const res = await fetch("/api/horarios/bloqueos", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bloqueoId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Error al eliminar")
+      await fetchBloqueos(idParaHorarios)
+    } catch (e: any) {
+      setError(e?.message || "Error al eliminar bloqueo")
     }
   }
 
@@ -572,6 +695,148 @@ export default function EditarProfesionalPage() {
               </CardContent>
             </Card>
 
+            <Card className="border-green-100 bg-green-50/20">
+              <CardHeader>
+                <CardTitle className="text-lg">Horarios de atención</CardTitle>
+                <CardDescription>
+                  Días y franjas en que trabaja este profesional. Agregue al menos un día para que pueda recibir turnos.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+                  <div className="space-y-1">
+                    <Label htmlFor="horarioDia">Día</Label>
+                    <select
+                      id="horarioDia"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={horarioForm.diaSemana}
+                      onChange={(e) => setHorarioForm({ ...horarioForm, diaSemana: e.target.value })}
+                    >
+                      <option value="">Seleccionar</option>
+                      {DIAS_SEMANA.map((d) => (
+                        <option key={d.value} value={d.value}>{d.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="horarioInicio">Desde</Label>
+                    <Input
+                      id="horarioInicio"
+                      type="time"
+                      value={horarioForm.horaInicio}
+                      onChange={(e) => setHorarioForm({ ...horarioForm, horaInicio: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="horarioFin">Hasta</Label>
+                    <Input
+                      id="horarioFin"
+                      type="time"
+                      value={horarioForm.horaFin}
+                      onChange={(e) => setHorarioForm({ ...horarioForm, horaFin: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="horarioDuracion">Duración turno (min)</Label>
+                    <Input
+                      id="horarioDuracion"
+                      type="number"
+                      min={15}
+                      step={15}
+                      value={horarioForm.duracionTurno}
+                      onChange={(e) => setHorarioForm({ ...horarioForm, duracionTurno: parseInt(e.target.value, 10) || 30 })}
+                    />
+                  </div>
+                  <Button type="button" onClick={handleAddHorario} disabled={loadingHorario}>
+                    {loadingHorario ? "Agregando..." : "Agregar horario"}
+                  </Button>
+                </div>
+                {horarios.length === 0 ? (
+                  <p className="text-sm text-gray-500 py-2">No hay horarios cargados.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {horarios.map((h) => (
+                      <li
+                        key={h.id}
+                        className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white rounded-lg border"
+                      >
+                        <span className="font-medium">
+                          {DIAS_SEMANA.find((d) => d.value === h.diaSemana)?.label} · {h.horaInicio} - {h.horaFin}
+                          {h.duracionTurno ? ` (${h.duracionTurno} min)` : ""}
+                        </span>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleBloquearDia(h.diaSemana)}
+                          >
+                            <Calendar className="h-4 w-4 mr-1" />
+                            Bloquear día
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={h.activo ? "destructive" : "default"}
+                            size="sm"
+                            onClick={() => toggleHorario(h.id, h.activo)}
+                          >
+                            {h.activo ? "Desactivar" : "Activar"}
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-amber-100 bg-amber-50/20">
+              <CardHeader>
+                <CardTitle className="text-lg">Días bloqueados</CardTitle>
+                <CardDescription>
+                  Fechas en que no atiende (feriados, licencia, enfermedad, etc.)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {bloqueos.length === 0 ? (
+                  <p className="text-sm text-gray-500 py-2">No hay días bloqueados.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {bloqueos.map((b) => (
+                      <li
+                        key={b.id}
+                        className="flex items-center justify-between p-3 bg-white rounded-lg border"
+                      >
+                        <div>
+                          <span className="font-medium">
+                            {new Date(b.fecha).toLocaleDateString("es-AR", {
+                              weekday: "long",
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </span>
+                          <span className="text-sm text-gray-600 ml-2">
+                            {b.horaInicio} - {b.horaFin}
+                            {b.motivo ? ` · ${b.motivo}` : ""}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:bg-red-50"
+                          onClick={() => handleEliminarBloqueo(b.id)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="flex gap-4">
               <Button type="submit" disabled={loading}>
                 {loading ? "Guardando..." : "Guardar Cambios"}
@@ -585,6 +850,22 @@ export default function EditarProfesionalPage() {
           </form>
         </CardContent>
       </Card>
+
+      {showBloqueoModal && idParaHorarios && (
+        <BloqueoDiaModal
+          profesionalId={idParaHorarios}
+          diaSemana={diaBloqueo}
+          onClose={() => {
+            setShowBloqueoModal(false)
+            setDiaBloqueo("")
+          }}
+          onSuccess={() => {
+            fetchBloqueos(idParaHorarios)
+            setShowBloqueoModal(false)
+            setDiaBloqueo("")
+          }}
+        />
+      )}
     </div>
   )
 }

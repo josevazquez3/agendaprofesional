@@ -48,9 +48,15 @@ export default function AdminHorariosPage() {
     try {
       const response = await fetch("/api/profesionales")
       const data = await response.json()
+      if (!response.ok) {
+        console.error("Error profesionales:", data?.error)
+        setProfesionales([])
+        return
+      }
       setProfesionales(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Error cargando profesionales:", error)
+      setProfesionales([])
     }
   }
 
@@ -58,9 +64,10 @@ export default function AdminHorariosPage() {
     try {
       const response = await fetch(`/api/horarios?profesionalId=${profesionalSeleccionado}`)
       const data = await response.json()
-      setHorarios(data)
+      setHorarios(response.ok && Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Error cargando horarios:", error)
+      setHorarios([])
     }
   }
 
@@ -68,9 +75,10 @@ export default function AdminHorariosPage() {
     try {
       const response = await fetch(`/api/horarios/bloqueos?profesionalId=${profesionalSeleccionado}`)
       const data = await response.json()
-      setBloqueos(data)
+      setBloqueos(response.ok && Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Error cargando bloqueos:", error)
+      setBloqueos([])
     }
   }
 

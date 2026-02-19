@@ -21,6 +21,7 @@ export function BloqueoDiaModal({
   onSuccess,
 }: BloqueoDiaModalProps) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     fecha: "",
     horaInicio: "",
@@ -31,7 +32,7 @@ export function BloqueoDiaModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
+    setError("")
     try {
       const response = await fetch("/api/horarios/bloqueos", {
         method: "POST",
@@ -42,14 +43,16 @@ export function BloqueoDiaModal({
           ...formData,
         }),
       })
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error("Error al crear bloqueo")
+        setError((data?.error as string) || "Error al crear bloqueo")
+        setLoading(false)
+        return
       }
-
       onSuccess()
-    } catch (error) {
-      alert("Error al crear bloqueo")
+    } catch {
+      setError("Error de conexión")
       setLoading(false)
     }
   }
@@ -70,6 +73,11 @@ export function BloqueoDiaModal({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-2 text-sm text-red-600 bg-red-50 rounded">
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="fecha">Fecha *</Label>
               <Input
