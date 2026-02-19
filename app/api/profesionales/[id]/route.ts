@@ -42,6 +42,13 @@ export async function GET(
       )
     }
 
+    if (!prof.user) {
+      return NextResponse.json(
+        { error: "Datos del usuario del profesional no encontrados" },
+        { status: 404 }
+      )
+    }
+
     const profesional = {
       id: prof.id,
       userId: prof.userId,
@@ -50,7 +57,7 @@ export async function GET(
       atiendeObraSocial: prof.atiendeObraSocial,
       createdAt: prof.createdAt,
       updatedAt: prof.updatedAt,
-      user: prof.user ?? undefined,
+      user: prof.user,
     }
 
     let aranceles: Awaited<ReturnType<typeof prisma.arancel.findMany>> = []
@@ -88,7 +95,7 @@ export async function GET(
       consultoriosAsignados,
     })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Error al obtener profesional"
+    const message = error instanceof Error ? error.message : String(error)
     console.error("Error obteniendo profesional:", error)
     return NextResponse.json(
       { error: message },

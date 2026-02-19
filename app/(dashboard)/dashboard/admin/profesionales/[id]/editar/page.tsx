@@ -79,30 +79,32 @@ export default function EditarProfesionalPage() {
       ])
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error((data as { error?: string }).error || "Error al cargar profesional")
+        const serverError = (data as { error?: string }).error
+        throw new Error(serverError || "Error al cargar profesional")
       }
 
+      const user = data.user ?? {}
       setClinicId(data.clinicId ?? null)
-      setConsultoriosAsignados(data.consultoriosAsignados ?? [])
+      setConsultoriosAsignados(Array.isArray(data.consultoriosAsignados) ? data.consultoriosAsignados : [])
 
       const arancelActivo = data.aranceles?.find((a: any) => a.activo) || null
       setFormData({
-        nombre: data.user.nombre || "",
-        email: data.user.email || "",
-        telefono: data.user.telefono || "",
-        dni: data.user.dni || "",
+        nombre: user.nombre || "",
+        email: user.email || "",
+        telefono: user.telefono || "",
+        dni: user.dni || "",
         especialidad: data.especialidad || "",
         matricula: data.matricula || "",
         atiendeObraSocial: data.atiendeObraSocial !== false,
-        obraSocial: data.user.obraSocial || "",
+        obraSocial: user.obraSocial || "",
         tieneArancel: !!arancelActivo,
         arancelMonto: arancelActivo?.monto?.toString() || "",
         arancelDescripcion: arancelActivo?.descripcion || "",
-        fotoPerfil: data.user.fotoPerfil || "",
+        fotoPerfil: user.fotoPerfil || "",
       })
       setLoadingData(false)
     } catch (error: any) {
-      setError(error.message || "Error al cargar profesional")
+      setError(error?.message || "Error al cargar profesional")
       setLoadingData(false)
     }
   }
