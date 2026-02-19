@@ -489,20 +489,29 @@ export default function EditarProfesionalPage() {
                 )}
               </div>
 
-              <div className="space-y-2 md:col-span-2 border-t pt-6">
-                <Label className="text-base font-semibold flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
+            </div>
+
+            <Card className="border-blue-100 bg-blue-50/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <MapPin className="h-5 w-5 text-blue-600" />
                   Consultorios asignados
-                </Label>
-                <p className="text-sm text-gray-500">
-                  Asigna los consultorios donde atiende este profesional. Podrás elegir el consultorio al crear cada turno.
-                </p>
-                {consultoriosAsignados.length > 0 && (
-                  <ul className="space-y-2 mt-2">
+                </CardTitle>
+                <CardDescription>
+                  Asigna los consultorios donde atiende este profesional. Es necesario asignar al menos uno para poder crear turnos.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {consultoriosAsignados.length === 0 ? (
+                  <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    Ningún consultorio asignado. Selecciona uno abajo y haz clic en &quot;Asignar consultorio&quot;.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
                     {consultoriosAsignados.map((a) => (
                       <li
                         key={a.consultorio.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
+                        className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm"
                       >
                         <div>
                           <span className="font-medium">{a.consultorio.nombre}</span>
@@ -524,16 +533,16 @@ export default function EditarProfesionalPage() {
                     ))}
                   </ul>
                 )}
-                <div className="flex flex-wrap items-end gap-2 mt-3">
+                <div className="flex flex-wrap items-end gap-2">
                   <div className="flex-1 min-w-[200px]">
-                    <Label htmlFor="consultorioSelect" className="sr-only">
+                    <Label htmlFor="consultorioSelect" className="text-sm font-medium text-gray-700">
                       Agregar consultorio
                     </Label>
                     <select
                       id="consultorioSelect"
                       value={consultorioSelect}
                       onChange={(e) => setConsultorioSelect(e.target.value)}
-                      className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={loadingConsultorio}
                     >
                       <option value="">Seleccionar consultorio...</option>
@@ -549,20 +558,19 @@ export default function EditarProfesionalPage() {
                     type="button"
                     disabled={!consultorioSelect || loadingConsultorio}
                     onClick={handleAsignarConsultorio}
-                    variant="outline"
-                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Asignar consultorio
                   </Button>
                 </div>
                 {consultoriosDisponibles.length === 0 && listConsultorios.length > 0 && (
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-500">
                     Todos los consultorios de la clínica ya están asignados a este profesional.
                   </p>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             <div className="flex gap-4">
               <Button type="submit" disabled={loading}>
