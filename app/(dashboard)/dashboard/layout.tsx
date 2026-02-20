@@ -7,6 +7,9 @@ import { OnboardingProvider } from "@/components/onboarding/onboarding-provider"
 import { ShortcutProvider } from "@/components/shortcuts/shortcut-provider"
 import { PrefetchProvider } from "@/components/performance/prefetch-provider"
 
+// Evita que Vercel intente pre-renderizar estas rutas (usan getServerSession/headers)
+export const dynamic = "force-dynamic"
+
 export default async function DashboardLayout({
   children,
 }: {
