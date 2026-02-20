@@ -398,7 +398,10 @@ export async function saveBackupLocal(
 
   await fs.mkdir(backupsDir, { recursive: true })
 
-  const fileName = `backup-${Date.now()}.zip`
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`
+  const fileName = `backup-${dateStr}.zip`
   const destinationPath = path.join(backupsDir, fileName)
 
   await fs.copyFile(filePath, destinationPath)
