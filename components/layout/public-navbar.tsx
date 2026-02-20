@@ -73,18 +73,26 @@ export function PublicNavbar() {
             </Link>
           </div>
 
-          {/* Solo hamburguesa en móvil (login y registro van dentro del menú) */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden flex-shrink-0 p-2 -mr-2 text-[#0F172A] rounded-lg hover:bg-[#F1F5F9]"
-            aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
+          {/* Móvil: enlace Ingresar siempre visible + menú hamburguesa */}
+          <div className="md:hidden flex items-center gap-1 flex-shrink-0">
+            <Link
+              href="/auth/login"
+              className="text-[#2563EB] font-semibold text-sm whitespace-nowrap py-2 px-3 rounded-lg hover:bg-[#EFF6FF]"
+            >
+              Ingresar
+            </Link>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 -mr-2 text-[#0F172A] rounded-lg hover:bg-[#F1F5F9]"
+              aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Menú móvil desplegable: enlaces + Ingresar + Solicitar turno */}

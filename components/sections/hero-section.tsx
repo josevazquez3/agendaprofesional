@@ -31,25 +31,25 @@ export function HeroSection() {
 
             {/* Botones CTA */}
             <div className="pt-1 sm:pt-4">
-              {/* Móvil: columna → Solicitar turno, Ver cómo funciona, Ingresar (debajo) */}
-              <div className="flex flex-col gap-3 sm:hidden">
+              {/* Móvil: columna → Solicitar turno, Ver cómo funciona, Ingresar (debajo). Usamos max-sm para que en tablets también se vean los 3. */}
+              <div className="flex flex-col gap-3 md:hidden">
                 <Link href="/auth/register">
                   <Button
                     size="lg"
                     className="w-full bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl px-4 py-4 text-sm font-medium shadow-sm"
                   >
                     Solicitar turno
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-4 w-4 flex-shrink-0" />
                   </Button>
                 </Link>
                 <Link href="#como-funciona">
                   <Button
                     variant="outline"
                     size="lg"
-                    className="w-full border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] rounded-xl px-4 py-4 text-sm font-medium"
+                    className="w-full border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] rounded-xl px-4 py-4 text-sm font-medium min-w-0"
                   >
-                    <Play className="mr-2 h-4 w-4" />
-                    Ver cómo funciona
+                    <Play className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">Ver cómo funciona</span>
                   </Button>
                 </Link>
                 <Link href="/auth/login">
@@ -58,13 +58,13 @@ export function HeroSection() {
                     size="lg"
                     className="w-full border-2 border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl px-4 py-4 text-sm font-medium"
                   >
-                    <LogIn className="mr-2 h-4 w-4" />
+                    <LogIn className="mr-2 h-4 w-4 flex-shrink-0" />
                     Ingresar
                   </Button>
                 </Link>
               </div>
               {/* Desktop: Solicitar + Ingresar en fila, "Ver cómo funciona" como enlace */}
-              <div className="hidden sm:block">
+              <div className="hidden md:block">
                 <div className="flex flex-row gap-4 flex-wrap">
                   <Link href="/auth/register">
                     <Button
