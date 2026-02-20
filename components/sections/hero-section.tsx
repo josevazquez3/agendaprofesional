@@ -29,36 +29,71 @@ export function HeroSection() {
               en una sola plataforma moderna y segura.
             </p>
 
-            {/* Botones CTA: en móvil dos en una fila para que se vean ambos sin scroll */}
+            {/* Botones CTA */}
             <div className="pt-1 sm:pt-4">
-              <div className="flex flex-row gap-2 sm:gap-4 flex-wrap">
-                <Link href="/auth/register" className="flex-1 min-w-[120px] sm:min-w-0 sm:flex-initial">
+              {/* Móvil: columna → Solicitar turno, Ver cómo funciona, Ingresar (debajo) */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                <Link href="/auth/register">
                   <Button
                     size="lg"
-                    className="w-full bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl px-4 sm:px-8 py-4 sm:py-6 text-sm sm:text-base font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                    className="w-full bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl px-4 py-4 text-sm font-medium shadow-sm"
                   >
                     Solicitar turno
-                    <ArrowRight className="ml-1.5 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <Link href="/auth/login" className="flex-1 min-w-[120px] sm:min-w-0 sm:flex-initial">
+                <Link href="#como-funciona">
                   <Button
                     variant="outline"
                     size="lg"
-                    className="w-full border-2 border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl px-4 sm:px-8 py-4 sm:py-6 text-sm sm:text-base font-medium transition-all duration-200"
+                    className="w-full border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] rounded-xl px-4 py-4 text-sm font-medium"
                   >
-                    <LogIn className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                    <Play className="mr-2 h-4 w-4" />
+                    Ver cómo funciona
+                  </Button>
+                </Link>
+                <Link href="/auth/login">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full border-2 border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl px-4 py-4 text-sm font-medium"
+                  >
+                    <LogIn className="mr-2 h-4 w-4" />
                     Ingresar
                   </Button>
                 </Link>
               </div>
-              <Link
-                href="#como-funciona"
-                className="inline-flex items-center gap-1.5 mt-3 text-sm text-[#64748B] hover:text-[#2563EB] font-medium"
-              >
-                <Play className="h-4 w-4" />
-                Ver cómo funciona
-              </Link>
+              {/* Desktop: Solicitar + Ingresar en fila, "Ver cómo funciona" como enlace */}
+              <div className="hidden sm:block">
+                <div className="flex flex-row gap-4 flex-wrap">
+                  <Link href="/auth/register">
+                    <Button
+                      size="lg"
+                      className="bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl px-8 py-6 text-base font-medium shadow-sm"
+                    >
+                      Solicitar turno
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </Link>
+                  <Link href="/auth/login">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl px-8 py-6 text-base font-medium"
+                    >
+                      <LogIn className="mr-2 h-5 w-5" />
+                      Ingresar
+                    </Button>
+                  </Link>
+                </div>
+                <Link
+                  href="#como-funciona"
+                  className="inline-flex items-center gap-1.5 mt-3 text-sm text-[#64748B] hover:text-[#2563EB] font-medium"
+                >
+                  <Play className="h-4 w-4" />
+                  Ver cómo funciona
+                </Link>
+              </div>
             </div>
           </div>
 
