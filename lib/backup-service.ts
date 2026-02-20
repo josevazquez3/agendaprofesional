@@ -24,9 +24,9 @@ export interface BackupData {
   }
 }
 
-/** Tipo para backup de toda la base de datos: nombre de modelo -> array de registros */
-export type FullDatabaseBackup = Record<string, unknown[]> & {
-  _metadata?: { exportedAt: string; version: string; type: "full_database" }
+/** Tipo para backup de toda la base de datos: nombre de modelo -> array de registros; _metadata es opcional y no es array */
+export type FullDatabaseBackup = {
+  [key: string]: unknown[] | { exportedAt: string; version: string; type: "full_database" } | undefined
 }
 
 /**
@@ -348,7 +348,8 @@ export async function createFullBackupZip(
       archive.pipe(output)
 
       for (const [key, value] of Object.entries(fullData)) {
-        if (key === "_metadata") continue
+        if (key === "_metadata" || value === undefined) continue
+        if (!Array.isArray(value)) continue
         archive.append(JSON.stringify(value, null, 2), {
           name: `${key}.json`,
         })
