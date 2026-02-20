@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -67,6 +67,8 @@ export function ConfiguracionForm() {
   const [folderCreated, setFolderCreated] = useState(false)
   const [backupRunning, setBackupRunning] = useState(false)
   const [backupMessage, setBackupMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [showPastePathHint, setShowPastePathHint] = useState(false)
+  const backupPathInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadConfig()
@@ -138,6 +140,10 @@ export function ConfiguracionForm() {
       const data = await response.json()
 
       if (response.ok) {
+        // Usar la ruta real donde se creó la carpeta como ruta de almacenamiento
+        if (data.ruta) {
+          setConfig((c) => (c ? { ...c, backupStoragePath: data.ruta } : c))
+        }
         setFolderCreated(true)
         setTimeout(() => setFolderCreated(false), 5000)
       } else {
@@ -151,7 +157,31 @@ export function ConfiguracionForm() {
     }
   }
 
-  const handleBrowseFolder = () => {
+  const handleBrowseFolder = async () => {
+    const supportsPicker =
+      typeof window !== "undefined" &&
+      "showDirectoryPicker" in window
+
+    if (supportsPicker) {
+      try {
+        await (window as any).showDirectoryPicker()
+        setShowPastePathHint(true)
+        setTimeout(() => backupPathInputRef.current?.focus(), 150)
+        setTimeout(() => setShowPastePathHint(false), 10000)
+      } catch (err: any) {
+        if (err?.name === "AbortError") return
+        const isBlocked =
+          err?.name === "SecurityError" ||
+          err?.message?.includes("archivos del sistema") ||
+          err?.message?.includes("system files")
+        const msg = isBlocked
+          ? "El navegador no permite elegir esa carpeta (protección de carpetas del sistema). Elige una subcarpeta como Escritorio o Documentos, o escribe la ruta manualmente en el campo de arriba (por ejemplo C:\\Users\\TuUsuario\\Desktop)."
+          : "No se pudo abrir el selector de carpeta. " + (err?.message || "Escribe o pega la ruta en el campo de arriba.")
+        alert(msg)
+      }
+      return
+    }
+
     const msg =
       "Para guardar los backups en cualquier carpeta (incluido el Escritorio):\n\n" +
       "1. Abre el Explorador de archivos y ve a la carpeta deseada (ej. Escritorio: abre 'Este equipo' → 'Escritorio').\n\n" +
@@ -189,7 +219,7 @@ export function ConfiguracionForm() {
       const ubicacion = data.fileUrl || config.backupStoragePath || "./backups"
       setBackupMessage({
         type: "success",
-        text: `Copia creada correctamente. ${data.sizeMB != null ? `Tamaño: ${data.sizeMB} MB. ` : ""}Ubicación: ${ubicacion}`,
+        text: `Copia creada correctamente. ${data.sizeMB != null ? `Tamaño: ${data.sizeMB} MB. ` : ""}Archivo guardado en: ${ubicacion}. Abre esa ruta en el Explorador para ver el .zip.`,
       })
       setTimeout(() => setBackupMessage(null), 8000)
     } catch (e) {
@@ -644,6 +674,7 @@ export function ConfiguracionForm() {
             </Label>
             <div className="flex gap-2 mt-1">
               <Input
+                ref={backupPathInputRef}
                 id="backupStoragePath"
                 type="text"
                 value={config.backupStoragePath}
@@ -658,7 +689,7 @@ export function ConfiguracionForm() {
                     variant="outline"
                     onClick={handleBrowseFolder}
                     className="border-[#E2E8F0] hover:bg-[#F8FAFC]"
-                    title="Seleccionar carpeta"
+                    title="Seleccionar carpeta (elige Escritorio, Documentos o una subcarpeta; el navegador puede bloquear carpetas del sistema)"
                   >
                     <FolderOpen className="h-4 w-4" />
                   </Button>
@@ -682,6 +713,13 @@ export function ConfiguracionForm() {
                 </>
               )}
             </div>
+            {showPastePathHint && (
+              <div className="mt-2 p-3 bg-[#EFF6FF] border border-[#2563EB]/30 rounded-lg">
+                <p className="text-sm text-[#1E40AF]">
+                  Carpeta elegida. Pega aquí la ruta: en el Explorador de Windows, clic derecho en la carpeta que seleccionaste → <strong>Copiar como ruta</strong>, y pégala en el campo de arriba (Ctrl+V).
+                </p>
+              </div>
+            )}
             {folderCreated && (
               <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-600" />
@@ -692,7 +730,9 @@ export function ConfiguracionForm() {
             )}
             <p className="text-xs text-[#64748B] mt-2">
               {config.backupStorageType === "local" && (
-                <>Ruta completa donde se guardarán los backups. Puedes usar el Escritorio: <code className="bg-[#F1F5F9] px-1 rounded">C:\Users\TuUsuario\Desktop</code> (o <code className="bg-[#F1F5F9] px-1 rounded">...\Escritorio</code>). También: <code className="bg-[#F1F5F9] px-1 rounded">./backups</code> o <code className="bg-[#F1F5F9] px-1 rounded">C:\backups</code>.</>
+                <>
+                  Ruta completa donde se guardarán los backups. Si al usar &quot;Seleccionar carpeta&quot; el navegador dice que no puede abrir la carpeta (contiene archivos del sistema), elige una subcarpeta como <strong>Escritorio</strong> o <strong>Documentos</strong>, o escribe la ruta a mano abajo. Ejemplos: Escritorio <code className="bg-[#F1F5F9] px-1 rounded">C:\Users\TuUsuario\Desktop</code> (o <code className="bg-[#F1F5F9] px-1 rounded">...\Escritorio</code>), <code className="bg-[#F1F5F9] px-1 rounded">./backups</code> o <code className="bg-[#F1F5F9] px-1 rounded">C:\backups</code>.
+                </>
               )}
               {config.backupStorageType === "s3" && (
                 <>Nombre del bucket de S3. Ejemplo: <code className="bg-[#F1F5F9] px-1 rounded">mi-bucket-backups</code></>
@@ -713,7 +753,7 @@ export function ConfiguracionForm() {
               </p>
               {config.backupStorageType === "local" && (
                 <p className="text-xs text-[#64748B] mt-2">
-                  Los backups se guardarán en: <strong>{config.backupStoragePath || "./backups"}</strong>
+                  Los backups se guardan en una subcarpeta con el ID de la clínica: <strong>{config.backupStoragePath || "./backups"}</strong> → carpeta <code className="bg-[#F1F5F9] px-1 rounded">[id-clínica]</code> → archivo <code className="bg-[#F1F5F9] px-1 rounded">backup-xxx.zip</code>. Revisa esa ruta completa tras hacer la copia.
                 </p>
               )}
             </div>

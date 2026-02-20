@@ -368,10 +368,11 @@ export async function createFullBackupZip(
 }
 
 /**
- * Normaliza una ruta para el sistema actual (Windows: barras invertidas)
+ * Normaliza una ruta para el sistema actual (Windows: barras invertidas).
+ * Quita comillas que Windows puede incluir al pegar "Copiar como ruta".
  */
 function normalizePath(ruta: string): string {
-  const trimmed = ruta.trim()
+  const trimmed = ruta.trim().replace(/^["']|["']$/g, "")
   if (process.platform === "win32") {
     return trimmed.replace(/\//g, path.sep)
   }
@@ -387,10 +388,11 @@ export async function saveBackupLocal(
   clinicId: string,
   customDir?: string
 ): Promise<string> {
-  const baseDir = customDir
-    ? (path.isAbsolute(customDir)
-        ? normalizePath(customDir)
-        : path.join(process.cwd(), normalizePath(customDir)))
+  const dirRaw = customDir?.trim().replace(/^["']|["']$/g, "") || ""
+  const baseDir = dirRaw
+    ? (path.isAbsolute(dirRaw)
+        ? normalizePath(dirRaw)
+        : path.join(process.cwd(), normalizePath(dirRaw)))
     : path.join(process.cwd(), "backups", clinicId)
   const backupsDir = path.join(baseDir, clinicId)
 

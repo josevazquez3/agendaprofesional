@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
 
     // Si no hay jobId, crear backup manual inmediato (usa ruta configurada si se envía)
     const storageType = (body.storageType as "local" | "s3" | "gcs") || "local"
-    const storagePath = typeof body.storagePath === "string" && body.storagePath.trim() ? body.storagePath.trim() : undefined
+    const rawPath = typeof body.storagePath === "string" ? body.storagePath.trim().replace(/^["']|["']$/g, "") : ""
+    const storagePath = rawPath || undefined
     const { fileUrl, sizeMB } = await createBackup(targetClinicId, storageType, storagePath)
 
     // Buscar o crear job manual para este backup
