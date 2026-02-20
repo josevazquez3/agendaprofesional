@@ -163,7 +163,7 @@ export default async function ProfesionalDashboard() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Turnos próximos */}
         <div className="lg:col-span-2">
-          <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+          <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex justify-between items-center">
                 <div>
@@ -240,7 +240,7 @@ export default async function ProfesionalDashboard() {
         {/* Panel lateral - Próximo turno */}
         <div className="lg:col-span-1">
           {proximoTurno ? (
-            <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+            <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
               <CardHeader className="border-b border-[#E2E8F0]">
                 <CardTitle className="text-lg font-semibold text-[#0F172A] font-inter">
                   Próximo turno
@@ -277,7 +277,7 @@ export default async function ProfesionalDashboard() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+            <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
               <CardContent className="p-6 text-center">
                 <p className="text-[#64748B] text-sm">No hay turnos próximos</p>
               </CardContent>

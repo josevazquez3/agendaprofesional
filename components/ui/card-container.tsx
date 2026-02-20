@@ -36,7 +36,7 @@ export function CardContainer({
       <motion.div variants={fadeIn} initial="hidden" animate="visible">
         <Card
           className={cn(
-            "bg-white border border-[#E2E8F0] rounded-2xl shadow-sm",
+            "bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm",
             className
           )}
         >

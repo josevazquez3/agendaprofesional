@@ -9,6 +9,7 @@ import Link from "next/link"
 import { User, Plus, Edit, Building } from "lucide-react"
 import Image from "next/image"
 import { ExportarProfesionalButton } from "@/components/profesionales/exportar-profesional-button"
+import { PageHeader } from "@/components/ui/page-header"
 
 export default async function AdminProfesionalesPage() {
   const session = await getServerSession(authOptions)
@@ -62,20 +63,18 @@ export default async function AdminProfesionalesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Gestión de Profesionales</h1>
-          <p className="text-gray-600 mt-2">
-            Administra los profesionales médicos del sistema
-          </p>
-        </div>
-        <Link href="/dashboard/admin/usuarios/nuevo?role=PROFESIONAL">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Profesional
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Gestión de Profesionales"
+        subtitle="Administra los profesionales médicos del sistema"
+        action={
+          <Link href="/dashboard/admin/usuarios/nuevo?role=PROFESIONAL">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Profesional
+            </Button>
+          </Link>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -86,7 +85,7 @@ export default async function AdminProfesionalesPage() {
         </CardHeader>
         <CardContent>
           {profesionalesFormateados.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               No hay profesionales registrados
             </div>
           ) : (
@@ -103,7 +102,7 @@ export default async function AdminProfesionalesPage() {
                                 src={profesional.user.fotoPerfil}
                                 alt={profesional.user.nombre}
                                 fill
-                                className="rounded-full object-cover border-2 border-gray-300"
+                                className="rounded-full object-cover border-2 border-[#E2E8F0]"
                               />
                             </div>
                           ) : (
@@ -115,9 +114,9 @@ export default async function AdminProfesionalesPage() {
                             <h3 className="text-xl font-semibold">
                               {profesional.user.nombre}
                             </h3>
-                            <p className="text-gray-600">{profesional.especialidad}</p>
+                            <p className="text-slate-600">{profesional.especialidad}</p>
                             {profesional.matricula && (
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-slate-500">
                                 Matrícula: {profesional.matricula}
                               </p>
                             )}
@@ -126,24 +125,24 @@ export default async function AdminProfesionalesPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                           <div>
-                            <p className="text-sm text-gray-600 mb-1"><strong>Email:</strong></p>
-                            <p className="text-gray-800">{profesional.user.email}</p>
+                            <p className="text-sm text-slate-600 mb-1"><strong>Email:</strong></p>
+                            <p className="text-slate-800">{profesional.user.email}</p>
                           </div>
                           {profesional.user.telefono && (
                             <div>
-                              <p className="text-sm text-gray-600 mb-1"><strong>Teléfono:</strong></p>
-                              <p className="text-gray-800">{profesional.user.telefono}</p>
+                              <p className="text-sm text-slate-600 mb-1"><strong>Teléfono:</strong></p>
+                              <p className="text-slate-800">{profesional.user.telefono}</p>
                             </div>
                           )}
                           {profesional.user.dni && (
                             <div>
-                              <p className="text-sm text-gray-600 mb-1"><strong>DNI:</strong></p>
-                              <p className="text-gray-800">{profesional.user.dni}</p>
+                              <p className="text-sm text-slate-600 mb-1"><strong>DNI:</strong></p>
+                              <p className="text-slate-800">{profesional.user.dni}</p>
                             </div>
                           )}
                           <div>
-                            <p className="text-sm text-gray-600 mb-1"><strong>Atiende Obra Social:</strong></p>
-                            <p className="text-gray-800">
+                            <p className="text-sm text-slate-600 mb-1"><strong>Atiende Obra Social:</strong></p>
+                            <p className="text-slate-800">
                               {profesional.atiendeObraSocial ? "Sí" : "No"}
                             </p>
                           </div>
@@ -151,8 +150,8 @@ export default async function AdminProfesionalesPage() {
 
                         {profesional.aranceles.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-1"><strong>Arancel:</strong></p>
-                            <p className="text-gray-800">
+                            <p className="text-sm text-slate-600 mb-1"><strong>Arancel:</strong></p>
+                            <p className="text-slate-800">
                               ${profesional.aranceles[0].monto}
                               {profesional.aranceles[0].descripcion &&
                                 ` - ${profesional.aranceles[0].descripcion}`}
@@ -162,7 +161,7 @@ export default async function AdminProfesionalesPage() {
 
                         {profesional.horarios.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-2"><strong>Horarios de Atención:</strong></p>
+                            <p className="text-sm text-slate-600 mb-2"><strong>Horarios de Atención:</strong></p>
                             <div className="flex flex-wrap gap-2">
                               {profesional.horarios.map((horario) => (
                                 <span
@@ -178,7 +177,7 @@ export default async function AdminProfesionalesPage() {
 
                         {profesional.consultorios.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-2"><strong>Consultorios:</strong></p>
+                            <p className="text-sm text-slate-600 mb-2"><strong>Consultorios:</strong></p>
                             <div className="flex flex-wrap gap-2">
                               {profesional.consultorios.map((cp) => (
                                 <span

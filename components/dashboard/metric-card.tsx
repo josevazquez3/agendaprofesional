@@ -32,7 +32,7 @@ export function MetricCard({
       <motion.div variants={fadeIn} initial="hidden" animate="visible">
         <Card
           className={cn(
-            "bg-white border border-[#E2E8F0] rounded-2xl shadow-sm",
+            "bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm",
             className
           )}
         >
@@ -45,7 +45,7 @@ export function MetricCard({
                 {icon}
               </div>
               <p className={cn(typography.secondary, "mb-2")}>{title}</p>
-              <p className="text-2xl lg:text-3xl font-bold text-[#0F172A] font-inter">
+              <p className="text-2xl lg:text-3xl font-bold text-[#1E293B] font-inter leading-tight">
                 {value}
               </p>
             </div>

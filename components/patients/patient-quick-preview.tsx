@@ -70,7 +70,7 @@ export function PatientQuickPreview({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
-        className="w-80 p-0 rounded-2xl border-[#E2E8F0] shadow-lg"
+        className="w-80 p-0 rounded-xl border-[#E2E8F0] shadow-lg"
         align="start"
       >
         <div className="p-6">

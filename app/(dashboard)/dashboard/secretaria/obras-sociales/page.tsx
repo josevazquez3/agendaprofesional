@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PageHeader } from "@/components/ui/page-header"
 import { prisma } from "@/lib/prisma"
 import { Heart, CheckCircle, XCircle } from "lucide-react"
 
@@ -23,12 +24,10 @@ export default async function SecretariaObrasSocialesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Obras Sociales</h1>
-          <p className="text-gray-600 mt-2">Consulta las obras sociales del sistema</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Obras Sociales"
+        subtitle="Consulta las obras sociales del sistema"
+      />
 
       <Card>
         <CardHeader>
@@ -39,7 +38,7 @@ export default async function SecretariaObrasSocialesPage() {
         </CardHeader>
         <CardContent>
           {obrasSociales.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               No hay obras sociales registradas
             </div>
           ) : (
@@ -62,39 +61,39 @@ export default async function SecretariaObrasSocialesPage() {
                   <CardContent className="space-y-4">
                     {obraSocial.codigo && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1"><strong>Código:</strong></p>
-                        <p className="text-gray-800">{obraSocial.codigo}</p>
+                        <p className="text-sm text-slate-600 mb-1"><strong>Código:</strong></p>
+                        <p className="text-slate-800">{obraSocial.codigo}</p>
                       </div>
                     )}
                     {obraSocial.descripcion && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1"><strong>Descripción:</strong></p>
-                        <p className="text-gray-800">{obraSocial.descripcion}</p>
+                        <p className="text-sm text-slate-600 mb-1"><strong>Descripción:</strong></p>
+                        <p className="text-slate-800">{obraSocial.descripcion}</p>
                       </div>
                     )}
                     {obraSocial.telefono && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1"><strong>Teléfono:</strong></p>
-                        <p className="text-gray-800">{obraSocial.telefono}</p>
+                        <p className="text-sm text-slate-600 mb-1"><strong>Teléfono:</strong></p>
+                        <p className="text-slate-800">{obraSocial.telefono}</p>
                       </div>
                     )}
                     {obraSocial.email && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1"><strong>Email:</strong></p>
-                        <p className="text-gray-800">{obraSocial.email}</p>
+                        <p className="text-sm text-slate-600 mb-1"><strong>Email:</strong></p>
+                        <p className="text-slate-800">{obraSocial.email}</p>
                       </div>
                     )}
                     {obraSocial.direccion && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-1"><strong>Dirección:</strong></p>
-                        <p className="text-gray-800">{obraSocial.direccion}</p>
+                        <p className="text-sm text-slate-600 mb-1"><strong>Dirección:</strong></p>
+                        <p className="text-slate-800">{obraSocial.direccion}</p>
                       </div>
                     )}
                     <div className="flex items-center gap-4 pt-2 border-t">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-slate-600">
                         <strong>Pacientes:</strong> {obraSocial._count.pacientes}
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-slate-600">
                         <strong>Turnos:</strong> {obraSocial._count.turnos}
                       </div>
                     </div>

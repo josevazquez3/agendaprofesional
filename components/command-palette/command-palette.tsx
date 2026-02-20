@@ -200,7 +200,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 gap-0 rounded-2xl border-[#E2E8F0] shadow-xl">
+      <DialogContent className="max-w-2xl p-0 gap-0 rounded-xl border-[#E2E8F0] shadow-xl">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-[#E2E8F0]">
           <DialogTitle className="text-lg font-semibold text-[#0F172A] font-inter">
             Búsqueda rápida

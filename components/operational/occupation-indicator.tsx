@@ -26,7 +26,7 @@ export function OccupationIndicator({
   }
 
   return (
-    <Card className={cn("bg-white border border-[#E2E8F0] rounded-2xl shadow-sm", className)}>
+    <Card className={cn("bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm", className)}>
       <CardHeader className="border-b border-[#E2E8F0]">
         <div className="flex items-center gap-2">
           <Calendar className={cn(iconography.header, "text-[#2563EB]")} strokeWidth={iconography.strokeWidth} />

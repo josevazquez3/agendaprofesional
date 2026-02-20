@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { PageHeader } from "@/components/ui/page-header"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { Plus, Edit } from "lucide-react"
@@ -47,26 +48,26 @@ export default async function AdminUsuariosPage() {
       case "PROFESIONAL":
         return "bg-green-100 text-green-800"
       case "PACIENTE":
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-slate-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-slate-800"
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Gestión de Usuarios</h1>
-          <p className="text-gray-600 mt-2">Administra todos los usuarios del sistema</p>
-        </div>
-        <Link href="/dashboard/admin/usuarios/nuevo">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Usuario
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Gestión de Usuarios"
+        subtitle="Administra todos los usuarios del sistema"
+        action={
+          <Link href="/dashboard/admin/usuarios/nuevo">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Usuario
+            </Button>
+          </Link>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -77,7 +78,7 @@ export default async function AdminUsuariosPage() {
         </CardHeader>
         <CardContent>
           {usuarios.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               No hay usuarios registrados
             </div>
           ) : (

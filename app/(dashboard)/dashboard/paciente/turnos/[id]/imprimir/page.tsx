@@ -198,7 +198,7 @@ export default async function ImprimirTurnoPage({
     <div className="max-w-2xl mx-auto bg-white p-8 shadow-lg print:shadow-none">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Comprobante de Turno</h1>
-        <p className="text-gray-600">Agenda Profesional</p>
+        <p className="text-slate-600">Agenda Profesional</p>
       </div>
 
       <div className="space-y-6 border-b pb-6 mb-6">
@@ -263,7 +263,7 @@ export default async function ImprimirTurnoPage({
       {qrCodeDataUrl ? (
         <div className="text-center border-t pt-6">
           <div className="mb-4 flex justify-center">
-            <div className="bg-white p-4 rounded-lg border-2 border-gray-300 inline-block">
+            <div className="bg-white/95 p-4 rounded-xl border-2 border-[#E2E8F0] shadow-sm inline-block">
               <Image
                 src={qrCodeDataUrl}
                 alt="QR Code del Turno"
@@ -275,13 +275,13 @@ export default async function ImprimirTurnoPage({
               />
             </div>
           </div>
-          <p className="text-sm font-semibold text-gray-800 mb-2">
+          <p className="text-sm font-semibold text-slate-800 mb-2">
             Código QR del Turno
           </p>
-          <p className="text-xs text-gray-600 mb-1">
+          <p className="text-xs text-slate-600 mb-1">
             Presente este código QR al llegar al consultorio
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-slate-500">
             Código: {turno.codigoTurno}
           </p>
         </div>

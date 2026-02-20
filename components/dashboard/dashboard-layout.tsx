@@ -47,23 +47,23 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
         />
       </div>
 
-      {/* Sidebar Mobile */}
+      {/* Sidebar Mobile - Drawer */}
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           <div
             className="fixed inset-0 bg-black/50"
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="fixed left-0 top-0 h-full w-[260px] bg-white z-50">
-            <div className="flex items-center justify-between p-4 border-b border-[#E2E8F0]">
-              <span className="text-xl font-semibold text-[#0F172A] font-inter">
+          <div className="fixed left-0 top-0 h-full w-[280px] bg-[#0F172A] z-50 shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b border-[#334155]">
+              <span className="text-xl font-semibold text-white font-inter">
                 Agenda Profesional
               </span>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(false)}
-                className="h-8 w-8"
+                className="h-8 w-8 text-[#94A3B8] hover:text-white hover:bg-[#1E293B]"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -85,10 +85,10 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
       <main
         className={cn(
           "pt-[72px] transition-all duration-300 ease-out",
-          sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
+          sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[280px]"
         )}
       >
-        <div className="max-w-[1800px] w-full mx-auto px-6 py-6 space-y-6">
+        <div className="max-w-[1800px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}

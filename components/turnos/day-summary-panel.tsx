@@ -22,7 +22,7 @@ export function DaySummaryPanel({
   const fechaDate = fecha ? (typeof fecha === "string" ? new Date(fecha) : fecha) : new Date()
 
   return (
-    <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+    <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
       <CardHeader className="border-b border-[#E2E8F0]">
         <CardTitle className="text-lg font-semibold text-[#0F172A] font-inter">
           Resumen del día
@@ -50,14 +50,14 @@ export function DaySummaryPanel({
             </span>
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl bg-[#FEF3C7]/20 border border-[#FDE68A]">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-[#DBEAFE]/30 border border-[#BFDBFE]">
             <div className="flex items-center space-x-3">
-              <Clock className="h-5 w-5 text-[#92400E]" />
-              <span className="text-sm font-medium text-[#0F172A]">
+              <Clock className="h-5 w-5 text-[#1D4ED8]" />
+              <span className="text-sm font-medium text-[#1E293B]">
                 Pendientes
               </span>
             </div>
-            <span className="text-lg font-bold text-[#92400E]">
+            <span className="text-lg font-bold text-[#1D4ED8]">
               {turnosPendientes}
             </span>
           </div>

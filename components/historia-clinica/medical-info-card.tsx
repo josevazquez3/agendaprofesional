@@ -17,7 +17,7 @@ export function MedicalInfoCard({
   observaciones,
 }: MedicalInfoCardProps) {
   return (
-    <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm mt-6">
+    <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm mt-6">
       <CardHeader className="border-b border-[#E2E8F0]">
         <CardTitle className="text-lg font-semibold text-[#0F172A] font-inter">
           Información Médica

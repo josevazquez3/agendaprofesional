@@ -1,10 +1,18 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import {
   Bell,
   Calendar,
@@ -16,6 +24,11 @@ import {
   FolderOpen,
   FolderPlus,
   Copy,
+  Upload,
+  AlertTriangle,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { GmailSmtpConfig } from "./gmail-smtp-config"
 
@@ -68,7 +81,17 @@ export function ConfiguracionForm() {
   const [backupRunning, setBackupRunning] = useState(false)
   const [backupMessage, setBackupMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [showPastePathHint, setShowPastePathHint] = useState(false)
+  const [restoreLoading, setRestoreLoading] = useState(false)
+  const [restoreFile, setRestoreFile] = useState<File | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewData, setPreviewData] = useState<{
+    metadata: { exportedAt?: string; version?: string }
+    tables: { name: string; count: number; sample: Record<string, unknown>[] }[]
+  } | null>(null)
+  const [previewIndex, setPreviewIndex] = useState(0)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const backupPathInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
   useEffect(() => {
     loadConfig()
@@ -227,6 +250,98 @@ export function ConfiguracionForm() {
     } finally {
       setBackupRunning(false)
     }
+  }
+
+  const handlePreview = async () => {
+    if (!restoreFile) {
+      alert("Selecciona un archivo ZIP de backup")
+      return
+    }
+    setPreviewLoading(true)
+    setPreviewData(null)
+    try {
+      const formData = new FormData()
+      formData.append("file", restoreFile)
+      const response = await fetch("/api/admin/backups/preview", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || "Error al cargar vista previa")
+      setPreviewData(data)
+      setPreviewIndex(0)
+      setPreviewOpen(true)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Error al cargar vista previa")
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    if (!restoreFile) return
+    if (
+      !confirm(
+        "⚠️ ADVERTENCIA: Restaurar reemplazará TODOS los datos actuales de la base de datos. Esta acción no se puede deshacer. ¿Continuar?"
+      )
+    ) {
+      return
+    }
+
+    setPreviewOpen(false)
+    try {
+      setRestoreLoading(true)
+      const formData = new FormData()
+      formData.append("file", restoreFile)
+
+      const response = await fetch("/api/admin/backups/restore", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al restaurar")
+      }
+
+      alert(data.message + "\n\nSerás redirigido para iniciar sesión de nuevo.")
+      setRestoreFile(null)
+      setPreviewData(null)
+      router.refresh()
+      window.location.href = "/auth/login"
+    } catch (error) {
+      console.error("Error restaurando:", error)
+      alert(error instanceof Error ? error.message : "Error al restaurar el backup")
+    } finally {
+      setRestoreLoading(false)
+    }
+  }
+
+  const TABLE_LABELS: Record<string, string> = {
+    Plan: "Planes",
+    Clinic: "Clínicas",
+    User: "Usuarios",
+    Profesional: "Profesionales",
+    Turno: "Turnos",
+    HistoriaClinica: "Historias clínicas",
+    Consultorio: "Consultorios",
+    HorarioDisponible: "Horarios",
+    Arancel: "Aranceles",
+    ObraSocial: "Obras sociales",
+    Notificacion: "Notificaciones",
+    ConfiguracionClinica: "Configuración clínica",
+    Invitation: "Invitaciones",
+    ClinicUser: "Usuarios de clínica",
+    Subscription: "Suscripciones",
+    BackupJob: "Jobs de backup",
+    BackupLog: "Logs de backup",
+    AuditLog: "Registros de auditoría",
+    RolePermission: "Permisos",
+    ClinicUsageDaily: "Uso diario",
+    ConsultorioProfesional: "Consultorio-Profesional",
+    BloqueoHorario: "Bloqueos de horario",
+    ArchivoHistoriaClinica: "Archivos historia clínica",
   }
 
   if (loading) {
@@ -793,6 +908,69 @@ export function ConfiguracionForm() {
                 </div>
               )}
             </div>
+
+            {/* Restaurar backup */}
+            <div className="pt-6 mt-6 border-t border-[#E2E8F0]">
+              <p className="text-sm font-medium text-[#0F172A] mb-2 flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Restaurar base de datos
+              </p>
+              <p className="text-xs text-[#64748B] mb-3">
+                Sube un archivo ZIP generado por el backup del sistema para reemplazar la base de datos actual.
+              </p>
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm mb-4">
+                <AlertTriangle className="h-5 w-5 shrink-0" />
+                <span>Esta acción eliminará todos los datos actuales y los reemplazará con los del archivo. Es irreversible.</span>
+              </div>
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex-1 min-w-[200px]">
+                  <Label htmlFor="restore-file">Archivo de backup (.zip)</Label>
+                  <Input
+                    id="restore-file"
+                    type="file"
+                    accept=".zip,.json"
+                    onChange={(e) => {
+                      setRestoreFile(e.target.files?.[0] ?? null)
+                      setPreviewData(null)
+                    }}
+                    className="mt-1"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePreview}
+                  disabled={previewLoading || !restoreFile}
+                >
+                  {previewLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Cargando...
+                    </>
+                  ) : (
+                    "Vista previa"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleRestore}
+                  disabled={restoreLoading || !restoreFile}
+                  variant="destructive"
+                >
+                  {restoreLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Restaurando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Restaurar base de datos
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -814,6 +992,135 @@ export function ConfiguracionForm() {
           {saving ? "Guardando..." : "Guardar Configuración"}
         </Button>
       </div>
+
+      {/* Modal Vista previa del backup */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col rounded-xl">
+          <DialogHeader>
+            <DialogTitle>Vista previa del backup</DialogTitle>
+            <DialogDescription>
+              Revisa qué datos contiene el backup. Usa las flechas para navegar entre tablas.
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewData && previewData.tables.length > 0 ? (
+            <>
+              <div className="flex items-center justify-between gap-4 py-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
+                  disabled={previewIndex === 0}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <div className="flex-1 text-center">
+                  <span className="font-medium text-[#0F172A]">
+                    {TABLE_LABELS[previewData.tables[previewIndex]?.name] ||
+                      previewData.tables[previewIndex]?.name}
+                  </span>
+                  <span className="text-[#64748B] ml-2">
+                    ({previewData.tables[previewIndex]?.count} registros)
+                  </span>
+                  <p className="text-xs text-[#64748B] mt-1">
+                    {previewIndex + 1} de {previewData.tables.length}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() =>
+                    setPreviewIndex((i) =>
+                      Math.min(previewData.tables.length - 1, i + 1)
+                    )
+                  }
+                  disabled={previewIndex === previewData.tables.length - 1}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-auto border border-[#E2E8F0] rounded-lg bg-[#F8FAFC] p-4">
+                <p className="text-xs text-[#64748B] mb-3">
+                  Muestra de hasta 5 registros:
+                </p>
+                <div className="space-y-3">
+                  {previewData.tables[previewIndex]?.sample.map((record, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-white rounded-lg border border-[#E2E8F0] text-sm"
+                    >
+                      {Object.entries(record)
+                        .filter(
+                          ([k, v]) =>
+                            v !== null &&
+                            v !== undefined &&
+                            v !== "" &&
+                            !k.toLowerCase().includes("password")
+                        )
+                        .slice(0, 8)
+                        .map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="flex gap-2 py-1"
+                          >
+                            <span className="text-[#64748B] font-medium min-w-[120px]">
+                              {key}:
+                            </span>
+                            <span className="text-[#0F172A] truncate max-w-[280px]" title={String(value)}>
+                              {typeof value === "object" && value !== null
+                                ? JSON.stringify(value)
+                                : /^\d{4}-\d{2}-\d{2}T/.test(String(value))
+                                  ? new Date(String(value)).toLocaleString("es-AR")
+                                  : String(value)}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {previewData.metadata?.exportedAt && (
+                <p className="text-xs text-[#64748B] mt-2">
+                  Backup exportado: {previewData.metadata.exportedAt}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-[#E2E8F0]">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPreviewOpen(false)}
+                >
+                  Cerrar
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleRestore}
+                  disabled={restoreLoading}
+                >
+                  {restoreLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Restaurando...
+                    </>
+                  ) : (
+                    "Restaurar base de datos"
+                  )}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="py-8 text-center text-[#64748B]">
+              No hay datos para mostrar
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

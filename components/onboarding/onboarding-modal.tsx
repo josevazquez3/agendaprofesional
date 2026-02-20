@@ -103,7 +103,7 @@ export function OnboardingModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl rounded-2xl border-[#E2E8F0]">
+      <DialogContent className="max-w-2xl rounded-xl border-[#E2E8F0]">
         <DialogHeader>
           <DialogTitle className={cn(typography.pageTitle, "text-center")}>
             Bienvenido a Agenda Profesional

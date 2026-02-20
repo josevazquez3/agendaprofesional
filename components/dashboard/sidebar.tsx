@@ -173,28 +173,28 @@ export function Sidebar({
     <TooltipProvider delayDuration={300}>
       <aside
         className={cn(
-          "h-full bg-white border-r border-[#E2E8F0] transition-all duration-300 ease-out flex flex-col",
-          collapsed ? "w-[72px]" : "w-[260px]"
+          "h-full bg-[#0F172A] transition-all duration-300 ease-out flex flex-col",
+          collapsed ? "w-[72px]" : "w-[280px]"
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div
             className={cn(
-              "h-[72px] flex items-center border-b border-[#E2E8F0] transition-all duration-300 ease-out",
+              "h-[72px] flex items-center border-b border-[#334155] transition-all duration-300 ease-out",
               collapsed ? "px-4 justify-center" : "px-6 justify-between"
             )}
           >
             {!collapsed && (
-              <Link href="/dashboard" className="flex items-center">
-                <span className="text-xl font-semibold text-[#0F172A] font-inter whitespace-nowrap">
+              <Link href="/dashboard" className="flex items-center min-w-0 flex-1 mr-2">
+                <span className="text-base font-semibold text-white font-inter leading-tight">
                   Agenda Profesional
                 </span>
               </Link>
             )}
             {collapsed && (
               <Link href="/dashboard" className="flex items-center">
-                <span className="text-xl font-semibold text-[#0F172A] font-inter">
+                <span className="text-xl font-semibold text-white font-inter">
                   AP
                 </span>
               </Link>
@@ -202,7 +202,7 @@ export function Sidebar({
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="p-1.5 rounded-lg hover:bg-[#F8FAFC] transition-all duration-200 ease-out text-[#64748B] hover:text-[#0F172A]"
+                className="p-1.5 rounded-lg hover:bg-[#1E293B] transition-all duration-200 ease-out text-[#94A3B8] hover:text-white"
                 aria-label={collapsed ? "Expandir sidebar" : "Colapsar sidebar"}
               >
                 {collapsed ? (
@@ -230,8 +230,8 @@ export function Sidebar({
                       "flex items-center rounded-xl text-sm font-medium transition-all duration-200 ease-out",
                       collapsed ? "justify-center px-3 py-2.5" : "space-x-3 px-3 py-2.5",
                       isActive
-                        ? "bg-[#EFF6FF] text-[#2563EB]"
-                        : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+                        ? "bg-[#2563EB] text-white"
+                        : "text-[#94A3B8] hover:bg-[#1E293B] hover:text-white"
                     )}
                   >
                     <Icon className={cn(iconography.header, "flex-shrink-0")} strokeWidth={iconography.strokeWidth} />

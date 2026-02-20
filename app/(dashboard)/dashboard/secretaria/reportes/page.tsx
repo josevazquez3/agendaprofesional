@@ -126,7 +126,7 @@ export default async function SecretariaReportesPage() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+        <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-[#2563EB]" />
@@ -158,7 +158,7 @@ export default async function SecretariaReportesPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+        <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-[#2563EB]" />
@@ -191,7 +191,7 @@ export default async function SecretariaReportesPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+        <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Resumen del Mes</CardTitle>
           </CardHeader>
@@ -220,7 +220,7 @@ export default async function SecretariaReportesPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+        <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Últimos 30 Días</CardTitle>
           </CardHeader>
@@ -230,7 +230,7 @@ export default async function SecretariaReportesPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+        <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Tasas</CardTitle>
           </CardHeader>

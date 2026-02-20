@@ -9,6 +9,7 @@ import * as fs from "fs/promises"
 import * as path from "path"
 import { createWriteStream } from "fs"
 import archiver from "archiver"
+import AdmZip from "adm-zip"
 
 export interface BackupData {
   patients: any[]
@@ -547,4 +548,200 @@ export async function runBackupJob(jobId: string): Promise<void> {
 
     throw error
   }
+}
+
+/** Modelos y orden de inserción para restaurar (respeta FK) */
+const RESTORE_MODEL_ORDER = [
+  "Plan",
+  "RolePermission",
+  "Clinic",
+  "ObraSocial",
+  "User",
+  "Profesional",
+  "Consultorio",
+  "ConsultorioProfesional",
+  "HorarioDisponible",
+  "BloqueoHorario",
+  "Turno",
+  "Arancel",
+  "HistoriaClinica",
+  "ArchivoHistoriaClinica",
+  "Notificacion",
+  "ConfiguracionClinica",
+  "Invitation",
+  "ClinicUser",
+  "Subscription",
+  "ClinicUsageDaily",
+  "BackupJob",
+  "BackupLog",
+  "AuditLog",
+] as const
+
+/** Mapeo modelo -> prisma delegate (camelCase) */
+const MODEL_TO_PRISMA: Record<string, keyof typeof prisma> = {
+  Plan: "plan",
+  Clinic: "clinic",
+  Subscription: "subscription",
+  ClinicUsageDaily: "clinicUsageDaily",
+  ClinicUser: "clinicUser",
+  RolePermission: "rolePermission",
+  Invitation: "invitation",
+  ConfiguracionClinica: "configuracionClinica",
+  User: "user",
+  Profesional: "profesional",
+  Consultorio: "consultorio",
+  ConsultorioProfesional: "consultorioProfesional",
+  HorarioDisponible: "horarioDisponible",
+  BloqueoHorario: "bloqueoHorario",
+  Turno: "turno",
+  Arancel: "arancel",
+  HistoriaClinica: "historiaClinica",
+  ArchivoHistoriaClinica: "archivoHistoriaClinica",
+  Notificacion: "notificacion",
+  ObraSocial: "obraSocial",
+  BackupJob: "backupJob",
+  BackupLog: "backupLog",
+  AuditLog: "auditLog",
+}
+
+/** Convierte fechas ISO string a Date en objetos anidados */
+function parseDates<T extends Record<string, unknown>>(obj: T): T {
+  const result = { ...obj }
+  for (const [k, v] of Object.entries(result)) {
+    if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v)) {
+      result[k as keyof T] = new Date(v) as T[keyof T]
+    }
+  }
+  return result
+}
+
+/**
+ * Parsea backup desde buffer (ZIP o JSON)
+ * - ZIP: extrae y lee cada Modelo.json
+ * - JSON: parsea directamente (formato FullDatabaseBackup)
+ */
+function parseBackupBuffer(buffer: Buffer): FullDatabaseBackup {
+  // Detectar ZIP: magic bytes PK (0x50 0x4B)
+  const isZip = buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4b
+
+  if (isZip) {
+    const zip = new AdmZip(buffer)
+    const entries = zip.getEntries()
+    const result: FullDatabaseBackup = {}
+
+    for (const entry of entries) {
+      if (entry.isDirectory) continue
+      const name = entry.entryName.replace(/^[^/]+[/\\]/, "") // quitar subcarpeta si existe
+      if (!name.endsWith(".json")) continue
+
+      const content = entry.getData().toString("utf8")
+      const key = name === "metadata.json" ? "_metadata" : name.replace(".json", "")
+      const parsed = JSON.parse(content)
+
+      if (key === "_metadata") {
+        result._metadata = parsed as FullDatabaseBackup["_metadata"]
+      } else if (Array.isArray(parsed)) {
+        result[key] = parsed
+      }
+    }
+
+    return result
+  }
+
+  // JSON directo
+  const parsed = JSON.parse(buffer.toString("utf8"))
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("El archivo JSON no tiene un formato válido")
+  }
+  return parsed as FullDatabaseBackup
+}
+
+/** Vista previa de un backup: tablas con cantidad y muestra de registros */
+export type BackupPreview = {
+  metadata: { exportedAt?: string; version?: string }
+  tables: {
+    name: string
+    count: number
+    sample: Record<string, unknown>[] // máximo 5 registros
+  }[]
+}
+
+const SAMPLE_SIZE = 5
+
+/**
+ * Obtener vista previa de un backup (sin modificar la BD).
+ * Útil para mostrar al usuario qué datos se restaurarán.
+ */
+export function getBackupPreview(buffer: Buffer): BackupPreview {
+  const data = parseBackupBuffer(buffer)
+
+  const meta = data._metadata
+  const metadata =
+    meta && typeof meta === "object" && "exportedAt" in meta
+      ? { exportedAt: (meta as { exportedAt?: string }).exportedAt, version: (meta as { version?: string }).version }
+      : {}
+
+  const tables: BackupPreview["tables"] = []
+
+  for (const modelName of RESTORE_MODEL_ORDER) {
+    const records = data[modelName]
+    if (!Array.isArray(records) || records.length === 0) continue
+
+    const sample = records.slice(0, SAMPLE_SIZE).map((r) => r as Record<string, unknown>)
+    tables.push({ name: modelName, count: records.length, sample })
+  }
+
+  return { metadata, tables }
+}
+
+/**
+ * Restaurar base de datos desde un archivo de backup (ZIP o JSON).
+ * Reemplaza completamente los datos actuales.
+ */
+export async function restoreFromBackup(buffer: Buffer): Promise<{ restoredTables: number }> {
+  const data = parseBackupBuffer(buffer)
+
+  const meta = data._metadata
+  if (
+    !meta ||
+    typeof meta !== "object" ||
+    !("type" in meta) ||
+    meta.type !== "full_database"
+  ) {
+    throw new Error(
+      "El archivo no es un backup completo válido del sistema. Debe ser un backup generado por este sistema."
+    )
+  }
+
+  let restoredTables = 0
+
+  await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as typeof prisma
+
+    // 1. Vaciar tablas (orden: tablas hijas primero para evitar violación FK al eliminar)
+    const tables = RESTORE_MODEL_ORDER.slice().reverse()
+    for (const modelName of tables) {
+      const delegate = MODEL_TO_PRISMA[modelName]
+      if (!delegate) continue
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const model = txPrisma[delegate] as any
+      await model.deleteMany({})
+    }
+
+    // 2. Insertar datos en orden respetando FK
+    for (const modelName of RESTORE_MODEL_ORDER) {
+      const delegate = MODEL_TO_PRISMA[modelName]
+      const records = data[modelName]
+
+      if (!delegate || !Array.isArray(records) || records.length === 0) continue
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const model = txPrisma[delegate] as any
+      const parsed = records.map((r: unknown) => parseDates(r as Record<string, unknown>))
+      await model.createMany({ data: parsed })
+      restoredTables++
+    }
+  })
+
+  return { restoredTables }
 }

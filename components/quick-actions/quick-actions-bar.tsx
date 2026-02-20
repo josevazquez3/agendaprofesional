@@ -105,7 +105,7 @@ export function QuickActionsBar({ role, className }: QuickActionsBarProps) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-3 p-4 bg-white border border-[#E2E8F0] rounded-2xl shadow-sm",
+        "flex flex-wrap items-center gap-3 p-4 bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm",
         className
       )}
     >

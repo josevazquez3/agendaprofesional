@@ -37,7 +37,7 @@ export function SuccessToast({
           initial="hidden"
           animate="visible"
           exit="hidden"
-          className="fixed bottom-6 right-6 z-50 bg-white border border-[#E2E8F0] rounded-xl shadow-lg p-4 flex items-center gap-3 min-w-[300px]"
+          className="fixed bottom-6 right-6 z-50 bg-white/95 border border-[#E2E8F0] rounded-xl shadow-lg p-4 flex items-center gap-3 min-w-[300px]"
         >
           <div className="w-8 h-8 rounded-full bg-[#D1FAE5] flex items-center justify-center flex-shrink-0">
             <CheckCircle className={cn(iconography.header, "text-[#10B981]")} strokeWidth={iconography.strokeWidth} />

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Calendar, CheckCircle, XCircle } from "lucide-react"
 import { BloqueoDiaModal } from "@/components/secretaria/BloqueoDiaModal"
+import { PageHeader } from "@/components/ui/page-header"
 
 const DIAS_SEMANA = [
   { value: "LUNES", label: "Lunes" },
@@ -159,7 +160,10 @@ export default function AdminHorariosPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Gestión de Horarios</h1>
+      <PageHeader
+        title="Gestión de Horarios"
+        subtitle="Configura los horarios de atención y bloqueos por profesional"
+      />
 
       <Card>
         <CardHeader>
@@ -271,7 +275,7 @@ export default function AdminHorariosPage() {
             </CardHeader>
             <CardContent>
               {horarios.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-slate-500">
                   No hay horarios configurados
                 </div>
               ) : (
@@ -279,14 +283,14 @@ export default function AdminHorariosPage() {
                   {horarios.map((horario) => (
                     <div
                       key={horario.id}
-                      className="flex justify-between items-center p-4 border rounded-lg"
+                      className="flex justify-between items-center p-4 border border-[#E2E8F0] rounded-xl"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-4">
                           <p className="font-semibold">
                             {DIAS_SEMANA.find((d) => d.value === horario.diaSemana)?.label}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-slate-600">
                             {horario.horaInicio} - {horario.horaFin} ({horario.duracionTurno} min)
                           </p>
                           <span
@@ -340,7 +344,7 @@ export default function AdminHorariosPage() {
             </CardHeader>
             <CardContent>
               {bloqueos.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-slate-500">
                   No hay días bloqueados
                 </div>
               ) : (
@@ -348,7 +352,7 @@ export default function AdminHorariosPage() {
                   {bloqueos.map((bloqueo) => (
                     <div
                       key={bloqueo.id}
-                      className="flex justify-between items-center p-3 border rounded-lg"
+                      className="flex justify-between items-center p-3 border border-[#E2E8F0] rounded-xl"
                     >
                       <div>
                         <p className="font-medium">
@@ -359,11 +363,11 @@ export default function AdminHorariosPage() {
                             day: "numeric",
                           })}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-slate-600">
                           {bloqueo.horaInicio} - {bloqueo.horaFin}
                         </p>
                         {bloqueo.motivo && (
-                          <p className="text-sm text-gray-500">Motivo: {bloqueo.motivo}</p>
+                          <p className="text-sm text-slate-500">Motivo: {bloqueo.motivo}</p>
                         )}
                       </div>
                       <Button

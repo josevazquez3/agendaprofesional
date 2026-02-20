@@ -84,7 +84,7 @@ export function PatientFilters({
   }, [search])
 
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm p-6">
+    <div className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm p-6">
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Buscador */}
         <div className="flex-1 relative">

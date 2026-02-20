@@ -6,6 +6,8 @@ import { MetricCard } from "@/components/dashboard/metric-card"
 import { PageHeader } from "@/components/ui/page-header"
 import { CardContainer } from "@/components/ui/card-container"
 import { EmptyState } from "@/components/ui/empty-state"
+import { PatientAvatar } from "@/components/patients/patient-avatar"
+import { AppointmentStatusBadge } from "@/components/turnos/appointment-status-badge"
 import {
   Calendar,
   Users,
@@ -13,6 +15,7 @@ import {
   Clock,
   Activity,
   CalendarDays,
+  Plus,
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -69,6 +72,14 @@ export default async function AdminDashboard() {
       <PageHeader
         title="Dashboard"
         subtitle={`Bienvenido, ${session.user.name ?? ""}`}
+        action={
+          <Link href="/dashboard/admin/turnos/nuevo">
+            <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-white bg-[#2563EB] hover:bg-[#1E40AF] shadow-sm hover:shadow-md transition-all duration-200 ease-out hover:-translate-y-0.5">
+              <Plus className="h-4 w-4" />
+              Nuevo Turno
+            </button>
+          </Link>
+        }
       />
 
       {/* Métricas superiores */}
@@ -128,34 +139,28 @@ export default async function AdminDashboard() {
           ) : (
             <div className="divide-y divide-[#E2E8F0]">
               {proximosTurnos.map((turno) => (
-                <div
+                <Link
                   key={turno.id}
-                  className="p-4 hover:bg-[#F8FAFC] transition-colors duration-200 ease-out"
+                  href={`/dashboard/admin/turnos/${turno.id}/editar`}
+                  className="flex items-center gap-4 p-4 hover:bg-[#F8FAFC] transition-colors duration-200 ease-out"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-[#0F172A]">
-                        {turno.paciente?.nombre ?? "Sin paciente"}
-                      </p>
-                      <p className="text-xs text-[#64748B] mt-1">
-                        {turno.profesional?.user?.nombre || "Sin profesional"}
-                      </p>
-                      <p className="text-xs text-[#64748B] mt-1">
-                        {format(new Date(turno.fecha), "dd/MM/yyyy")} a las{" "}
-                        {turno.hora}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                        turno.estado === "CONFIRMADO"
-                          ? "bg-[#EFF6FF] text-[#2563EB]"
-                          : "bg-[#FEF3C7] text-[#F59E0B]"
-                      }`}
-                    >
-                      {turno.estado}
-                    </span>
+                  <PatientAvatar
+                    name={turno.paciente?.nombre ?? "—"}
+                    size="sm"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#0F172A] truncate">
+                      {turno.paciente?.nombre ?? "Sin paciente"}
+                    </p>
+                    <p className="text-xs text-[#64748B] mt-0.5">
+                      {turno.profesional?.user?.nombre || "Sin profesional"}
+                    </p>
+                    <p className="text-xs text-[#64748B] mt-0.5">
+                      {format(new Date(turno.fecha), "dd/MM/yyyy")} — {turno.hora}
+                    </p>
                   </div>
-                </div>
+                  <AppointmentStatusBadge status={turno.estado} />
+                </Link>
               ))}
             </div>
           )}

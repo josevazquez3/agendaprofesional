@@ -59,7 +59,7 @@ export function OperationalSummaryCards({
         return (
           <Card
             key={index}
-            className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ease-out"
+            className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ease-out"
           >
             <CardContent className="p-4">
               <div className="flex flex-col items-center justify-center text-center">

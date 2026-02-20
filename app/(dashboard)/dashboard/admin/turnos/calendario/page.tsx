@@ -456,7 +456,7 @@ export default function CalendarioTurnosAdminPage() {
                   Mes
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 {modoSeleccion === "dia" 
                   ? "Haz clic en los días para seleccionarlos. Mantén Ctrl/Cmd para agregar más días."
                   : modoSeleccion === "semana"
@@ -524,7 +524,7 @@ export default function CalendarioTurnosAdminPage() {
                         ${!esDelMes ? "text-gray-300" : ""}
                         ${seleccionado ? "bg-blue-500 text-white font-bold" : ""}
                         ${!seleccionado && tieneTurnoDia && esDelMes ? "bg-blue-200 text-blue-900" : ""}
-                        ${!seleccionado && !tieneTurnoDia && esDelMes ? "bg-white hover:bg-gray-100 border border-gray-200" : ""}
+                        ${!seleccionado && !tieneTurnoDia && esDelMes ? "bg-white/95 hover:bg-slate-50 border border-[#E2E8F0]" : ""}
                         ${!esDelMes ? "bg-gray-50" : ""}
                       `}
                       title={seleccionado ? "Clic para deseleccionar" : "Clic para seleccionar (Ctrl/Cmd para múltiple)"}
@@ -536,7 +536,7 @@ export default function CalendarioTurnosAdminPage() {
               </div>
               <div className="mt-4 flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-white border border-gray-200"></div>
+                  <div className="w-4 h-4 bg-white/95 border border-[#E2E8F0] rounded"></div>
                   <span>Libre</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -627,7 +627,7 @@ export default function CalendarioTurnosAdminPage() {
                     >
                       <div>
                         <p className="font-semibold">{turno.pacienteNombre}</p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-slate-600">
                           {format(new Date(turno.fecha), "dd/MM/yyyy", { locale: es })} - {turno.hora}
                         </p>
                       </div>

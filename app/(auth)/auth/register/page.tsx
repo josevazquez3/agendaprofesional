@@ -79,7 +79,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-2xl">
+      <Card className="w-full max-w-2xl bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
             Registro de Paciente

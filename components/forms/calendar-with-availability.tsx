@@ -282,7 +282,7 @@ export function CalendarWithAvailability({
             className="fixed inset-0 z-40"
             onClick={() => setShowCalendar(false)}
           />
-          <div className={cn("absolute z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-[350px]", calendarPopupClassName)}>
+          <div className={cn("absolute z-50 mt-2 bg-white border border-[#E2E8F0] rounded-xl shadow-lg p-4 w-[350px]", calendarPopupClassName)}>
             {/* Header del calendario */}
             <div className="flex items-center justify-between mb-4">
               <button

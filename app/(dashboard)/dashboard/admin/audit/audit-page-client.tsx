@@ -491,7 +491,7 @@ export function AuditPageClient({
 
       {/* Modal de Detalles */}
       <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl">
           <DialogHeader>
             <DialogTitle>Detalles de Auditoría</DialogTitle>
           </DialogHeader>

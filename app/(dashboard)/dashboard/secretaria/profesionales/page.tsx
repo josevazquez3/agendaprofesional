@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PageHeader } from "@/components/ui/page-header"
 import { prisma } from "@/lib/prisma"
 import { User, Building } from "lucide-react"
 import Image from "next/image"
@@ -56,12 +57,10 @@ export default async function SecretariaProfesionalesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Profesionales</h1>
-        <p className="text-gray-600 mt-2">
-          Listado de profesionales médicos del sistema
-        </p>
-      </div>
+      <PageHeader
+        title="Profesionales"
+        subtitle="Listado de profesionales médicos del sistema"
+      />
 
       <Card>
         <CardHeader>
@@ -72,7 +71,7 @@ export default async function SecretariaProfesionalesPage() {
         </CardHeader>
         <CardContent>
           {profesionalesFormateados.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               No hay profesionales registrados
             </div>
           ) : (
@@ -87,7 +86,7 @@ export default async function SecretariaProfesionalesPage() {
                             src={profesional.user.fotoPerfil}
                             alt={profesional.user.nombre}
                             fill
-                            className="rounded-full object-cover border-2 border-gray-300"
+                            className="rounded-full object-cover border-2 border-[#E2E8F0]"
                           />
                         </div>
                       ) : (
@@ -97,31 +96,31 @@ export default async function SecretariaProfesionalesPage() {
                       )}
                       <div className="flex-1">
                         <h3 className="text-xl font-semibold">{profesional.user.nombre}</h3>
-                        <p className="text-gray-600">{profesional.especialidad}</p>
+                        <p className="text-slate-600">{profesional.especialidad}</p>
                         {profesional.matricula && (
-                          <p className="text-sm text-gray-500">Matrícula: {profesional.matricula}</p>
+                          <p className="text-sm text-slate-500">Matrícula: {profesional.matricula}</p>
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                           <div>
-                            <p className="text-sm text-gray-600 mb-1"><strong>Email:</strong></p>
-                            <p className="text-gray-800">{profesional.user.email}</p>
+                            <p className="text-sm text-slate-600 mb-1"><strong>Email:</strong></p>
+                            <p className="text-slate-800">{profesional.user.email}</p>
                           </div>
                           {profesional.user.telefono && (
                             <div>
-                              <p className="text-sm text-gray-600 mb-1"><strong>Teléfono:</strong></p>
-                              <p className="text-gray-800">{profesional.user.telefono}</p>
+                              <p className="text-sm text-slate-600 mb-1"><strong>Teléfono:</strong></p>
+                              <p className="text-slate-800">{profesional.user.telefono}</p>
                             </div>
                           )}
                           {profesional.user.dni && (
                             <div>
-                              <p className="text-sm text-gray-600 mb-1"><strong>DNI:</strong></p>
-                              <p className="text-gray-800">{profesional.user.dni}</p>
+                              <p className="text-sm text-slate-600 mb-1"><strong>DNI:</strong></p>
+                              <p className="text-slate-800">{profesional.user.dni}</p>
                             </div>
                           )}
                           <div>
-                            <p className="text-sm text-gray-600 mb-1"><strong>Atiende Obra Social:</strong></p>
-                            <p className="text-gray-800">
+                            <p className="text-sm text-slate-600 mb-1"><strong>Atiende Obra Social:</strong></p>
+                            <p className="text-slate-800">
                               {profesional.atiendeObraSocial ? "Sí" : "No"}
                             </p>
                           </div>
@@ -129,8 +128,8 @@ export default async function SecretariaProfesionalesPage() {
 
                         {profesional.aranceles.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-1"><strong>Arancel:</strong></p>
-                            <p className="text-gray-800">
+                            <p className="text-sm text-slate-600 mb-1"><strong>Arancel:</strong></p>
+                            <p className="text-slate-800">
                               ${profesional.aranceles[0].monto}
                               {profesional.aranceles[0].descripcion &&
                                 ` - ${profesional.aranceles[0].descripcion}`}
@@ -140,7 +139,7 @@ export default async function SecretariaProfesionalesPage() {
 
                         {profesional.horarios.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-2"><strong>Horarios de Atención:</strong></p>
+                            <p className="text-sm text-slate-600 mb-2"><strong>Horarios de Atención:</strong></p>
                             <div className="flex flex-wrap gap-2">
                               {profesional.horarios.map((horario) => (
                                 <span
@@ -156,7 +155,7 @@ export default async function SecretariaProfesionalesPage() {
 
                         {profesional.consultorios.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-2"><strong>Consultorios:</strong></p>
+                            <p className="text-sm text-slate-600 mb-2"><strong>Consultorios:</strong></p>
                             <div className="flex flex-wrap gap-2">
                               {profesional.consultorios.map((cp) => (
                                 <span

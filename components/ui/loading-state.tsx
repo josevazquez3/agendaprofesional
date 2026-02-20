@@ -42,7 +42,7 @@ export function LoadingState({
         {Array.from({ length: 4 }).map((_, index) => (
           <Card
             key={index}
-            className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm"
+            className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm"
           >
             <CardContent className="p-6">
               <div className="animate-pulse">
@@ -67,7 +67,7 @@ export function LoadingState({
         {Array.from({ length: rows }).map((_, index) => (
           <Card
             key={index}
-            className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm"
+            className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm"
           >
             <CardContent className="p-6">
               <div className="animate-pulse space-y-3">
@@ -93,7 +93,7 @@ export function LoadingState({
       {Array.from({ length: rows }).map((_, index) => (
         <Card
           key={index}
-          className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm mb-4"
+          className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm mb-4"
         >
           <CardContent className="p-6">
             <div className="animate-pulse space-y-4">

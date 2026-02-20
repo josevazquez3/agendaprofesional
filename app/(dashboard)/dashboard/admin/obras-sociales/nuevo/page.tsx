@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { PageHeader } from "@/components/ui/page-header"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -64,15 +65,18 @@ export default function NuevaObraSocialPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/admin/obras-sociales">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-bold">Nueva Obra Social</h1>
-      </div>
+      <PageHeader
+        title="Nueva Obra Social"
+        subtitle="Complete la información para crear una obra social"
+        action={
+          <Link href="/dashboard/admin/obras-sociales">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+          </Link>
+        }
+      />
 
       <Card>
         <CardHeader>

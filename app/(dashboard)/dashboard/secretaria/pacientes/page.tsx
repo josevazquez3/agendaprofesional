@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { PageHeader } from "@/components/ui/page-header"
 import { Input } from "@/components/ui/input"
 import { Search, Eye, FileText } from "lucide-react"
 import Link from "next/link"
@@ -73,7 +74,7 @@ export default function SecretariaPacientesPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando pacientes...</p>
+          <p className="mt-4 text-slate-600">Cargando pacientes...</p>
         </div>
       </div>
     )
@@ -81,7 +82,10 @@ export default function SecretariaPacientesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Pacientes</h1>
+      <PageHeader
+        title="Pacientes"
+        subtitle="Busque y gestione los pacientes del sistema"
+      />
 
       <Card>
         <CardHeader>
@@ -92,7 +96,7 @@ export default function SecretariaPacientesPage() {
         </CardHeader>
         <CardContent>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
             <Input
               type="text"
               placeholder="Buscar por DNI, nombre o apellido..."
@@ -101,7 +105,7 @@ export default function SecretariaPacientesPage() {
               className="pl-10"
             />
           </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-slate-500 mt-2">
             {pacientesFiltrados.length} paciente(s) encontrado(s)
           </p>
         </CardContent>
@@ -116,7 +120,7 @@ export default function SecretariaPacientesPage() {
         </CardHeader>
         <CardContent>
           {pacientesFiltrados.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               {busqueda ? "No se encontraron pacientes" : "No hay pacientes registrados"}
             </div>
           ) : (
@@ -128,7 +132,7 @@ export default function SecretariaPacientesPage() {
                 >
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg">{paciente.nombre}</h3>
-                    <div className="flex gap-4 mt-2 text-sm text-gray-600">
+                    <div className="flex gap-4 mt-2 text-sm text-slate-600">
                       {paciente.dni && (
                         <span>DNI: {paciente.dni}</span>
                       )}

@@ -103,7 +103,7 @@ export function HeroSection() {
               {/* Placeholder para ilustración - puedes reemplazar con una imagen real */}
               <div className="relative w-full aspect-square max-w-lg mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/10 to-[#0EA5A4]/10 rounded-3xl backdrop-blur-sm"></div>
-                <div className="relative bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ease-out">
+                <div className="relative bg-white rounded-xl border border-[#E2E8F0] shadow-sm p-8 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ease-out">
                   {/* Dashboard médico simulado */}
                   <div className="space-y-4">
                     <div className="h-4 bg-[#2563EB]/20 rounded w-3/4"></div>
@@ -128,7 +128,7 @@ export function HeroSection() {
           <div className="lg:hidden relative mt-8">
             <div className="relative w-full aspect-square max-w-md mx-auto">
               <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/10 to-[#0EA5A4]/10 rounded-3xl"></div>
-              <div className="relative bg-white rounded-2xl shadow-xl p-6">
+              <div className="relative bg-white rounded-xl shadow-xl p-6">
                 <div className="space-y-3">
                   <div className="h-3 bg-[#2563EB]/20 rounded w-3/4"></div>
                   <div className="h-3 bg-[#0EA5A4]/20 rounded w-1/2"></div>

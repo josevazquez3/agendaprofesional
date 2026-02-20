@@ -43,9 +43,9 @@ export function Topbar({
   return (
     <header
       className={cn(
-        "fixed top-0 h-[72px] bg-white border-b border-[#E2E8F0] z-30 transition-all duration-300 ease-out",
+        "fixed top-0 h-[72px] bg-[#F8FAFC]/95 backdrop-blur-sm border-b border-[#E2E8F0] z-30 transition-all duration-300 ease-out",
         "left-0 right-0 lg:right-0",
-        sidebarCollapsed ? "lg:left-[72px]" : "lg:left-[260px]"
+        sidebarCollapsed ? "lg:left-[72px]" : "lg:left-[280px]"
       )}
     >
       <div className="h-full flex items-center justify-between px-4 sm:px-6">

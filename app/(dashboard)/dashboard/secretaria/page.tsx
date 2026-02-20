@@ -217,7 +217,7 @@ export default async function SecretariaDashboard() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+          <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex justify-between items-center">
                 <div>

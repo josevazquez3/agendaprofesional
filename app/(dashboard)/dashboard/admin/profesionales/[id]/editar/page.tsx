@@ -425,7 +425,7 @@ export default function EditarProfesionalPage() {
                       alt="Foto de perfil"
                       width={120}
                       height={120}
-                      className="rounded-full object-cover border-2 border-gray-300"
+                      className="rounded-full object-cover border-2 border-[#E2E8F0]"
                     />
                     <button
                       type="button"
@@ -666,7 +666,7 @@ export default function EditarProfesionalPage() {
                       id="consultorioSelect"
                       value={consultorioSelect}
                       onChange={(e) => setConsultorioSelect(e.target.value)}
-                      className="mt-1 flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 flex h-10 w-full rounded-lg border border-[#E2E8F0] bg-white/95 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={loadingConsultorio}
                     >
                       <option value="">Seleccionar consultorio...</option>

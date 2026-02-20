@@ -51,7 +51,7 @@ export function MedicalRecordItem({
   pacienteNombre,
 }: MedicalRecordItemProps) {
   return (
-    <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 ease-out">
+    <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ease-out">
       <div className="p-6">
         {/* Header */}
         <div className="flex justify-between items-start mb-4">

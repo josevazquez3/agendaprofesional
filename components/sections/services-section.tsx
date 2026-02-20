@@ -82,7 +82,7 @@ export function ServicesSection() {
               return (
                 <Card
                   key={index}
-                  className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ease-out group"
+                  className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ease-out group"
                 >
                   <CardContent className="p-8">
                     {/* Icono en contenedor circular */}
@@ -124,7 +124,7 @@ export function ServicesSection() {
               return (
                 <Card
                   key={index}
-                  className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ease-out"
+                  className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ease-out"
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start space-x-4">

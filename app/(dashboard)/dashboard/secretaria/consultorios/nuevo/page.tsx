@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { PageHeader } from "@/components/ui/page-header"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
@@ -53,12 +54,15 @@ export default function NuevoConsultorioPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Crear Nuevo Consultorio</h1>
-        <Link href="/dashboard/secretaria/consultorios">
-          <Button variant="outline">Volver</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Crear Nuevo Consultorio"
+        subtitle="Complete los datos para crear un nuevo consultorio"
+        action={
+          <Link href="/dashboard/secretaria/consultorios">
+            <Button variant="outline">Volver</Button>
+          </Link>
+        }
+      />
 
       <Card>
         <CardHeader>

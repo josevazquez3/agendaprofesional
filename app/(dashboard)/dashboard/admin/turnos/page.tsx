@@ -169,7 +169,7 @@ export default async function AdminTurnosPage({
 
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
         <div className="min-w-0">
-          <Card className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm">
+          <Card className="bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex justify-between items-center">
                 <div>

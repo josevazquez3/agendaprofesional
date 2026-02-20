@@ -483,7 +483,7 @@ export function BackupsPageClient({
 
       {/* Modal Crear Backup */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="max-w-2xl rounded-2xl">
+        <DialogContent className="max-w-2xl rounded-xl">
           <DialogHeader>
             <DialogTitle className={cn(typography.pageTitle)}>
               Crear Backup

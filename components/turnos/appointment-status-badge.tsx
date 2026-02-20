@@ -21,7 +21,7 @@ export function AppointmentStatusBadge({
       case "PENDIENTE":
         return {
           label: "Pendiente",
-          className: "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]",
+          className: "bg-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE]",
         }
       case "CANCELADO":
         return {

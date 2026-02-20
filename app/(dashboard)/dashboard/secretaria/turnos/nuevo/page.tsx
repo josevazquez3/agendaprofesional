@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { PageHeader } from "@/components/ui/page-header"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CalendarWithAvailability } from "@/components/forms/calendar-with-availability"
@@ -127,7 +128,10 @@ export default function NuevoTurnoSecretariaPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Crear Nuevo Turno</h1>
+      <PageHeader
+        title="Crear Nuevo Turno"
+        subtitle="Complete los datos para crear un turno"
+      />
 
       <Card>
         <CardHeader>
@@ -204,7 +208,7 @@ export default function NuevoTurnoSecretariaPage() {
                   required
                   disabled
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   Primero seleccione un profesional para ver los días disponibles
                 </p>
               </div>
@@ -250,7 +254,7 @@ export default function NuevoTurnoSecretariaPage() {
                 ))}
               </select>
               {obrasSociales.length === 0 && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   No hay obras sociales disponibles. Puede ingresar una manualmente.
                 </p>
               )}
