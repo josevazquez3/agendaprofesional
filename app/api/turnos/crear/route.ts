@@ -8,6 +8,7 @@ import { sendWhatsAppMessage } from "@/lib/whatsapp"
 import { generateTurnoConfirmationEmail } from "@/lib/email"
 import { generateTurnoConfirmationWhatsApp } from "@/lib/whatsapp"
 import { logCreate } from "@/lib/audit-service"
+import { getConfiguracion } from "@/lib/configuracion-helpers"
 import { getActiveClinic } from "@/lib/clinic-context"
 import { existeTurnoEnHorario } from "@/lib/turno-helpers"
 
@@ -178,6 +179,10 @@ export async function POST(request: Request) {
     })
     const nombreProfesional = profesional.user?.nombre || "Profesional"
 
+    const config = await getConfiguracion()
+    const enviarWhatsApp =
+      config.notificacionesWhatsApp && config.whatsappEnabled && paciente.telefono
+
     await Promise.allSettled([
       paciente.email
         ? sendEmail({
@@ -186,9 +191,9 @@ export async function POST(request: Request) {
             html: generateTurnoConfirmationEmail(paciente.nombre, nombreProfesional, fechaFormateada, hora),
           })
         : Promise.resolve(),
-      paciente.telefono
+      enviarWhatsApp
         ? sendWhatsAppMessage({
-            to: paciente.telefono,
+            to: paciente.telefono!,
             message: generateTurnoConfirmationWhatsApp(
               paciente.nombre,
               nombreProfesional,

@@ -67,9 +67,14 @@ export class ResendProvider extends BaseEmailProvider {
       // Preparar destinatarios
       const recipients = Array.isArray(options.to) ? options.to : [options.to]
 
+      // Formato "from": Resend exige "Nombre <email>". Sin dominio verificado usar onboarding@resend.dev
+      const fromEmail = options.from || this.resendConfig.fromEmail || "onboarding@resend.dev"
+      const fromName = options.fromName || this.resendConfig.fromName || "Agenda Profesional"
+      const fromFormatted = fromEmail.includes("<") ? fromEmail : `${fromName} <${fromEmail}>`
+
       // Enviar email
       const { data, error } = await client.emails.send({
-        from: options.from || this.resendConfig.fromEmail || "Agenda Profesional <noreply@agendaprofesional.com>",
+        from: fromFormatted,
         to: recipients,
         subject: options.subject,
         html: options.html,

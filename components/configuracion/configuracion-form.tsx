@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label"
 import {
   Bell,
   Calendar,
-  Mail,
   MessageSquare,
   Shield,
   Database,
@@ -373,70 +372,6 @@ export function ConfiguracionForm() {
         onConfigChange={(field, value) => updateConfig(field as keyof ConfiguracionSistema, value)}
       />
 
-      {/* Configuración SMTP Avanzada (para otros proveedores) */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Configuración SMTP Avanzada
-          </CardTitle>
-          <CardDescription>
-            Configuración manual para otros proveedores SMTP (si no usas Gmail)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="emailSmtpHost">Servidor SMTP</Label>
-            <Input
-              id="emailSmtpHost"
-              value={config.emailSmtpHost}
-              onChange={(e) => updateConfig("emailSmtpHost", e.target.value)}
-              placeholder="smtp.example.com"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="emailSmtpPort">Puerto SMTP</Label>
-              <Input
-                id="emailSmtpPort"
-                type="number"
-                value={config.emailSmtpPort}
-                onChange={(e) =>
-                  updateConfig("emailSmtpPort", parseInt(e.target.value))
-                }
-              />
-            </div>
-            <div className="flex items-center justify-between pt-6">
-              <Label htmlFor="emailSmtpSecure">Conexión segura (TLS)</Label>
-              <input
-                type="checkbox"
-                id="emailSmtpSecure"
-                checked={config.emailSmtpSecure}
-                onChange={(e) => updateConfig("emailSmtpSecure", e.target.checked)}
-                className="h-4 w-4"
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="emailSmtpUser">Usuario SMTP</Label>
-            <Input
-              id="emailSmtpUser"
-              value={config.emailSmtpUser}
-              onChange={(e) => updateConfig("emailSmtpUser", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="emailSmtpPassword">Contraseña SMTP</Label>
-            <Input
-              id="emailSmtpPassword"
-              type="password"
-              value={config.emailSmtpPassword}
-              onChange={(e) => updateConfig("emailSmtpPassword", e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* WhatsApp */}
       <Card>
         <CardHeader>
@@ -445,7 +380,7 @@ export function ConfiguracionForm() {
             Configuración de WhatsApp
           </CardTitle>
           <CardDescription>
-            Configura la integración con WhatsApp Business API
+            Elige un proveedor. <strong>CallMeBot</strong> es la opción más sencilla (solo 1 clave, gratis para uso personal).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -469,37 +404,67 @@ export function ConfiguracionForm() {
                   onChange={(e) => updateConfig("whatsappProvider", e.target.value)}
                   className="flex h-10 w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
                 >
-                  <option value="twilio">Twilio</option>
+                  <option value="callmebot">CallMeBot (sencillo, 1 clave)</option>
+                  <option value="twilio">Twilio (Business API)</option>
                   <option value="360dialog">360dialog</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>
-              <div>
-                <Label htmlFor="whatsappAccountSid">Account SID / API Key</Label>
-                <Input
-                  id="whatsappAccountSid"
-                  value={config.whatsappAccountSid}
-                  onChange={(e) => updateConfig("whatsappAccountSid", e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="whatsappAuthToken">Auth Token / API Secret</Label>
-                <Input
-                  id="whatsappAuthToken"
-                  type="password"
-                  value={config.whatsappAuthToken}
-                  onChange={(e) => updateConfig("whatsappAuthToken", e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="whatsappPhoneNumber">Número de WhatsApp</Label>
-                <Input
-                  id="whatsappPhoneNumber"
-                  value={config.whatsappPhoneNumber}
-                  onChange={(e) => updateConfig("whatsappPhoneNumber", e.target.value)}
-                  placeholder="+1234567890"
-                />
-              </div>
+              {config.whatsappProvider === "callmebot" ? (
+                <div>
+                  <Label htmlFor="whatsappAccountSid">API Key de CallMeBot</Label>
+                  <Input
+                    id="whatsappAccountSid"
+                    value={config.whatsappAccountSid}
+                    onChange={(e) => updateConfig("whatsappAccountSid", e.target.value)}
+                    placeholder="Tu API key de CallMeBot"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Obtén tu clave gratis en{" "}
+                    <a
+                      href="https://www.callmebot.com/blog/free-api-whatsapp-messages/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#2563EB] underline"
+                    >
+                      callmebot.com
+                    </a>
+                    : agrega el bot a WhatsApp, envía el mensaje de activación y usa la API key que te devuelve. Uso personal.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <Label htmlFor="whatsappAccountSid">Account SID / API Key</Label>
+                    <Input
+                      id="whatsappAccountSid"
+                      value={config.whatsappAccountSid}
+                      onChange={(e) => updateConfig("whatsappAccountSid", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="whatsappAuthToken">Auth Token / API Secret</Label>
+                    <Input
+                      id="whatsappAuthToken"
+                      type="password"
+                      value={config.whatsappAuthToken}
+                      onChange={(e) => updateConfig("whatsappAuthToken", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="whatsappPhoneNumber">Número de WhatsApp (remitente)</Label>
+                    <Input
+                      id="whatsappPhoneNumber"
+                      value={config.whatsappPhoneNumber}
+                      onChange={(e) => updateConfig("whatsappPhoneNumber", e.target.value)}
+                      placeholder="+5491112345678"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Número con código de país (ej. +54 9 11 1234-5678 para Argentina).
+                    </p>
+                  </div>
+                </>
+              )}
             </>
           )}
         </CardContent>

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { getTurnoById } from "@/lib/turno-helpers"
 import { sendEmail, generateTurnoCancellationEmail } from "@/lib/email"
 import { sendWhatsAppMessage, generateTurnoCancellationWhatsApp } from "@/lib/whatsapp"
+import { getConfiguracion } from "@/lib/configuracion-helpers"
 
 export async function POST(request: Request) {
   try {
@@ -84,13 +85,18 @@ export async function POST(request: Request) {
       })
     }
 
+    const config = await getConfiguracion()
     const pacienteUser = await prisma.user.findUnique({
       where: { id: turno.pacienteId },
       select: { telefono: true },
     })
     const telefonoPaciente = pacienteUser?.telefono ?? null
-    
-    if (telefonoPaciente) {
+
+    if (
+      config.notificacionesWhatsApp &&
+      config.whatsappEnabled &&
+      telefonoPaciente
+    ) {
       const whatsappMessage = generateTurnoCancellationWhatsApp(
         turno.paciente?.nombre || "Paciente",
         turno.profesional?.user?.nombre || "Profesional",

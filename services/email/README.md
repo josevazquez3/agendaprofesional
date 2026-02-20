@@ -119,8 +119,9 @@ RESEND_API_KEY=re_xxxxx
 
 ### Resend Provider
 
-- Servicio de email como fallback
-- Requiere API key de Resend
+- Servicio de email; puede usarse como único proveedor (solo con `RESEND_API_KEY`).
+- **Pruebas**: Si no defines `EMAIL_FROM`, se usa `onboarding@resend.dev` (dominio de prueba de Resend).
+- **Producción**: Verifica tu dominio en [Resend](https://resend.com/domains) y define `EMAIL_FROM=noreply@tudominio.com`.
 
 ## Retry Logic
 

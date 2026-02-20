@@ -73,7 +73,7 @@ const DEFAULT_CONFIG: ConfiguracionSistema = {
   emailSmtpPassword: process.env.SMTP_PASSWORD || "",
   emailSmtpSecure: process.env.SMTP_SECURE === "true",
   whatsappEnabled: false,
-  whatsappProvider: "twilio",
+  whatsappProvider: "callmebot",
   whatsappAccountSid: process.env.WHATSAPP_ACCOUNT_SID || "",
   whatsappAuthToken: process.env.WHATSAPP_AUTH_TOKEN || "",
   whatsappPhoneNumber: process.env.WHATSAPP_PHONE_NUMBER || "",
@@ -103,7 +103,7 @@ export async function getConfiguracion(): Promise<ConfiguracionSistema> {
     const config = await prisma.$queryRawUnsafe<Array<{
       clave: string
       valor: string
-    }>>(`SELECT clave, valor FROM ConfiguracionSistema`)
+    }>>(`SELECT clave, valor FROM "ConfiguracionSistema"`)
 
     if (config.length === 0) {
       return DEFAULT_CONFIG
@@ -135,21 +135,22 @@ export async function saveConfiguracion(
   config: Partial<ConfiguracionSistema>
 ): Promise<void> {
   try {
-    // Crear tabla si no existe
+    // Crear tabla si no existe (PostgreSQL)
     await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS ConfiguracionSistema (
-        clave TEXT PRIMARY KEY,
+      CREATE TABLE IF NOT EXISTS "ConfiguracionSistema" (
+        clave VARCHAR(255) PRIMARY KEY,
         valor TEXT NOT NULL,
-        updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `)
 
-    // Guardar cada clave-valor
+    // Guardar cada clave-valor (PostgreSQL: ON CONFLICT DO UPDATE)
     for (const [key, value] of Object.entries(config)) {
-      const valorStr = typeof value === 'object' ? JSON.stringify(value) : String(value)
+      const valorStr = typeof value === "object" ? JSON.stringify(value) : String(value)
       await prisma.$executeRawUnsafe(
-        `INSERT OR REPLACE INTO ConfiguracionSistema (clave, valor, updatedAt) 
-         VALUES (?, ?, CURRENT_TIMESTAMP)`,
+        `INSERT INTO "ConfiguracionSistema" (clave, valor, "updatedAt")
+         VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (clave) DO UPDATE SET valor = $2, "updatedAt" = CURRENT_TIMESTAMP`,
         key,
         valorStr
       )

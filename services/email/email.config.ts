@@ -57,7 +57,8 @@ function buildConfigFromEnv(): Partial<EmailConfig> {
         enabled: !!process.env.RESEND_API_KEY,
         credentials: {
           apiKey: process.env.RESEND_API_KEY || "",
-          fromEmail: process.env.EMAIL_FROM || "noreply@agendaprofesional.com",
+          // Resend exige dominio verificado; para pruebas usar onboarding@resend.dev
+          fromEmail: process.env.EMAIL_FROM || "onboarding@resend.dev",
           fromName: process.env.EMAIL_FROM_NAME || "Agenda Profesional",
         },
       },
@@ -140,7 +141,7 @@ async function buildConfigFromDB(): Promise<Partial<EmailConfig>> {
           enabled: !!process.env.RESEND_API_KEY, // Resend siempre disponible desde env
           credentials: {
             apiKey: process.env.RESEND_API_KEY || "",
-            fromEmail: dbConfig.emailFrom || process.env.EMAIL_FROM || "noreply@agendaprofesional.com",
+            fromEmail: dbConfig.emailFrom || process.env.EMAIL_FROM || "onboarding@resend.dev",
             fromName: dbConfig.emailFromName || process.env.EMAIL_FROM_NAME || "Agenda Profesional",
           },
         },
