@@ -44,13 +44,13 @@ export function Topbar({
     <header
       className={cn(
         "fixed top-0 h-[72px] bg-white border-b border-[#E2E8F0] z-30 transition-all duration-300 ease-out",
-        sidebarCollapsed ? "left-[72px]" : "left-[260px]",
-        "right-0"
+        "left-0 right-0 lg:right-0",
+        sidebarCollapsed ? "lg:left-[72px]" : "lg:left-[260px]"
       )}
     >
-      <div className="h-full flex items-center justify-between px-6">
+      <div className="h-full flex items-center justify-between px-4 sm:px-6">
         {/* Buscador Global */}
-        <form onSubmit={handleSearch} className="flex-1 max-w-md">
+        <form onSubmit={handleSearch} className="flex-1 max-w-md min-w-0">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#64748B]" />
             <Input
