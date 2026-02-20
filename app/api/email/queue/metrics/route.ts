@@ -9,6 +9,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { emailQueue } from "@/services/email/email.queue"
 
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)

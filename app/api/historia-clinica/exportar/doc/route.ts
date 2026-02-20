@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma"
 import { getUserById } from "@/lib/user-helpers"
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType } from "docx"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)

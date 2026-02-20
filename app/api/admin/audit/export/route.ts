@@ -6,6 +6,8 @@ import { getActiveClinic } from "@/lib/clinic-context"
 import { auditExportSchema } from "@/lib/validations/audit"
 import { z } from "zod"
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/admin/audit/export
  * Exportar logs de auditoría a CSV (solo ADMIN/OWNER)

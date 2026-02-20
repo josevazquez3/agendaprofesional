@@ -6,6 +6,8 @@ import { getActiveClinic } from "@/lib/clinic-context"
 import { auditFilterSchema } from "@/lib/validations/audit"
 import { z } from "zod"
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/admin/audit
  * Listar logs de auditoría (solo ADMIN/OWNER)
