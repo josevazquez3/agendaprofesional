@@ -34,6 +34,7 @@ export default function SecretariaPerfilPage() {
       return
     }
     if (session?.user) fetchPerfil()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- router/fetchPerfil estables; solo re-ejecutar por status/session
   }, [status, session])
 
   const fetchPerfil = async () => {

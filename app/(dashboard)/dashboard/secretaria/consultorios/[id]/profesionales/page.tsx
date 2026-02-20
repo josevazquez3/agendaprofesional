@@ -19,6 +19,7 @@ export default function ConsultorioProfesionalesPage() {
 
   useEffect(() => {
     fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchData depende de consultorioId
   }, [consultorioId])
 
   const fetchData = async () => {

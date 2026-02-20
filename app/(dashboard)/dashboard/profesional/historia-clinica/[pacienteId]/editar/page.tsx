@@ -76,6 +76,7 @@ export default function EditarHistoriaClinicaProfesionalPage() {
 
   useEffect(() => {
     fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchData depende de pacienteId
   }, [pacienteId])
 
   const fetchData = async () => {
