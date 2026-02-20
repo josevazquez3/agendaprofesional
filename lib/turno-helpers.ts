@@ -34,6 +34,7 @@ export interface TurnoWithRelations {
   eliminadoAt?: Date | null
   eliminadoPor?: { nombre: string }
   paciente?: {
+    id: string
     nombre: string
     email: string
   }
