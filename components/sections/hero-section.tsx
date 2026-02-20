@@ -19,7 +19,7 @@ export function HeroSection() {
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Columna izquierda - Contenido */}
-          <div className="space-y-5 sm:space-y-8">
+          <div className="space-y-4 sm:space-y-8">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#0F172A] leading-tight font-inter">
               Gestione sus turnos médicos de forma inteligente
             </h1>
@@ -29,36 +29,35 @@ export function HeroSection() {
               en una sola plataforma moderna y segura.
             </p>
 
-            {/* Botones CTA */}
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-2 sm:pt-4">
-              <Link href="/auth/register" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base font-medium shadow-sm hover:shadow-md transition-all duration-200 ease-out hover:scale-[1.02]"
-                >
-                  Solicitar turno
-                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-              </Link>
-              <Link href="/auth/login" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base font-medium transition-all duration-200 ease-out hover:scale-[1.02]"
-                >
-                  <LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Ingresar
-                </Button>
-              </Link>
-              <Link href="#como-funciona" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] rounded-xl px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base font-medium transition-all duration-200 ease-out hover:scale-[1.02]"
-                >
-                  <Play className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Ver cómo funciona
-                </Button>
+            {/* Botones CTA: en móvil dos en una fila para que se vean ambos sin scroll */}
+            <div className="pt-1 sm:pt-4">
+              <div className="flex flex-row gap-2 sm:gap-4 flex-wrap">
+                <Link href="/auth/register" className="flex-1 min-w-[120px] sm:min-w-0 sm:flex-initial">
+                  <Button
+                    size="lg"
+                    className="w-full bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl px-4 sm:px-8 py-4 sm:py-6 text-sm sm:text-base font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                  >
+                    Solicitar turno
+                    <ArrowRight className="ml-1.5 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  </Button>
+                </Link>
+                <Link href="/auth/login" className="flex-1 min-w-[120px] sm:min-w-0 sm:flex-initial">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full border-2 border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl px-4 sm:px-8 py-4 sm:py-6 text-sm sm:text-base font-medium transition-all duration-200"
+                  >
+                    <LogIn className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                    Ingresar
+                  </Button>
+                </Link>
+              </div>
+              <Link
+                href="#como-funciona"
+                className="inline-flex items-center gap-1.5 mt-3 text-sm text-[#64748B] hover:text-[#2563EB] font-medium"
+              >
+                <Play className="h-4 w-4" />
+                Ver cómo funciona
               </Link>
             </div>
           </div>
