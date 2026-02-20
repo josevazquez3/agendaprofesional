@@ -74,6 +74,7 @@ export async function PUT(
       obraSocial,
       obraSocialId,
       role,
+      bloqueado,
     } = body
 
     // Verificar que el usuario existe
@@ -117,8 +118,16 @@ export async function PUT(
       }
     }
 
+    // No permitir bloquearse a sí mismo
+    if (bloqueado === true && session.user.id === id) {
+      return NextResponse.json(
+        { error: "No puedes bloquear tu propio usuario" },
+        { status: 400 }
+      )
+    }
+
     // Preparar datos de actualización
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       nombre: nombre !== undefined ? nombre : existingUser.nombre,
       email: email !== undefined ? email : existingUser.email,
       telefono: telefono !== undefined ? telefono : existingUser.telefono,
@@ -133,6 +142,8 @@ export async function PUT(
             : null
           : existingUser.fechaNacimiento,
     }
+    if (role !== undefined) updateData.role = role
+    if (bloqueado !== undefined) updateData.bloqueado = bloqueado
 
     // Si se proporciona una nueva contraseña, hashearla
     if (password && password.length > 0) {
@@ -148,17 +159,64 @@ export async function PUT(
     // Actualizar usuario
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: updateData,
+      data: updateData as Parameters<typeof prisma.user.update>[0]["data"],
     })
 
     return NextResponse.json({
       message: "Usuario actualizado exitosamente",
       user: updatedUser,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error actualizando usuario:", error)
     return NextResponse.json(
-      { error: error.message || "Error al actualizar usuario" },
+      { error: error instanceof Error ? error.message : "Error al actualizar usuario" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const session = await getServerSession(authOptions)
+
+    if (!session || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { bloqueado } = body
+
+    if (typeof bloqueado !== "boolean") {
+      return NextResponse.json(
+        { error: "bloqueado debe ser true o false" },
+        { status: 400 }
+      )
+    }
+
+    if (bloqueado && session.user.id === id) {
+      return NextResponse.json(
+        { error: "No puedes bloquear tu propio usuario" },
+        { status: 400 }
+      )
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { bloqueado },
+    })
+
+    return NextResponse.json({
+      message: bloqueado ? "Usuario bloqueado" : "Usuario desbloqueado",
+      user: updatedUser,
+    })
+  } catch (error: unknown) {
+    console.error("Error actualizando estado de bloqueo:", error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Error al actualizar" },
       { status: 500 }
     )
   }

@@ -8,6 +8,7 @@ import {
   Calendar,
   Users,
   UserCircle,
+  UserCog,
   Stethoscope,
   Settings,
   ChevronLeft,
@@ -62,6 +63,11 @@ export function Sidebar({
             href: "/dashboard/admin/profesionales",
             label: "Profesionales",
             icon: UserCircle,
+          },
+          {
+            href: "/dashboard/admin/usuarios",
+            label: "Usuarios",
+            icon: UserCog,
           },
           {
             href: "/dashboard/admin/consultorios",
@@ -227,7 +233,7 @@ export function Sidebar({
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center rounded-xl text-sm font-medium transition-all duration-200 ease-out",
+                      "flex items-center rounded-xl text-sm font-medium transition-all duration-200 ease-out min-w-0 overflow-hidden",
                       collapsed ? "justify-center px-3 py-2.5" : "space-x-3 px-3 py-2.5",
                       isActive
                         ? "bg-[#2563EB] text-white"
@@ -236,7 +242,7 @@ export function Sidebar({
                   >
                     <Icon className={cn(iconography.header, "flex-shrink-0")} strokeWidth={iconography.strokeWidth} />
                     {!collapsed && (
-                      <span className="whitespace-nowrap">{item.label}</span>
+                      <span className="truncate">{item.label}</span>
                     )}
                   </Link>
                 )

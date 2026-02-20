@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { Plus, Edit } from "lucide-react"
 import { DeleteUserButton } from "@/components/admin/DeleteUserButton"
+import { BlockUserButton } from "@/components/admin/BlockUserButton"
 
 export default async function AdminUsuariosPage() {
   const session = await getServerSession(authOptions)
@@ -18,7 +19,15 @@ export default async function AdminUsuariosPage() {
 
   const usuariosRaw = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      nombre: true,
+      email: true,
+      dni: true,
+      telefono: true,
+      role: true,
+      bloqueado: true,
+      createdAt: true,
       profesional: {
         select: { id: true, especialidad: true },
       },
@@ -37,7 +46,17 @@ export default async function AdminUsuariosPage() {
           },
         }
       : null,
-  }))
+  })) as Array<{
+    id: string
+    nombre: string
+    email: string
+    dni: string | null
+    telefono: string | null
+    role: string
+    bloqueado: boolean
+    createdAt: Date
+    profesional: { id: string; especialidad: string; user: { nombre: string; email: string } } | null
+  }>
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -89,6 +108,7 @@ export default async function AdminUsuariosPage() {
                     <th className="text-left p-4">Nombre</th>
                     <th className="text-left p-4">Email</th>
                     <th className="text-left p-4">Rol</th>
+                    <th className="text-left p-4">Estado</th>
                     <th className="text-left p-4">DNI</th>
                     <th className="text-left p-4">Teléfono</th>
                     <th className="text-left p-4">Fecha Registro</th>
@@ -109,18 +129,33 @@ export default async function AdminUsuariosPage() {
                           {usuario.role}
                         </span>
                       </td>
+                      <td className="p-4">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            usuario.bloqueado ? "bg-red-100 text-red-800" : "bg-emerald-100 text-emerald-800"
+                          }`}
+                        >
+                          {usuario.bloqueado ? "Bloqueado" : "Activo"}
+                        </span>
+                      </td>
                       <td className="p-4">{usuario.dni || "-"}</td>
                       <td className="p-4">{usuario.telefono || "-"}</td>
                       <td className="p-4">
                         {new Date(usuario.createdAt).toLocaleDateString("es-AR")}
                       </td>
                       <td className="p-4">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2 flex-wrap">
                           <Link href={`/dashboard/admin/usuarios/${usuario.id}/editar`}>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" title="Editar">
                               <Edit className="h-4 w-4" />
                             </Button>
                           </Link>
+                          <BlockUserButton
+                            userId={usuario.id}
+                            userName={usuario.nombre}
+                            bloqueado={usuario.bloqueado}
+                            isCurrentUser={session.user.id === usuario.id}
+                          />
                           <DeleteUserButton userId={usuario.id} userName={usuario.nombre} />
                         </div>
                       </td>

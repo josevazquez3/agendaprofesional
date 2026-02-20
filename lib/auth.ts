@@ -22,7 +22,14 @@ export const authOptions: NextAuthOptions = {
 
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
-            select: { id: true, email: true, password: true, nombre: true, role: true },
+            select: { 
+              id: true, 
+              email: true, 
+              password: true, 
+              nombre: true, 
+              role: true 
+              // ← "bloqueado" eliminado porque no existe en el schema
+            },
           })
 
           if (!user) {
@@ -47,7 +54,7 @@ export const authOptions: NextAuthOptions = {
               await logLogin(clinicUser.clinicId, user.id, req as any)
             }
           } catch (auditError) {
-            // Ignorar completamente errores de auditoría
+            // Ignorar errores de auditoría para no bloquear el login
           }
 
           return {
@@ -56,6 +63,7 @@ export const authOptions: NextAuthOptions = {
             name: user.nombre,
             role: user.role,
           } as User
+
         } catch (error) {
           console.error("[AUTH] Error en authorize:", error)
           return null

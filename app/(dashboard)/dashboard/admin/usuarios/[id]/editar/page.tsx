@@ -29,6 +29,7 @@ export default function EditarUsuarioPage() {
     obraSocial: "",
     obraSocialId: "",
     role: "PACIENTE",
+    bloqueado: false,
   })
   const [obrasSociales, setObrasSociales] = useState<any[]>([])
 
@@ -72,6 +73,7 @@ export default function EditarUsuarioPage() {
         obraSocial: data.obraSocial || "",
         obraSocialId: data.obraSocialId || "",
         role: data.role || "PACIENTE",
+        bloqueado: data.bloqueado ?? false,
       })
       setLoadingData(false)
     } catch (error: any) {
@@ -113,7 +115,7 @@ export default function EditarUsuarioPage() {
     setLoading(true)
 
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         nombre: formData.nombre,
         email: formData.email,
         dni: formData.dni || null,
@@ -123,6 +125,7 @@ export default function EditarUsuarioPage() {
         obraSocial: formData.obraSocial || null,
         obraSocialId: formData.obraSocialId === "SIN_OBRA_SOCIAL" ? null : (formData.obraSocialId || null),
         role: formData.role,
+        bloqueado: formData.bloqueado,
       }
 
       // Solo incluir contraseña si se proporciona
@@ -142,7 +145,7 @@ export default function EditarUsuarioPage() {
         throw new Error(data.error || "Error al actualizar usuario")
       }
 
-      router.push("/dashboard/admin/pacientes")
+      router.push("/dashboard/admin/usuarios")
     } catch (error: any) {
       setError(error.message || "Error al actualizar usuario")
       setLoading(false)
@@ -163,20 +166,20 @@ export default function EditarUsuarioPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/admin/pacientes">
+        <Link href="/dashboard/admin/usuarios">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold">Editar Paciente</h1>
+        <h1 className="text-3xl font-bold">Editar Usuario</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Datos del Paciente</CardTitle>
+          <CardTitle>Datos del Usuario</CardTitle>
           <CardDescription>
-            Modifique los datos del paciente
+            Modifique los datos del usuario. Usuario bloqueado no puede iniciar sesión.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -278,6 +281,36 @@ export default function EditarUsuarioPage() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="role">Rol</Label>
+                <select
+                  id="role"
+                  name="role"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.role}
+                  onChange={handleChange}
+                >
+                  <option value="PACIENTE">Paciente</option>
+                  <option value="PROFESIONAL">Profesional</option>
+                  <option value="SECRETARIA">Secretaria</option>
+                  <option value="ADMIN">Administrador</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 md:col-span-2">
+                <input
+                  id="bloqueado"
+                  name="bloqueado"
+                  type="checkbox"
+                  checked={formData.bloqueado}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-input"
+                />
+                <Label htmlFor="bloqueado" className="cursor-pointer">
+                  Usuario bloqueado (no puede iniciar sesión)
+                </Label>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="obraSocialId">Obra Social</Label>
                 <select
                   id="obraSocialId"
@@ -316,7 +349,7 @@ export default function EditarUsuarioPage() {
               <Button type="submit" disabled={loading}>
                 {loading ? "Guardando..." : "Guardar Cambios"}
               </Button>
-              <Link href="/dashboard/admin/pacientes">
+              <Link href="/dashboard/admin/usuarios">
                 <Button type="button" variant="outline">
                   Cancelar
                 </Button>

@@ -32,6 +32,7 @@ export interface UserWithRelations {
   obraSocial: string | null
   obraSocialId: string | null
   role: string
+  bloqueado?: boolean
   createdAt: Date
   updatedAt: Date
   obraSocialRel?: {
@@ -209,6 +210,7 @@ export async function getUserById(
         obraSocial: true,
         obraSocialId: true,
         role: true,
+        bloqueado: true,
         createdAt: true,
         updatedAt: true,
         ...(options?.includeObraSocial && { obraSocialRel: { select: { nombre: true } } }),
@@ -227,6 +229,7 @@ export async function getUserById(
       obraSocial: user.obraSocial,
       obraSocialId: user.obraSocialId,
       role: user.role,
+      bloqueado: "bloqueado" in user ? user.bloqueado : false,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       obraSocialRel: "obraSocialRel" in user && user.obraSocialRel ? { nombre: (user.obraSocialRel as { nombre: string }).nombre } : null,
