@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,11 +26,31 @@ export default function ProfesionalPacientesPage() {
 
   useEffect(() => {
     fetchPacientes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga inicial
   }, [])
+
+  const filtrarPacientes = useCallback(() => {
+    if (!busqueda.trim()) {
+      setPacientesFiltrados(pacientes)
+      return
+    }
+    const termino = busqueda.toLowerCase().trim()
+    const filtrados = pacientes.filter((paciente) => {
+      const nombreCompleto = paciente.nombre.toLowerCase()
+      const dni = paciente.dni?.toLowerCase() || ""
+      const apellido = nombreCompleto.split(" ").slice(-1)[0] || ""
+      return (
+        nombreCompleto.includes(termino) ||
+        dni.includes(termino) ||
+        apellido.includes(termino)
+      )
+    })
+    setPacientesFiltrados(filtrados)
+  }, [busqueda, pacientes])
 
   useEffect(() => {
     filtrarPacientes()
-  }, [busqueda, pacientes])
+  }, [filtrarPacientes])
 
   const fetchPacientes = async () => {
     try {
@@ -59,27 +79,6 @@ export default function ProfesionalPacientesPage() {
       setPacientesFiltrados([])
       setLoading(false)
     }
-  }
-
-  const filtrarPacientes = () => {
-    if (!busqueda.trim()) {
-      setPacientesFiltrados(pacientes)
-      return
-    }
-
-    const termino = busqueda.toLowerCase().trim()
-    const filtrados = pacientes.filter((paciente) => {
-      const nombreCompleto = paciente.nombre.toLowerCase()
-      const dni = paciente.dni?.toLowerCase() || ""
-      const apellido = nombreCompleto.split(" ").slice(-1)[0] || ""
-      
-      return (
-        nombreCompleto.includes(termino) ||
-        dni.includes(termino) ||
-        apellido.includes(termino)
-      )
-    })
-    setPacientesFiltrados(filtrados)
   }
 
   if (loading) {

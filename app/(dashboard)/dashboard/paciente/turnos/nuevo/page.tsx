@@ -24,6 +24,7 @@ export default function NuevoTurnoPage() {
 
   useEffect(() => {
     fetchProfesionales()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga inicial
   }, [])
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function NuevoTurnoPage() {
       // Limpiar hora cuando cambia profesional o fecha
       setFormData(prev => ({ ...prev, hora: "" }))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchHorariosDisponibles usa formData
   }, [formData.profesionalId, formData.fecha])
 
   const fetchProfesionales = async () => {

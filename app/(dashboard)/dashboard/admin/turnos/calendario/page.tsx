@@ -33,12 +33,14 @@ export default function CalendarioTurnosAdminPage() {
   useEffect(() => {
     fetchProfesionales()
     fetchPacientes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga inicial
   }, [])
 
   useEffect(() => {
     if (profesionalSeleccionado) {
       fetchTurnos()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchTurnos usa profesionalSeleccionado y fechaActual
   }, [profesionalSeleccionado, fechaActual])
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export default function CalendarioTurnosAdminPage() {
       const primeraFecha = diasSeleccionados[0]
       fetchHorariosDisponibles(primeraFecha)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchHorariosDisponibles usa profesionalSeleccionado y diasSeleccionados
   }, [profesionalSeleccionado, diasSeleccionados])
 
   const fetchProfesionales = async () => {

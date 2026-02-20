@@ -35,6 +35,7 @@ export default function EditarUsuarioPage() {
   useEffect(() => {
     fetchUsuario()
     fetchObrasSociales()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga al cambiar userId
   }, [userId])
 
   const fetchObrasSociales = async () => {

@@ -41,6 +41,7 @@ export function HourSelectorPopup({
     } else {
       setHorariosDisponibles([])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchHorariosDisponibles usa profesionalId y fecha
   }, [profesionalId, fecha])
 
   // Establecer el primer horario disponible como valor por defecto cuando hay horarios y cambia la fecha

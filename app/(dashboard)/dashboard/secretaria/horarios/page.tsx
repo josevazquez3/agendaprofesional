@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,12 +37,32 @@ export default function SecretariaHorariosPage() {
     fetchProfesionales()
   }, [])
 
+  const fetchHorarios = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/horarios?profesionalId=${profesionalSeleccionado}`)
+      const data = await response.json()
+      setHorarios(Array.isArray(data) ? data : [])
+    } catch {
+      setHorarios([])
+    }
+  }, [profesionalSeleccionado])
+
+  const fetchBloqueos = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/horarios/bloqueos?profesionalId=${profesionalSeleccionado}`)
+      const data = await response.json()
+      setBloqueos(Array.isArray(data) ? data : [])
+    } catch {
+      setBloqueos([])
+    }
+  }, [profesionalSeleccionado])
+
   useEffect(() => {
     if (profesionalSeleccionado) {
       fetchHorarios()
       fetchBloqueos()
     }
-  }, [profesionalSeleccionado])
+  }, [profesionalSeleccionado, fetchHorarios, fetchBloqueos])
 
   const fetchProfesionales = async () => {
     try {
@@ -54,25 +74,6 @@ export default function SecretariaHorariosPage() {
     }
   }
 
-  const fetchHorarios = async () => {
-    try {
-      const response = await fetch(`/api/horarios?profesionalId=${profesionalSeleccionado}`)
-      const data = await response.json()
-      setHorarios(data)
-    } catch (error) {
-      console.error("Error cargando horarios:", error)
-    }
-  }
-
-  const fetchBloqueos = async () => {
-    try {
-      const response = await fetch(`/api/horarios/bloqueos?profesionalId=${profesionalSeleccionado}`)
-      const data = await response.json()
-      setBloqueos(data)
-    } catch (error) {
-      console.error("Error cargando bloqueos:", error)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

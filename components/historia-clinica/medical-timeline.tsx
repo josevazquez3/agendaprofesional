@@ -59,6 +59,8 @@ export function MedicalTimeline({
   useEffect(() => {
     if (!hasMore) return
 
+    const loadMoreEl = loadMoreRef.current
+
     // Intersection Observer para cargar más cuando se acerca al final
     observerRef.current = new IntersectionObserver(
       (entries) => {
@@ -73,13 +75,13 @@ export function MedicalTimeline({
       { threshold: 0.1 }
     )
 
-    if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current)
+    if (loadMoreEl) {
+      observerRef.current.observe(loadMoreEl)
     }
 
     return () => {
-      if (observerRef.current && loadMoreRef.current) {
-        observerRef.current.unobserve(loadMoreRef.current)
+      if (observerRef.current && loadMoreEl) {
+        observerRef.current.unobserve(loadMoreEl)
       }
     }
   }, [hasMore, isLoading, registros.length])

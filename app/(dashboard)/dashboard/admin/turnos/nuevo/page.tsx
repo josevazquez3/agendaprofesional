@@ -57,6 +57,7 @@ export default function NuevoTurnoAdminPage() {
         trackFormAbandon("create_appointment", fieldsCompletedRef.current, 7)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al montar y al cambiar sesión; fetchData/timeStart/trackFormAbandon inestables
   }, [session?.user?.id])
 
   useEffect(() => {

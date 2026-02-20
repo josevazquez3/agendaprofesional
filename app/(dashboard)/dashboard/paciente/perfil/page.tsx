@@ -34,6 +34,7 @@ export default function PacientePerfilPage() {
       return
     }
     if (session?.user) fetchPerfil()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- router estable; fetchPerfil solo al montar/sesión
   }, [status, session])
 
   const fetchPerfil = async () => {

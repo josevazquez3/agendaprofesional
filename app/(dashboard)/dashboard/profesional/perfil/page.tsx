@@ -34,6 +34,7 @@ export default function ProfesionalPerfilPage() {
 
   useEffect(() => {
     fetchProfesional()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carga al montar y al cambiar sesión
   }, [session])
 
   const fetchProfesional = async () => {

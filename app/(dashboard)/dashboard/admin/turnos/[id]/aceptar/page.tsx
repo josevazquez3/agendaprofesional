@@ -37,6 +37,7 @@ export default function AceptarTurnoAdminPage() {
 
   useEffect(() => {
     fetchTurno()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch depende de turnoId
   }, [turnoId])
 
   const fetchTurno = async () => {

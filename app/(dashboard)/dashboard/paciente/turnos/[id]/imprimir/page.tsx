@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
+import Image from "next/image"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getTurnoById } from "@/lib/turno-helpers"
@@ -263,11 +264,14 @@ export default async function ImprimirTurnoPage({
         <div className="text-center border-t pt-6">
           <div className="mb-4 flex justify-center">
             <div className="bg-white p-4 rounded-lg border-2 border-gray-300 inline-block">
-              <img 
-                src={qrCodeDataUrl} 
-                alt="QR Code del Turno" 
+              <Image
+                src={qrCodeDataUrl}
+                alt="QR Code del Turno"
+                width={192}
+                height={192}
                 className="mx-auto w-48 h-48"
-                style={{ imageRendering: 'crisp-edges' }}
+                style={{ imageRendering: "crisp-edges" }}
+                unoptimized
               />
             </div>
           </div>

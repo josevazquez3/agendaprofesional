@@ -30,6 +30,7 @@ export default function EditarObraSocialPage() {
 
   useEffect(() => {
     fetchObraSocial()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch depende de obraSocialId, ya en el array
   }, [obraSocialId])
 
   const fetchObraSocial = async () => {

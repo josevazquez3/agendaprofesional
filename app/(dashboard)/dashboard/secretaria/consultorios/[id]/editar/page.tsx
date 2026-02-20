@@ -25,6 +25,7 @@ export default function EditarConsultorioPage() {
 
   useEffect(() => {
     fetchConsultorio()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch depende de consultorioId
   }, [consultorioId])
 
   const fetchConsultorio = async () => {

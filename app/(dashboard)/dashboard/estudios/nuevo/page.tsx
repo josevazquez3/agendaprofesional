@@ -85,6 +85,7 @@ export default function NuevoEstudioPage() {
     } else {
       setHistoriaClinica([])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchHistoriaClinica depende de formData.pacienteId
   }, [formData.pacienteId])
 
   const fetchPacientes = async () => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { PageHeader } from "@/components/ui/page-header"
@@ -91,7 +91,7 @@ export function AuditPageClient({
 
   const limit = 50
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams({
@@ -116,11 +116,11 @@ export function AuditPageClient({
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, filters])
 
   useEffect(() => {
     fetchLogs()
-  }, [page, filters])
+  }, [fetchLogs])
 
   const handleExport = () => {
     const params = new URLSearchParams()

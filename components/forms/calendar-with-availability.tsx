@@ -39,6 +39,7 @@ export function CalendarWithAvailability({
     } else {
       setDiasDisponibles({})
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchDiasDisponibles usa profesionalId y currentMonth
   }, [profesionalId, currentMonth])
 
   // Al abrir el calendario, recargar días para asegurar que se vean en azul
@@ -46,6 +47,7 @@ export function CalendarWithAvailability({
     if (showCalendar && profesionalId) {
       fetchDiasDisponibles()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al abrir calendario
   }, [showCalendar])
 
 

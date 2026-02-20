@@ -36,6 +36,7 @@ export default function EditarTurnoSecretariaPage() {
 
   useEffect(() => {
     fetchTurno()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch depende de turnoId
   }, [turnoId])
 
   const fetchTurno = async () => {

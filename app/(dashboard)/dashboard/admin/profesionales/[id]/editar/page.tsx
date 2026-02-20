@@ -71,6 +71,7 @@ export default function EditarProfesionalPage() {
 
   useEffect(() => {
     fetchProfesional()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch depende de profesionalId
   }, [profesionalId])
 
   const fetchConsultorios = async () => {
