@@ -136,7 +136,7 @@ function FeatureCard({
   href,
   small = false,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number | string; style?: React.CSSProperties }>
   title: string
   description: string
   href: string
