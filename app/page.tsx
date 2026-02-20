@@ -19,11 +19,11 @@ export default function HomePage() {
         {/* Sección "Cómo funciona" */}
         <section
           id="como-funciona"
-          className="py-20 bg-white border-t border-[#E2E8F0]"
+          className="py-12 sm:py-16 md:py-20 bg-white border-t border-[#E2E8F0]"
         >
-          <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl lg:text-3xl font-semibold text-[#0F172A] mb-4 font-inter">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-8 sm:mb-12">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-[#0F172A] mb-4 font-inter">
                 Cómo Funciona
               </h2>
               <p className="text-base text-[#64748B] max-w-2xl mx-auto leading-relaxed">
@@ -72,9 +72,9 @@ export default function HomePage() {
         {/* Sección Profesionales */}
         <section
           id="profesionales"
-          className="py-20 bg-[#F8FAFC]"
+          className="py-12 sm:py-16 md:py-20 bg-[#F8FAFC]"
         >
-          <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-2xl lg:text-3xl font-semibold text-[#0F172A] mb-4 font-inter">
                 Nuestros Profesionales
@@ -89,9 +89,9 @@ export default function HomePage() {
         {/* Sección Contacto */}
         <section
           id="contacto"
-          className="py-20 bg-white border-t border-[#E2E8F0]"
+          className="py-12 sm:py-16 md:py-20 bg-white border-t border-[#E2E8F0]"
         >
-          <div className="max-w-[1200px] mx-auto px-6 lg:px-8">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-2xl lg:text-3xl font-semibold text-[#0F172A] mb-4 font-inter">
                 Contacto

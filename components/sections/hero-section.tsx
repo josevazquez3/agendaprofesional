@@ -8,7 +8,7 @@ export function HeroSection() {
   return (
     <section
       id="inicio"
-      className="pt-[120px] pb-20 bg-[#F8FAFC] relative overflow-hidden"
+      className="pt-24 sm:pt-28 md:pt-[100px] lg:pt-[120px] pb-12 sm:pb-16 md:pb-20 bg-[#F8FAFC] relative overflow-hidden"
     >
       {/* Gradiente decorativo sutil */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -16,37 +16,37 @@ export function HeroSection() {
         <div className="absolute top-60 -left-40 w-96 h-96 bg-[#0EA5A4] opacity-5 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-6 lg:px-8 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Columna izquierda - Contenido */}
-          <div className="space-y-8">
-            <h1 className="text-4xl lg:text-5xl font-bold text-[#0F172A] leading-tight font-inter">
+          <div className="space-y-5 sm:space-y-8">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#0F172A] leading-tight font-inter">
               Gestione sus turnos médicos de forma inteligente
             </h1>
 
-            <p className="text-base text-[#64748B] leading-relaxed max-w-xl">
+            <p className="text-sm sm:text-base text-[#64748B] leading-relaxed max-w-xl">
               Optimice la gestión de turnos, historias clínicas y recordatorios
               en una sola plataforma moderna y segura.
             </p>
 
             {/* Botones CTA */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Link href="/auth/register">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
+              <Link href="/auth/register" className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl px-8 py-6 text-base font-medium shadow-sm hover:shadow-md transition-all duration-200 ease-out hover:scale-[1.02]"
+                  className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base font-medium shadow-sm hover:shadow-md transition-all duration-200 ease-out hover:scale-[1.02]"
                 >
                   Solicitar turno
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
-              <Link href="#como-funciona">
+              <Link href="#como-funciona" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl px-8 py-6 text-base font-medium transition-all duration-200 ease-out hover:scale-[1.02]"
+                  className="w-full sm:w-auto border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base font-medium transition-all duration-200 ease-out hover:scale-[1.02]"
                 >
-                  <Play className="mr-2 h-5 w-5" />
+                  <Play className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Ver cómo funciona
                 </Button>
               </Link>
