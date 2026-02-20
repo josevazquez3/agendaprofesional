@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Play } from "lucide-react"
+import { ArrowRight, Play, LogIn } from "lucide-react"
 
 export function HeroSection() {
   return (
@@ -30,7 +30,7 @@ export function HeroSection() {
             </p>
 
             {/* Botones CTA */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-2 sm:pt-4">
               <Link href="/auth/register" className="w-full sm:w-auto">
                 <Button
                   size="lg"
@@ -40,11 +40,21 @@ export function HeroSection() {
                   <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
-              <Link href="#como-funciona" className="w-full sm:w-auto">
+              <Link href="/auth/login" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
                   size="lg"
                   className="w-full sm:w-auto border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base font-medium transition-all duration-200 ease-out hover:scale-[1.02]"
+                >
+                  <LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Ingresar
+                </Button>
+              </Link>
+              <Link href="#como-funciona" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] rounded-xl px-6 sm:px-8 py-5 sm:py-6 text-sm sm:text-base font-medium transition-all duration-200 ease-out hover:scale-[1.02]"
                 >
                   <Play className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Ver cómo funciona
