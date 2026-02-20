@@ -723,8 +723,7 @@ export async function restoreFromBackup(buffer: Buffer): Promise<{ restoredTable
     for (const modelName of tables) {
       const delegate = MODEL_TO_PRISMA[modelName]
       if (!delegate) continue
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const model = txPrisma[delegate] as any
+      const model = txPrisma[delegate] as { deleteMany: (args: object) => Promise<unknown> }
       await model.deleteMany({})
     }
 
@@ -735,8 +734,7 @@ export async function restoreFromBackup(buffer: Buffer): Promise<{ restoredTable
 
       if (!delegate || !Array.isArray(records) || records.length === 0) continue
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const model = txPrisma[delegate] as any
+      const model = txPrisma[delegate] as { createMany: (args: { data: unknown[] }) => Promise<unknown> }
       const parsed = records.map((r: unknown) => parseDates(r as Record<string, unknown>))
       await model.createMany({ data: parsed })
       restoredTables++
