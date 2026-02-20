@@ -169,10 +169,10 @@ export function HourSelectorPopup({
                       Sin horarios para este día{infoHorarios?.diaSemana ? ` (${infoHorarios.diaSemana.toLowerCase()})` : ""}.
                     </p>
                     <p className="mt-1 text-xs">
-                      Cargue los horarios del profesional en{" "}
-                      {session?.user?.role === "ADMIN" && (
-                        <Link href="/dashboard/admin/horarios" className="underline font-medium">
-                          Configuración → Horarios
+                      Agregue días y horarios de atención en:{" "}
+                      {session?.user?.role === "ADMIN" && profesionalId && (
+                        <Link href={`/dashboard/admin/profesionales/${profesionalId}/editar`} className="underline font-medium">
+                          Editar profesional → Horarios de atención
                         </Link>
                       )}
                       {session?.user?.role === "SECRETARIA" && (
@@ -180,7 +180,7 @@ export function HourSelectorPopup({
                           Configuración → Horarios
                         </Link>
                       )}
-                      {session?.user?.role !== "ADMIN" && session?.user?.role !== "SECRETARIA" && "Configuración → Horarios"}
+                      {(session?.user?.role !== "ADMIN" || !profesionalId) && session?.user?.role !== "SECRETARIA" && "Editar profesional o Configuración → Horarios"}
                     </p>
                   </>
                 ) : (

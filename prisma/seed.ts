@@ -192,6 +192,34 @@ async function main() {
     }
   }
 
+  // Asignar horarios por defecto a TODOS los profesionales que no tengan ninguno (ej. hernan - radiologo)
+  const profesionalesSinHorarios = await prisma.profesional.findMany({
+    where: {
+      horarios: { none: {} },
+    },
+    select: { id: true, especialidad: true },
+  })
+  const horariosPorDefecto = [
+    { diaSemana: "LUNES", horaInicio: "09:00", horaFin: "13:00" },
+    { diaSemana: "MIERCOLES", horaInicio: "09:00", horaFin: "13:00" },
+    { diaSemana: "VIERNES", horaInicio: "09:00", horaFin: "17:00" },
+  ]
+  for (const p of profesionalesSinHorarios) {
+    for (const h of horariosPorDefecto) {
+      await prisma.horarioDisponible.create({
+        data: {
+          profesionalId: p.id,
+          diaSemana: h.diaSemana,
+          horaInicio: h.horaInicio,
+          horaFin: h.horaFin,
+          duracionTurno: 30,
+          activo: true,
+        },
+      })
+    }
+    console.log(`  ✅ Horarios por defecto asignados a profesional (${p.especialidad})`)
+  }
+
   console.log("✨ Seed completado exitosamente!")
 }
 

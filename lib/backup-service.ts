@@ -24,6 +24,97 @@ export interface BackupData {
   }
 }
 
+/** Tipo para backup de toda la base de datos: nombre de modelo -> array de registros */
+export type FullDatabaseBackup = Record<string, unknown[]> & {
+  _metadata?: { exportedAt: string; version: string; type: "full_database" }
+}
+
+/**
+ * Exportar toda la base de datos (todas las tablas) para backup completo
+ */
+export async function exportFullDatabase(): Promise<FullDatabaseBackup> {
+  const exportedAt = new Date().toISOString()
+  const version = "1.0.0"
+
+  const [
+    Plan,
+    Clinic,
+    Subscription,
+    ClinicUsageDaily,
+    ClinicUser,
+    RolePermission,
+    Invitation,
+    ConfiguracionClinica,
+    User,
+    Profesional,
+    Consultorio,
+    ConsultorioProfesional,
+    HorarioDisponible,
+    BloqueoHorario,
+    Turno,
+    Arancel,
+    HistoriaClinica,
+    ArchivoHistoriaClinica,
+    Notificacion,
+    ObraSocial,
+    BackupJob,
+    BackupLog,
+    AuditLog,
+  ] = await Promise.all([
+    prisma.plan.findMany(),
+    prisma.clinic.findMany(),
+    prisma.subscription.findMany(),
+    prisma.clinicUsageDaily.findMany(),
+    prisma.clinicUser.findMany(),
+    prisma.rolePermission.findMany(),
+    prisma.invitation.findMany(),
+    prisma.configuracionClinica.findMany(),
+    prisma.user.findMany(),
+    prisma.profesional.findMany(),
+    prisma.consultorio.findMany(),
+    prisma.consultorioProfesional.findMany(),
+    prisma.horarioDisponible.findMany(),
+    prisma.bloqueoHorario.findMany(),
+    prisma.turno.findMany(),
+    prisma.arancel.findMany(),
+    prisma.historiaClinica.findMany(),
+    prisma.archivoHistoriaClinica.findMany(),
+    prisma.notificacion.findMany(),
+    prisma.obraSocial.findMany(),
+    prisma.backupJob.findMany(),
+    prisma.backupLog.findMany(),
+    prisma.auditLog.findMany(),
+  ])
+
+  const result: FullDatabaseBackup = {
+    Plan,
+    Clinic,
+    Subscription,
+    ClinicUsageDaily,
+    ClinicUser,
+    RolePermission,
+    Invitation,
+    ConfiguracionClinica,
+    User,
+    Profesional,
+    Consultorio,
+    ConsultorioProfesional,
+    HorarioDisponible,
+    BloqueoHorario,
+    Turno,
+    Arancel,
+    HistoriaClinica,
+    ArchivoHistoriaClinica,
+    Notificacion,
+    ObraSocial,
+    BackupJob,
+    BackupLog,
+    AuditLog,
+    _metadata: { exportedAt, version, type: "full_database" },
+  }
+  return result
+}
+
 /**
  * Exportar todos los datos de una clínica en formato estructurado
  */
@@ -235,25 +326,81 @@ export async function createBackupZip(
 }
 
 /**
+ * Crear archivo ZIP con backup completo de toda la base de datos
+ */
+export async function createFullBackupZip(
+  fullData: FullDatabaseBackup,
+  outputPath: string
+): Promise<{ filePath: string; sizeMB: number }> {
+  return new Promise((resolve, reject) => {
+    try {
+      const output = createWriteStream(outputPath)
+      const archive = archiver("zip", {
+        zlib: { level: 9 },
+      })
+
+      output.on("close", () => {
+        const sizeMB = archive.pointer() / 1024 / 1024
+        resolve({ filePath: outputPath, sizeMB: parseFloat(sizeMB.toFixed(2)) })
+      })
+
+      archive.on("error", (err) => reject(err))
+      archive.pipe(output)
+
+      for (const [key, value] of Object.entries(fullData)) {
+        if (key === "_metadata") continue
+        archive.append(JSON.stringify(value, null, 2), {
+          name: `${key}.json`,
+        })
+      }
+      if (fullData._metadata) {
+        archive.append(JSON.stringify(fullData._metadata, null, 2), {
+          name: "metadata.json",
+        })
+      }
+
+      archive.finalize()
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
+
+/**
+ * Normaliza una ruta para el sistema actual (Windows: barras invertidas)
+ */
+function normalizePath(ruta: string): string {
+  const trimmed = ruta.trim()
+  if (process.platform === "win32") {
+    return trimmed.replace(/\//g, path.sep)
+  }
+  return trimmed
+}
+
+/**
  * Guardar backup en almacenamiento local
+ * @param customDir - Ruta configurada por el usuario (ej. ./backups, C:\backups o C:\Users\...\Desktop). Si no se pasa, usa process.cwd()/backups/clinicId
  */
 export async function saveBackupLocal(
   filePath: string,
-  clinicId: string
+  clinicId: string,
+  customDir?: string
 ): Promise<string> {
-  const backupsDir = path.join(process.cwd(), "backups", clinicId)
-  
-  // Crear directorio si no existe
+  const baseDir = customDir
+    ? (path.isAbsolute(customDir)
+        ? normalizePath(customDir)
+        : path.join(process.cwd(), normalizePath(customDir)))
+    : path.join(process.cwd(), "backups", clinicId)
+  const backupsDir = path.join(baseDir, clinicId)
+
   await fs.mkdir(backupsDir, { recursive: true })
 
   const fileName = `backup-${Date.now()}.zip`
   const destinationPath = path.join(backupsDir, fileName)
 
-  // Copiar archivo al directorio de backups
   await fs.copyFile(filePath, destinationPath)
 
-  // Retornar ruta relativa para almacenar en DB
-  return `/backups/${clinicId}/${fileName}`
+  return destinationPath
 }
 
 /**
@@ -291,29 +438,28 @@ export async function saveBackupGCS(
 }
 
 /**
- * Crear backup completo de una clínica
+ * Crear backup completo de toda la base de datos
+ * @param clinicId - Se usa para la carpeta de destino en almacenamiento local
+ * @param storagePath - Para tipo "local", ruta donde guardar (ej. ./backups o C:\backups)
  */
 export async function createBackup(
   clinicId: string,
-  storageType: "local" | "s3" | "gcs" = "local"
+  storageType: "local" | "s3" | "gcs" = "local",
+  storagePath?: string
 ): Promise<{ fileUrl: string; sizeMB: number }> {
-  // 1. Exportar datos
-  const backupData = await exportClinicData(clinicId)
+  const fullData = await exportFullDatabase()
 
-  // 2. Crear archivo temporal
   const tempDir = path.join(process.cwd(), "tmp")
   await fs.mkdir(tempDir, { recursive: true })
-  const tempFilePath = path.join(tempDir, `backup-${clinicId}-${Date.now()}.zip`)
+  const tempFilePath = path.join(tempDir, `backup-full-${Date.now()}.zip`)
 
-  // 3. Generar ZIP
-  const { filePath, sizeMB } = await createBackupZip(backupData, tempFilePath)
+  const { filePath, sizeMB } = await createFullBackupZip(fullData, tempFilePath)
 
-  // 4. Guardar según tipo de almacenamiento
   let fileUrl: string
 
   switch (storageType) {
     case "local":
-      fileUrl = await saveBackupLocal(filePath, clinicId)
+      fileUrl = await saveBackupLocal(filePath, clinicId, storagePath)
       break
     case "s3":
       fileUrl = await saveBackupS3(filePath, clinicId)

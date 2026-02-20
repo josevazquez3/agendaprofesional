@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { format } from "date-fns"
 import { AlertTriangle } from "lucide-react"
+import { CalendarWithAvailability } from "@/components/forms/calendar-with-availability"
+import { HourSelectorPopup } from "@/components/forms/hour-selector-popup"
 
 export default function EditarTurnoSecretariaPage() {
   const router = useRouter()
@@ -18,6 +20,7 @@ export default function EditarTurnoSecretariaPage() {
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState("")
+  const [profesionalId, setProfesionalId] = useState("")
   const [formData, setFormData] = useState({
     fecha: "",
     hora: "",
@@ -42,9 +45,10 @@ export default function EditarTurnoSecretariaPage() {
         throw new Error("Error al cargar turno")
       }
       const data = await response.json()
-      
+      const fechaYMD = data.fecha ? new Date(data.fecha).toISOString().split("T")[0] : ""
+      setProfesionalId(data.profesionalId || "")
       setFormData({
-        fecha: data.fecha ? new Date(data.fecha).toISOString().split("T")[0] : "",
+        fecha: fechaYMD,
         hora: data.hora || "",
         estado: data.estado || "PENDIENTE",
         motivo: data.motivo || "",
@@ -152,29 +156,54 @@ export default function EditarTurnoSecretariaPage() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fecha">Fecha *</Label>
-                <Input
-                  id="fecha"
-                  name="fecha"
-                  type="date"
-                  value={formData.fecha}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="hora">Hora *</Label>
-                <Input
-                  id="hora"
-                  name="hora"
-                  type="time"
-                  value={formData.hora}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+              {profesionalId ? (
+                <>
+                  <div className="space-y-2 md:col-span-2">
+                    <CalendarWithAvailability
+                      profesionalId={profesionalId}
+                      value={formData.fecha}
+                      onChange={(date) => setFormData({ ...formData, fecha: date, hora: formData.fecha !== date ? "" : formData.hora })}
+                      onHourSelect={(hour) => setFormData({ ...formData, hora: hour })}
+                      calendarPopupClassName="w-[420px] min-w-[420px]"
+                    />
+                  </div>
+                  {formData.fecha && (
+                    <div className="space-y-2 md:col-span-2">
+                      <HourSelectorPopup
+                        profesionalId={profesionalId}
+                        fecha={formData.fecha}
+                        value={formData.hora}
+                        onChange={(hour) => setFormData({ ...formData, hora: hour })}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="fecha">Fecha *</Label>
+                    <Input
+                      id="fecha"
+                      name="fecha"
+                      type="date"
+                      value={formData.fecha}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hora">Hora *</Label>
+                    <Input
+                      id="hora"
+                      name="hora"
+                      type="time"
+                      value={formData.hora}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="estado">Estado *</Label>

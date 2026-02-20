@@ -135,7 +135,6 @@ export async function POST(request: Request) {
     const creadoPorId =
       session.user.role === "ADMIN" && fechaConsultaBody ? session.user.id : null
 
-    // Crear nueva historia clínica (sin creadoPorId en create por compatibilidad con cliente Prisma)
     const historiaClinica = await prisma.$transaction(async (tx) => {
       const created = await tx.historiaClinica.create({
         data: {
@@ -147,6 +146,7 @@ export async function POST(request: Request) {
           notas: notas || null,
           diagnostico: diagnostico || null,
           tratamiento: tratamiento || null,
+          creadoPorId: creadoPorId || undefined,
         },
         include: {
           profesional: {
@@ -169,19 +169,6 @@ export async function POST(request: Request) {
           },
         },
       })
-
-      // Auditoría: registrar quién creó el registro (columna creadoPorId)
-      if (creadoPorId) {
-        try {
-          await tx.$executeRawUnsafe(
-            `UPDATE HistoriaClinica SET creadoPorId = ? WHERE id = ?`,
-            creadoPorId,
-            created.id
-          )
-        } catch {
-          // Si la columna no existe aún, ignorar
-        }
-      }
 
       // Adjuntos (estudios): PDF, DOCX, etc.
       if (estudios && Array.isArray(estudios)) {

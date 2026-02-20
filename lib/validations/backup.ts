@@ -22,4 +22,6 @@ export const updateBackupJobSchema = createBackupJobSchema.partial()
 export const runBackupSchema = z.object({
   jobId: z.string().min(1, "El jobId es requerido").optional(),
   clinicId: z.string().min(1, "El clinicId es requerido").optional(),
+  storageType: z.enum(["local", "s3", "gcs"]).optional(),
+  storagePath: z.string().optional(),
 })

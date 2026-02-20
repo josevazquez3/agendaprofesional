@@ -85,9 +85,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Si no hay jobId, crear backup manual inmediato
+    // Si no hay jobId, crear backup manual inmediato (usa ruta configurada si se envía)
     const storageType = (body.storageType as "local" | "s3" | "gcs") || "local"
-    const { fileUrl, sizeMB } = await createBackup(targetClinicId, storageType)
+    const storagePath = typeof body.storagePath === "string" && body.storagePath.trim() ? body.storagePath.trim() : undefined
+    const { fileUrl, sizeMB } = await createBackup(targetClinicId, storageType, storagePath)
 
     // Buscar o crear job manual para este backup
     let manualJob = await prisma.backupJob.findFirst({
@@ -143,10 +144,17 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("Error ejecutando backup:", error)
+    const err = error as NodeJS.ErrnoException
+    let message = error instanceof Error ? error.message : "Error desconocido"
+    if (err?.code === "EACCES") {
+      message = "No hay permiso para escribir en la carpeta. Prueba otra ruta (ej. Escritorio) o ejecuta la aplicación con permisos."
+    } else if (err?.code === "ENOENT") {
+      message = "La carpeta no existe. Comprueba la ruta o créala en el Explorador antes de hacer la copia."
+    }
     return NextResponse.json(
       {
         error: "Error al ejecutar backup",
-        details: error instanceof Error ? error.message : "Error desconocido",
+        details: message,
       },
       { status: 500 }
     )

@@ -9,6 +9,7 @@ import { generateTurnoConfirmationEmail } from "@/lib/email"
 import { generateTurnoConfirmationWhatsApp } from "@/lib/whatsapp"
 import { logCreate } from "@/lib/audit-service"
 import { getActiveClinic } from "@/lib/clinic-context"
+import { existeTurnoEnHorario } from "@/lib/turno-helpers"
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +22,6 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { pacienteId: pacienteIdParam, profesionalId, fecha, hora, motivo, obraSocial, obraSocialId, consultorioProfesionalId } = body
 
-    // Validaciones básicas
     if (!profesionalId || !fecha || !hora) {
       return NextResponse.json(
         { error: `Faltan campos requeridos. profesionalId: ${profesionalId}, fecha: ${fecha}, hora: ${hora}` },
@@ -29,8 +29,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Si es secretaria o admin, puede especificar pacienteId
-    // Si es paciente, solo puede crear turnos para sí mismo
     let pacienteId: string
     if (session.user.role === "SECRETARIA" || session.user.role === "ADMIN") {
       if (!pacienteIdParam) {
@@ -49,7 +47,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar que el profesional existe (una sola consulta)
     const profesional = await getProfesionalById(profesionalId, {
       includeUser: true,
       includeUserFields: ["nombre", "email"],
@@ -62,21 +59,18 @@ export async function POST(request: Request) {
       )
     }
 
-    // Normalizar fecha (asegurar que sea a medianoche para comparación correcta)
     const fechaTurno = new Date(fecha)
     fechaTurno.setHours(0, 0, 0, 0)
     const fechaFin = new Date(fechaTurno)
     fechaFin.setHours(23, 59, 59, 999)
 
-    // Verificar que no haya un turno en el mismo horario usando helper
-    const { existeTurnoEnHorario } = await import("@/lib/turno-helpers")
     const turnoExistente = await existeTurnoEnHorario(
       profesionalId,
       fechaTurno,
       hora,
       ["PENDIENTE", "CONFIRMADO"]
     )
-    
+
     if (turnoExistente) {
       return NextResponse.json(
         { error: `Ya existe un turno en este horario (${fecha} ${hora})` },
@@ -84,85 +78,41 @@ export async function POST(request: Request) {
       )
     }
 
-    // Obtener datos del paciente usando SQL raw
-    const pacienteResult = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      nombre: string
-      email: string
-      telefono: string | null
-    }>>(
-      `SELECT id, nombre, email, telefono FROM User WHERE id = ? LIMIT 1`,
-      pacienteId
-    )
+    const paciente = await prisma.user.findUnique({
+      where: { id: pacienteId },
+      select: { id: true, nombre: true, email: true, telefono: true },
+    })
 
-    if (pacienteResult.length === 0) {
+    if (!paciente) {
       return NextResponse.json(
         { error: "Paciente no encontrado" },
         { status: 404 }
       )
     }
 
-    const paciente = pacienteResult[0]
-
-    // Obtener clinicId (usar un valor por defecto o obtenerlo de la clínica activa)
     let clinicId: string | null = null
     try {
       const clinic = await getActiveClinic()
       if (clinic) {
         clinicId = clinic.id
-      } else {
-        // Si no hay clínica activa, intentar obtener la primera clínica del usuario
-        const clinicUserResult = await prisma.$queryRawUnsafe<Array<{
-          clinicId: string
-        }>>(
-          `SELECT clinicId FROM ClinicUser WHERE userId = ? AND activo = 1 LIMIT 1`,
-          session.user.id
-        )
-        if (clinicUserResult.length > 0) {
-          clinicId = clinicUserResult[0].clinicId
-        }
       }
-      
-      // Si aún no tenemos clinicId, intentar obtener la primera clínica disponible
       if (!clinicId) {
-        const primeraClinic = await prisma.$queryRawUnsafe<Array<{
-          id: string
-        }>>(
-          `SELECT id FROM Clinic LIMIT 1`
-        )
-        if (primeraClinic.length > 0) {
-          clinicId = primeraClinic[0].id
-        }
+        const clinicUser = await prisma.clinicUser.findFirst({
+          where: { userId: session.user.id, activo: true },
+          select: { clinicId: true },
+        })
+        if (clinicUser) clinicId = clinicUser.clinicId
       }
-      
-      // Si aún no tenemos clinicId, crear uno por defecto o usar un valor temporal
       if (!clinicId) {
-        console.warn("No se encontró ninguna clínica, usando valor por defecto")
-        // Intentar crear una clínica por defecto si no existe
-        try {
-          const clinicDefaultId = `clinic_default_${Date.now()}`
-          await prisma.$executeRawUnsafe(
-            `INSERT OR IGNORE INTO Clinic (id, nombre, slug, activo, createdAt, updatedAt)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            clinicDefaultId,
-            "Clínica por Defecto",
-            "default",
-            1,
-            new Date().toISOString(),
-            new Date().toISOString()
-          )
-          clinicId = clinicDefaultId
-        } catch (createError) {
-          console.error("Error creando clínica por defecto:", createError)
-          // Usar un valor temporal que puede causar error, pero al menos veremos el error real
-          clinicId = "default-clinic"
-        }
+        const primeraClinic = await prisma.clinic.findFirst({
+          select: { id: true },
+        })
+        if (primeraClinic) clinicId = primeraClinic.id
       }
-    } catch (error) {
-      console.error("Error obteniendo clinicId:", error)
-      clinicId = "default-clinic"
+    } catch (err) {
+      console.error("Error obteniendo clinicId:", err)
     }
-    
+
     if (!clinicId) {
       return NextResponse.json(
         { error: "No se pudo determinar la clínica para crear el turno" },
@@ -170,149 +120,56 @@ export async function POST(request: Request) {
       )
     }
 
-    // Crear turno usando SQL raw para evitar problemas con clinicId
     const fechaCreacion = new Date(fecha)
     fechaCreacion.setHours(0, 0, 0, 0)
-    const codigoTurno = `T${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`
-    const ahora = new Date()
-    const turnoId = `turno_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
-    // Formatear fecha para SQLite (ISO string completo para DateTime)
-    const fechaSQL = fechaCreacion.toISOString()
-    const ahoraISO = ahora.toISOString()
 
-    // Intentar insertar sin clinicId primero (para SQLite sin la columna)
-    // Si falla, intentar con clinicId
-    let turnoCreado = false
-    
-    try {
-      // Primero intentar sin clinicId (para SQLite de desarrollo)
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO Turno (
-          id, pacienteId, profesionalId, consultorioProfesionalId,
-          fecha, hora, estado, motivo, obraSocial, obraSocialId,
-          codigoTurno, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        turnoId,
+    const turno = await prisma.turno.create({
+      data: {
+        clinicId,
         pacienteId,
         profesionalId,
-        consultorioProfesionalId || null,
-        fechaSQL,
+        consultorioProfesionalId: consultorioProfesionalId || null,
+        fecha: fechaCreacion,
         hora,
-        "PENDIENTE",
-        motivo || null,
-        obraSocial || null,
-        obraSocialId || null,
-        codigoTurno,
-        ahoraISO,
-        ahoraISO
-      )
-      turnoCreado = true
-    } catch (errorSinClinicId: any) {
-      // Si falla porque falta clinicId, intentar con clinicId
-      if (errorSinClinicId.message && errorSinClinicId.message.includes('clinicId')) {
-        try {
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO Turno (
-              id, clinicId, pacienteId, profesionalId, consultorioProfesionalId,
-              fecha, hora, estado, motivo, obraSocial, obraSocialId,
-              codigoTurno, createdAt, updatedAt
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            turnoId,
-            clinicId,
-            pacienteId,
-            profesionalId,
-            consultorioProfesionalId || null,
-            fechaSQL,
-            hora,
-            "PENDIENTE",
-            motivo || null,
-            obraSocial || null,
-            obraSocialId || null,
-            codigoTurno,
-            ahoraISO,
-            ahoraISO
-          )
-          turnoCreado = true
-        } catch (errorConClinicId: any) {
-          console.error("Error en INSERT de turno (con clinicId):", errorConClinicId)
-          console.error("Datos del INSERT:", {
-            turnoId,
-            clinicId,
-            pacienteId,
-            profesionalId,
-            fechaSQL,
-            hora,
-            codigoTurno,
-          })
-          throw errorConClinicId
-        }
-      } else {
-        // Si el error no es por clinicId, lanzarlo
-        console.error("Error en INSERT de turno (sin clinicId):", errorSinClinicId)
-        console.error("Datos del INSERT:", {
-          turnoId,
-          pacienteId,
-          profesionalId,
-          fechaSQL,
-          hora,
-          codigoTurno,
-        })
-        throw errorSinClinicId
-      }
-    }
+        estado: "PENDIENTE",
+        motivo: motivo || null,
+        obraSocial: obraSocial || null,
+        obraSocialId: obraSocialId || null,
+      },
+      select: {
+        id: true,
+        codigoTurno: true,
+        pacienteId: true,
+        profesionalId: true,
+        fecha: true,
+        hora: true,
+        estado: true,
+        motivo: true,
+      },
+    })
 
-    // Obtener el turno creado usando helper
-    const turnosCreados = await prisma.$queryRawUnsafe<Array<{
-      id: string
-      codigoTurno: string
-      pacienteId: string
-      profesionalId: string
-      fecha: string
-      hora: string
-      estado: string
-      motivo: string | null
-    }>>(
-      `SELECT id, codigoTurno, pacienteId, profesionalId, fecha, hora, estado, motivo 
-       FROM Turno 
-       WHERE codigoTurno = ? 
-       LIMIT 1`,
-      codigoTurno
-    )
-
-    if (turnosCreados.length === 0) {
-      throw new Error("No se pudo crear el turno")
-    }
-
-    const turno = {
-      id: turnosCreados[0].id,
-      codigoTurno: turnosCreados[0].codigoTurno,
-      pacienteId: turnosCreados[0].pacienteId,
-      profesionalId: turnosCreados[0].profesionalId,
-      fecha: new Date(turnosCreados[0].fecha),
-      hora: turnosCreados[0].hora,
-      estado: turnosCreados[0].estado,
-      motivo: turnosCreados[0].motivo,
+    const turnoResponse = {
+      id: turno.id,
+      codigoTurno: turno.codigoTurno,
+      pacienteId: turno.pacienteId,
+      profesionalId: turno.profesionalId,
+      fecha: turno.fecha,
+      hora: turno.hora,
+      estado: turno.estado,
+      motivo: turno.motivo,
       paciente: {
         id: paciente.id,
         nombre: paciente.nombre,
         email: paciente.email,
       },
-          profesional: {
-            id: profesional.id,
-            user: profesional.user ? {
-              id: profesional.userId,
-              nombre: profesional.user.nombre || "",
-              email: profesional.user.email || "",
-            } : {
-              id: profesional.userId,
-              nombre: "",
-              email: "",
-            },
-          },
+      profesional: {
+        id: profesional.id,
+        user: profesional.user
+          ? { id: profesional.userId, nombre: profesional.user.nombre || "", email: profesional.user.email || "" }
+          : { id: profesional.userId, nombre: "", email: "" },
+      },
     }
 
-    // Notificaciones y auditoría en paralelo (no bloquean ni fallan la respuesta)
     const fechaFormateada = new Date(fecha).toLocaleDateString("es-AR", {
       weekday: "long",
       year: "numeric",
@@ -322,7 +179,6 @@ export async function POST(request: Request) {
     const nombreProfesional = profesional.user?.nombre || "Profesional"
 
     await Promise.allSettled([
-      // 1. Email al paciente
       paciente.email
         ? sendEmail({
             to: paciente.email,
@@ -330,7 +186,6 @@ export async function POST(request: Request) {
             html: generateTurnoConfirmationEmail(paciente.nombre, nombreProfesional, fechaFormateada, hora),
           })
         : Promise.resolve(),
-      // 2. WhatsApp al paciente
       paciente.telefono
         ? sendWhatsAppMessage({
             to: paciente.telefono,
@@ -343,7 +198,6 @@ export async function POST(request: Request) {
             ),
           })
         : Promise.resolve(),
-      // 3. Notificaciones in-app
       prisma.notificacion.createMany({
         data: [
           {
@@ -362,7 +216,6 @@ export async function POST(request: Request) {
           },
         ],
       }),
-      // 4. Auditoría (reutilizando clinicId ya obtenido)
       clinicId
         ? logCreate(
             clinicId,
@@ -383,42 +236,25 @@ export async function POST(request: Request) {
     ])
 
     return NextResponse.json(
-      {
-        message: "Turno creado exitosamente",
-        turno,
-      },
+      { message: "Turno creado exitosamente", turno: turnoResponse },
       { status: 201 }
     )
   } catch (error: any) {
     console.error("Error creando turno:", error)
-    console.error("Error details:", {
-      message: error?.message,
-      code: error?.code,
-      meta: error?.meta,
-      stack: error?.stack,
-      cause: error?.cause,
-    })
-    
-    // Mensaje más específico según el tipo de error
     let errorMessage = "Error al crear turno"
-    if (error?.message?.includes("UNIQUE constraint")) {
-      errorMessage = "Ya existe un turno con ese código"
-    } else if (error?.message?.includes("FOREIGN KEY constraint")) {
+    if (error?.message?.includes("UNIQUE") || error?.code === "P2002") {
+      errorMessage = "Ya existe un turno con ese código o conflicto de horario"
+    } else if (error?.message?.includes("Foreign key") || error?.code === "P2003") {
       errorMessage = "Error de referencia: verifique que el paciente, profesional o clínica existan"
-    } else if (error?.message?.includes("NOT NULL constraint")) {
+    } else if (error?.message?.includes("NOT NULL") || error?.code === "P2011") {
       errorMessage = "Faltan campos requeridos"
     } else if (process.env.NODE_ENV === "development") {
       errorMessage = error?.message || errorMessage
     }
-    
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
-        details: process.env.NODE_ENV === "development" ? {
-          message: error?.message,
-          code: error?.code,
-          meta: error?.meta,
-        } : undefined
+        details: process.env.NODE_ENV === "development" ? { message: error?.message, code: error?.code } : undefined,
       },
       { status: 500 }
     )

@@ -404,7 +404,7 @@ export async function getTurnos(where: {
 }
 
 /**
- * Obtener un turno por ID con relaciones usando SQL raw
+ * Obtener un turno por ID con relaciones (Prisma, compatible Postgres)
  */
 export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
   obraSocial?: string | null
@@ -416,102 +416,43 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
   eliminadoPor?: { nombre: string }
 }) | null> {
   try {
-    type TurnoRow = {
-      id: string
-      pacienteId: string
-      profesionalId: string
-      consultorioProfesionalId: string | null
-      fecha: string | bigint | number
-      hora: string
-      estado: string
-      motivo: string | null
-      codigoTurno: string
-      clinicId: string | null
-      obraSocial: string | null
-      arancel: number | null
-      motivoCancelacion: string | null
-      canceladoAt: string | bigint | number | null
-      motivoEliminacion: string | null
-      eliminadoAt: string | bigint | number | null
-      eliminadoPorId: string | null
-    }
-    let turnos: TurnoRow[]
-    try {
-      turnos = await prisma.$queryRawUnsafe<TurnoRow[]>(
-        `SELECT id, pacienteId, profesionalId, consultorioProfesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId,
-         obraSocial, arancel, motivoCancelacion, canceladoAt, motivoEliminacion, eliminadoAt, eliminadoPorId
-         FROM Turno WHERE id = ? LIMIT 1`,
-        id
-      )
-    } catch (err: any) {
-      if (err?.message?.includes("eliminadoPorId") || err?.message?.includes("no such column")) {
-        turnos = await prisma.$queryRawUnsafe<TurnoRow[]>(
-          `SELECT id, pacienteId, profesionalId, consultorioProfesionalId, fecha, hora, estado, motivo, codigoTurno, clinicId,
-           obraSocial, arancel, motivoCancelacion, canceladoAt, motivoEliminacion, eliminadoAt, NULL as eliminadoPorId
-           FROM Turno WHERE id = ? LIMIT 1`,
-          id
-        )
-      } else {
-        throw err
-      }
-    }
+    const turno = await prisma.turno.findUnique({
+      where: { id },
+      include: {
+        paciente: { select: { id: true, nombre: true, email: true } },
+        profesional: { select: { id: true, especialidad: true, userId: true, user: { select: { id: true, nombre: true } } } },
+        eliminadoPor: { select: { nombre: true } },
+      },
+    })
 
-    if (turnos.length === 0) {
-      return null
-    }
-
-    const turno = turnos[0]
-
-    const [pacientes, profesionalesRaw, eliminadoPorUser] = await Promise.all([
-      prisma.$queryRawUnsafe<Array<{ id: string; nombre: string; email: string }>>(
-        `SELECT id, nombre, email FROM User WHERE id = ? LIMIT 1`,
-        turno.pacienteId
-      ),
-      prisma.$queryRawUnsafe<Array<{ id: string; userId: string; especialidad: string }>>(
-        `SELECT id, userId, especialidad FROM Profesional WHERE id = ? LIMIT 1`,
-        turno.profesionalId
-      ),
-      turno.eliminadoPorId
-        ? prisma.$queryRawUnsafe<Array<{ id: string; nombre: string }>>(
-            `SELECT id, nombre FROM User WHERE id = ? LIMIT 1`,
-            turno.eliminadoPorId
-          )
-        : Promise.resolve([]),
-    ])
-
-    let profesional: TurnoWithRelations["profesional"] = undefined
-    if (profesionalesRaw.length > 0) {
-      const us = await prisma.$queryRawUnsafe<Array<{ id: string; nombre: string }>>(
-        `SELECT id, nombre FROM User WHERE id = ? LIMIT 1`,
-        profesionalesRaw[0].userId
-      )
-      profesional = {
-        id: profesionalesRaw[0].id,
-        especialidad: profesionalesRaw[0].especialidad,
-        user: us.length > 0 ? us[0] : undefined,
-      }
-    }
+    if (!turno) return null
 
     return {
       id: turno.id,
       pacienteId: turno.pacienteId,
       profesionalId: turno.profesionalId,
-      consultorioProfesionalId: turno.consultorioProfesionalId || null,
-      fecha: safeDate(turno.fecha) || new Date(),
+      consultorioProfesionalId: turno.consultorioProfesionalId ?? null,
+      fecha: turno.fecha,
       hora: turno.hora,
       estado: turno.estado,
       motivo: turno.motivo,
       codigoTurno: turno.codigoTurno,
-      clinicId: turno.clinicId || null,
-      paciente: pacientes.length > 0 ? pacientes[0] : undefined,
-      profesional,
-      obraSocial: turno.obraSocial,
-      arancel: turno.arancel,
-      motivoCancelacion: turno.motivoCancelacion,
-      canceladoAt: safeDate(turno.canceladoAt),
-      motivoEliminacion: turno.motivoEliminacion,
-      eliminadoAt: safeDate(turno.eliminadoAt),
-      eliminadoPor: eliminadoPorUser.length > 0 ? { nombre: eliminadoPorUser[0].nombre } : undefined,
+      clinicId: turno.clinicId ?? null,
+      paciente: turno.paciente ? { id: turno.paciente.id, nombre: turno.paciente.nombre, email: turno.paciente.email } : undefined,
+      profesional: turno.profesional
+        ? {
+            id: turno.profesional.id,
+            especialidad: turno.profesional.especialidad,
+            user: turno.profesional.user ? { id: turno.profesional.user.id, nombre: turno.profesional.user.nombre } : undefined,
+          }
+        : undefined,
+      obraSocial: turno.obraSocial ?? null,
+      arancel: turno.arancel ?? null,
+      motivoCancelacion: turno.motivoCancelacion ?? null,
+      canceladoAt: turno.canceladoAt ?? null,
+      motivoEliminacion: turno.motivoEliminacion ?? null,
+      eliminadoAt: turno.eliminadoAt ?? null,
+      eliminadoPor: turno.eliminadoPor ? { nombre: turno.eliminadoPor.nombre } : undefined,
     }
   } catch (error) {
     console.error("Error obteniendo turno por ID:", error)
@@ -520,7 +461,7 @@ export async function getTurnoById(id: string): Promise<(TurnoWithRelations & {
 }
 
 /**
- * Verificar si existe un turno en un horario específico usando SQL raw
+ * Verificar si existe un turno en un horario específico (Prisma, compatible Postgres)
  */
 export async function existeTurnoEnHorario(
   profesionalId: string,
@@ -530,28 +471,20 @@ export async function existeTurnoEnHorario(
   excluirTurnoId?: string
 ): Promise<boolean> {
   try {
-    const fechaStr = fecha.toISOString().split('T')[0]
-    let query = `
-      SELECT COUNT(*) as count 
-      FROM Turno 
-      WHERE profesionalId = ? 
-        AND date(fecha) = date(?)
-        AND hora = ?
-        AND estado IN (${estado.map(() => "?").join(",")})
-    `
-    const params: any[] = [profesionalId, fechaStr, hora, ...estado]
-
-    if (excluirTurnoId) {
-      query += " AND id != ?"
-      params.push(excluirTurnoId)
-    }
-
-    const result = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-      query,
-      ...params
-    )
-
-    return Number(result[0]?.count || 0) > 0
+    const inicio = new Date(fecha)
+    inicio.setHours(0, 0, 0, 0)
+    const fin = new Date(fecha)
+    fin.setHours(23, 59, 59, 999)
+    const existing = await prisma.turno.findFirst({
+      where: {
+        profesionalId,
+        fecha: { gte: inicio, lte: fin },
+        hora,
+        estado: { in: estado },
+        ...(excluirTurnoId ? { id: { not: excluirTurnoId } } : {}),
+      },
+    })
+    return !!existing
   } catch (error) {
     console.error("Error verificando turno existente:", error)
     return false

@@ -16,6 +16,7 @@ import {
   CheckCircle,
   FolderOpen,
   FolderPlus,
+  Copy,
 } from "lucide-react"
 import { GmailSmtpConfig } from "./gmail-smtp-config"
 
@@ -65,6 +66,8 @@ export function ConfiguracionForm() {
   const [saved, setSaved] = useState(false)
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [folderCreated, setFolderCreated] = useState(false)
+  const [backupRunning, setBackupRunning] = useState(false)
+  const [backupMessage, setBackupMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   useEffect(() => {
     loadConfig()
@@ -150,19 +153,50 @@ export function ConfiguracionForm() {
   }
 
   const handleBrowseFolder = () => {
-    // En navegadores modernos, podemos usar el file picker para seleccionar carpeta
-    // Nota: Esto solo funciona en Chrome/Edge y requiere HTTPS
-    if ('showDirectoryPicker' in window) {
-      (window as any).showDirectoryPicker().then((dirHandle: any) => {
-        // Obtener el path es complicado, pero podemos mostrar el nombre
-        // Por ahora, solo mostramos un mensaje
-        alert("Selección de carpeta: " + dirHandle.name + "\n\nNota: Por favor ingresa la ruta manualmente en el campo de texto.")
-      }).catch(() => {
-        // Usuario canceló
+    const msg =
+      "Para guardar los backups en cualquier carpeta (incluido el Escritorio):\n\n" +
+      "1. Abre el Explorador de archivos y ve a la carpeta deseada (ej. Escritorio: abre 'Este equipo' → 'Escritorio').\n\n" +
+      "2. Haz clic en la barra de direcciones para ver la ruta completa. Copia la ruta (Ctrl+C) o clic derecho en la carpeta → 'Copiar como ruta'.\n\n" +
+      "3. Pega la ruta en el campo 'Ruta de Almacenamiento' de esta página.\n\n" +
+      "Ejemplos:\n" +
+      "• Escritorio: C:\\Users\\TuUsuario\\Desktop\n" +
+      "• O si Windows está en español: C:\\Users\\TuUsuario\\Escritorio\n\n" +
+      "4. Pulsa 'Hacer copia' para generar el backup en esa carpeta."
+    alert(msg)
+  }
+
+  const handleRunBackup = async () => {
+    if (!config) return
+    if (config.backupStorageType === "local" && !config.backupStoragePath?.trim()) {
+      setBackupMessage({ type: "error", text: "Ingresa la ruta de almacenamiento antes de hacer la copia." })
+      return
+    }
+    setBackupRunning(true)
+    setBackupMessage(null)
+    try {
+      const response = await fetch("/api/admin/backups/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storageType: config.backupStorageType || "local",
+          storagePath: config.backupStoragePath?.trim() || undefined,
+        }),
       })
-    } else {
-      // Fallback: mostrar instrucciones
-      alert("Para seleccionar una carpeta:\n\n1. Copia la ruta completa de la carpeta desde el explorador de archivos\n2. Pégala en el campo 'Ruta de Almacenamiento'\n3. Haz clic en 'Crear Carpeta' si no existe")
+      const data = await response.json()
+      if (!response.ok) {
+        setBackupMessage({ type: "error", text: data.error || "Error al generar la copia de seguridad." })
+        return
+      }
+      const ubicacion = data.fileUrl || config.backupStoragePath || "./backups"
+      setBackupMessage({
+        type: "success",
+        text: `Copia creada correctamente. ${data.sizeMB != null ? `Tamaño: ${data.sizeMB} MB. ` : ""}Ubicación: ${ubicacion}`,
+      })
+      setTimeout(() => setBackupMessage(null), 8000)
+    } catch (e) {
+      setBackupMessage({ type: "error", text: "Error de conexión al generar la copia." })
+    } finally {
+      setBackupRunning(false)
     }
   }
 
@@ -693,7 +727,7 @@ export function ConfiguracionForm() {
             )}
             <p className="text-xs text-[#64748B] mt-2">
               {config.backupStorageType === "local" && (
-                <>Ruta relativa o absoluta donde se guardarán los backups. Ejemplo: <code className="bg-[#F1F5F9] px-1 rounded">./backups</code> o <code className="bg-[#F1F5F9] px-1 rounded">C:\backups\agendaprofesional</code></>
+                <>Ruta completa donde se guardarán los backups. Puedes usar el Escritorio: <code className="bg-[#F1F5F9] px-1 rounded">C:\Users\TuUsuario\Desktop</code> (o <code className="bg-[#F1F5F9] px-1 rounded">...\Escritorio</code>). También: <code className="bg-[#F1F5F9] px-1 rounded">./backups</code> o <code className="bg-[#F1F5F9] px-1 rounded">C:\backups</code>.</>
               )}
               {config.backupStorageType === "s3" && (
                 <>Nombre del bucket de S3. Ejemplo: <code className="bg-[#F1F5F9] px-1 rounded">mi-bucket-backups</code></>
@@ -716,6 +750,42 @@ export function ConfiguracionForm() {
                 <p className="text-xs text-[#64748B] mt-2">
                   Los backups se guardarán en: <strong>{config.backupStoragePath || "./backups"}</strong>
                 </p>
+              )}
+            </div>
+            <div className="pt-4 border-t border-[#E2E8F0]">
+              <Button
+                type="button"
+                onClick={handleRunBackup}
+                disabled={backupRunning || (config.backupStorageType === "local" && !config.backupStoragePath?.trim())}
+                className="bg-[#2563EB] hover:bg-[#1E40AF]"
+              >
+                {backupRunning ? (
+                  "Generando copia..."
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Hacer copia
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-[#64748B] mt-2">
+                Genera una copia de seguridad ahora y la guarda en la carpeta configurada arriba.
+              </p>
+              {backupMessage && (
+                <div
+                  className={`mt-3 p-3 rounded-lg flex items-center gap-2 ${
+                    backupMessage.type === "success"
+                      ? "bg-green-50 border border-green-200 text-green-800"
+                      : "bg-red-50 border border-red-200 text-red-800"
+                  }`}
+                >
+                  {backupMessage.type === "success" ? (
+                    <CheckCircle className="h-5 w-5 shrink-0" />
+                  ) : (
+                    <span className="text-red-600 font-medium">Error</span>
+                  )}
+                  <span className="text-sm">{backupMessage.text}</span>
+                </div>
               )}
             </div>
           </div>

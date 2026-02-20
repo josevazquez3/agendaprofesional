@@ -12,6 +12,8 @@ interface CalendarWithAvailabilityProps {
   onHourSelect?: (hour: string) => void
   minDate?: string
   className?: string
+  /** Clase CSS para el popup del calendario (ej. "w-[420px]" para hacerlo más grande) */
+  calendarPopupClassName?: string
 }
 
 export function CalendarWithAvailability({
@@ -21,6 +23,7 @@ export function CalendarWithAvailability({
   onHourSelect,
   minDate,
   className,
+  calendarPopupClassName,
 }: CalendarWithAvailabilityProps) {
   const [showCalendar, setShowCalendar] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -277,7 +280,7 @@ export function CalendarWithAvailability({
             className="fixed inset-0 z-40"
             onClick={() => setShowCalendar(false)}
           />
-          <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-[350px]">
+          <div className={cn("absolute z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-[350px]", calendarPopupClassName)}>
             {/* Header del calendario */}
             <div className="flex items-center justify-between mb-4">
               <button
