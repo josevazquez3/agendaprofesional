@@ -78,6 +78,8 @@ export function BackupsPageClient({
   const [jobs, setJobs] = useState<BackupJob[]>(initialJobs)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [restoreLoading, setRestoreLoading] = useState(false)
+  const [restoreFile, setRestoreFile] = useState<File | null>(null)
   const router = useRouter()
 
   const [formData, setFormData] = useState({
@@ -226,6 +228,47 @@ export function BackupsPageClient({
     window.open(`/api/admin/backups/download/${logId}`, "_blank")
   }
 
+  const handleRestore = async () => {
+    if (!restoreFile) {
+      alert("Selecciona un archivo de backup (ZIP o JSON)")
+      return
+    }
+    if (
+      !confirm(
+        "⚠️ ADVERTENCIA: Restaurar reemplazará TODOS los datos actuales de la base de datos. Esta acción no se puede deshacer. ¿Continuar?"
+      )
+    ) {
+      return
+    }
+
+    try {
+      setRestoreLoading(true)
+      const formData = new FormData()
+      formData.append("file", restoreFile)
+
+      const response = await fetch("/api/admin/backups/restore", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al restaurar")
+      }
+
+      alert(data.message + "\n\nSerás redirigido para iniciar sesión de nuevo.")
+      setRestoreFile(null)
+      router.refresh()
+      window.location.href = "/auth/login"
+    } catch (error) {
+      console.error("Error restaurando:", error)
+      alert(error instanceof Error ? error.message : "Error al restaurar el backup")
+    } finally {
+      setRestoreLoading(false)
+    }
+  }
+
   const getFrequencyLabel = (frequency: string) => {
     const labels: Record<string, string> = {
       manual: "Manual",
@@ -260,6 +303,57 @@ export function BackupsPageClient({
           </Button>
         }
       />
+
+      {/* Restaurar backup */}
+      <Card className="border-amber-200 bg-amber-50/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            Restaurar base de datos
+          </CardTitle>
+          <p className="text-sm text-[#64748B] mt-1">
+            Sube un archivo ZIP o JSON generado por el backup del sistema para reemplazar la base de datos actual.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-100/80 text-amber-800 text-sm">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <span>
+              Esta acción eliminará todos los datos actuales y los reemplazará con los del archivo. Es irreversible.
+            </span>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[200px]">
+              <Label htmlFor="restore-file">Archivo de backup (.zip o .json)</Label>
+              <Input
+                id="restore-file"
+                type="file"
+                accept=".zip,.json"
+                onChange={(e) => setRestoreFile(e.target.files?.[0] ?? null)}
+                className="rounded-xl mt-1"
+              />
+            </div>
+            <Button
+              onClick={handleRestore}
+              disabled={restoreLoading || !restoreFile}
+              variant="destructive"
+              className="rounded-xl"
+            >
+              {restoreLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Restaurando...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Restaurar base de datos
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Backup Jobs */}
       <Card>
@@ -483,7 +577,7 @@ export function BackupsPageClient({
 
       {/* Modal Crear Backup */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="max-w-2xl rounded-xl">
+        <DialogContent className="max-w-2xl rounded-2xl">
           <DialogHeader>
             <DialogTitle className={cn(typography.pageTitle)}>
               Crear Backup

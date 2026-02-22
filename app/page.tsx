@@ -8,7 +8,6 @@ import { FeaturesSection } from "@/components/landing/features-section"
 import { HowItWorksSection } from "@/components/landing/how-it-works-section"
 import { TestimonialsSection } from "@/components/landing/testimonials-section"
 import { PricingSection } from "@/components/landing/pricing-section"
-import { CtaSection } from "@/components/landing/cta-section"
 
 /**
  * Landing Page — Agenda Profesional
@@ -26,8 +25,6 @@ export default function HomePage() {
         <FeaturesSection />
         <HowItWorksSection />
         <TestimonialsSection />
-        <PricingSection />
-        <CtaSection />
       </main>
 
       <PublicFooter />

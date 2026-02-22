@@ -9,7 +9,6 @@ const navLinks = [
   { href: "#inicio", label: "Inicio" },
   { href: "#funcionalidades", label: "Funcionalidades" },
   { href: "#como-funciona", label: "Cómo funciona" },
-  { href: "#planes", label: "Planes" },
 ]
 
 export function PublicNavbar() {
@@ -63,11 +62,6 @@ export function PublicNavbar() {
                 Ingresar
               </Button>
             </Link>
-            <Link href="/auth/register">
-              <Button className="bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl px-6 py-2 font-medium transition-all duration-200">
-                Solicitar demo
-              </Button>
-            </Link>
           </div>
 
           <div className="md:hidden flex items-center gap-1 flex-shrink-0">
@@ -108,11 +102,6 @@ export function PublicNavbar() {
                 <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className="block">
                   <Button variant="outline" className="w-full border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] rounded-xl font-medium py-3 text-base">
                     Ingresar
-                  </Button>
-                </Link>
-                <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)} className="block">
-                  <Button className="w-full bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl font-medium py-3 text-base">
-                    Solicitar demo
                   </Button>
                 </Link>
               </div>

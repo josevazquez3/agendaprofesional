@@ -1,11 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 /**
- * Hero Section — Full-width dark navy, gradient headline, dual CTAs,
- * dashboard mockup (CSS/SVG), animated gradient orbs, trust badges
+ * Hero Section — Full-width dark navy, gradient headline,
+ * dashboard mockup (CSS/SVG), animated gradient orbs
  */
 export function HeroSection() {
   return (
@@ -54,51 +54,28 @@ export function HeroSection() {
                 className="bg-clip-text text-transparent bg-gradient-to-r from-[#2563EB] via-[#3B82F6] to-[#10B981]"
                 style={{ fontFamily: "var(--font-inter), Inter, sans-serif" }}
               >
-                La plataforma médica
+                Plataforma gestión de turnos
               </span>
-              <br />
-              <span className="text-white">que su clínica necesita</span>
             </h1>
 
-            <p
-              className="text-base sm:text-lg max-w-xl mx-auto lg:mx-0"
-              style={{ color: "#94A3B8", lineHeight: 1.7 }}
-            >
-              Gestión de turnos, historia clínica digital y pacientes en un solo
-              lugar. Seguro, moderno y fácil de usar.
-            </p>
-
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link
-                href="#contacto-demo"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-semibold text-white transition-all duration-200 hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5"
-                style={{ backgroundColor: "#10B981" }}
-                aria-label="Solicitar demostración"
-              >
-                Solicitar Demo
-                <ArrowRight className="h-5 w-5" aria-hidden />
+              <Link href="/auth/register">
+                <Button
+                  className="bg-[#2563EB] hover:bg-[#1E40AF] text-white rounded-xl font-medium transition-all duration-200 px-8 py-4 text-base"
+                >
+                  Turnos
+                </Button>
               </Link>
-              <Link
-                href="#planes"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-semibold border-2 border-white/30 text-white transition-all duration-200 hover:bg-white/10 hover:border-white/50"
-                aria-label="Ver planes disponibles"
-              >
-                Ver planes
+              <Link href="/auth/login">
+                <Button
+                  variant="outline"
+                  className="border-[#2563EB] text-[#2563EB] hover:bg-[#EFF6FF] bg-transparent rounded-xl font-medium transition-all duration-200 px-8 py-4 text-base"
+                >
+                  Ingresar
+                </Button>
               </Link>
             </div>
 
-            {/* Trust badges */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-6 pt-4 border-t border-white/10">
-              <span className="text-sm text-[#94A3B8] flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span> HIPAA Compliant
-              </span>
-              <span className="text-sm text-[#94A3B8] flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span> Soporte 24/7
-              </span>
-              <span className="text-sm text-[#94A3B8] flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span> Sin contratos
-              </span>
-            </div>
           </div>
 
           {/* Right: Dashboard mockup — CSS/SVG only */}
