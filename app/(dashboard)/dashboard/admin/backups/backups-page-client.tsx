@@ -19,6 +19,8 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  Upload,
+  AlertTriangle,
 } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
