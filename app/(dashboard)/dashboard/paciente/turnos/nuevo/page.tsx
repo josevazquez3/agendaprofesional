@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { CalendarWithAvailability } from "@/components/forms/calendar-with-availability"
 
 export default function NuevoTurnoPage() {
   const router = useRouter()
@@ -151,7 +152,7 @@ export default function NuevoTurnoPage() {
             </div>
 
             {profesionalSeleccionado && (
-              <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="p-4 bg-blue-50 rounded-lg space-y-1">
                 <p className="text-sm">
                   <strong>Especialidad:</strong> {profesionalSeleccionado.especialidad}
                 </p>
@@ -160,22 +161,31 @@ export default function NuevoTurnoPage() {
                     <strong>Atiende obra social:</strong> Sí
                   </p>
                 )}
+                <p className="text-xs text-blue-700 mt-2">
+                  En el calendario a continuación, los días en <strong>azul</strong> son aquellos en que el profesional tiene disponibilidad.
+                </p>
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="fecha">Fecha *</Label>
-              <Input
-                id="fecha"
-                type="date"
-                value={formData.fecha}
-                onChange={(e) =>
-                  setFormData({ ...formData, fecha: e.target.value })
-                }
-                min={new Date().toISOString().split("T")[0]}
-                required
-              />
-            </div>
+            {formData.profesionalId ? (
+              <div className="space-y-2">
+                <CalendarWithAvailability
+                  profesionalId={formData.profesionalId}
+                  value={formData.fecha}
+                  onChange={(date) =>
+                    setFormData({ ...formData, fecha: date, hora: formData.fecha !== date ? "" : formData.hora })
+                  }
+                  minDate={new Date().toISOString().split("T")[0]}
+                  calendarPopupClassName="w-[380px] sm:w-[420px]"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">
+                  Seleccione primero un profesional para ver el calendario con los días disponibles.
+                </p>
+              </div>
+            )}
 
             {formData.fecha && formData.profesionalId && (
               <div className="space-y-2">

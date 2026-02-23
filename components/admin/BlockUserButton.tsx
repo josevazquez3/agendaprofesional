@@ -9,6 +9,7 @@ interface BlockUserButtonProps {
   userName: string
   bloqueado: boolean
   isCurrentUser?: boolean
+  iconOnly?: boolean
 }
 
 export function BlockUserButton({
@@ -16,6 +17,7 @@ export function BlockUserButton({
   userName,
   bloqueado,
   isCurrentUser = false,
+  iconOnly = false,
 }: BlockUserButtonProps) {
   const router = useRouter()
 
@@ -49,19 +51,20 @@ export function BlockUserButton({
     <Button
       type="button"
       variant={bloqueado ? "default" : "outline"}
-      size="sm"
+      size={iconOnly ? "icon" : "sm"}
+      className={iconOnly ? "h-8 w-8 shrink-0" : undefined}
       onClick={handleToggle}
       title={bloqueado ? "Desbloquear usuario" : "Bloquear usuario"}
     >
       {bloqueado ? (
         <>
-          <Unlock className="h-4 w-4 mr-1" />
-          Desbloquear
+          <Unlock className="h-4 w-4" />
+          {!iconOnly && "Desbloquear"}
         </>
       ) : (
         <>
-          <Ban className="h-4 w-4 mr-1" />
-          Bloquear
+          <Ban className="h-4 w-4" />
+          {!iconOnly && "Bloquear"}
         </>
       )}
     </Button>
