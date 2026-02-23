@@ -4,12 +4,30 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { OnboardingModal } from "./onboarding-modal"
 
+const MOBILE_BREAKPOINT = 768
+
+function isMobileViewport(): boolean {
+  if (typeof window === "undefined") return false
+  return window.innerWidth < MOBILE_BREAKPOINT
+}
+
 export function OnboardingWrapper() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const { data: session } = useSession()
 
   useEffect(() => {
     if (!session?.user) return
+
+    // En dispositivos móviles no mostrar el onboarding para no bloquear el uso
+    if (isMobileViewport()) {
+      if (session.user.role === "ADMIN" || session.user.role === "SECRETARIA") {
+        localStorage.setItem(
+          `onboarding_completed_${session.user.id}`,
+          "true"
+        )
+      }
+      return
+    }
 
     // Verificar si el usuario ya completó el onboarding
     const hasCompletedOnboarding = localStorage.getItem(
