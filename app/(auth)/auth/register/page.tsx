@@ -78,45 +78,47 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-2xl bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10 overflow-y-auto">
+      <Card className="w-full max-w-2xl min-w-0 my-auto bg-white/95 border border-[#E2E8F0] rounded-xl shadow-sm">
+        <CardHeader className="space-y-1 px-4 pt-6 pb-4 sm:px-6 sm:pt-8 sm:pb-6">
+          <CardTitle className="text-xl sm:text-2xl font-bold text-center">
             Registro de Paciente
           </CardTitle>
-          <CardDescription className="text-center">
+          <CardDescription className="text-center text-sm sm:text-base">
             Complete sus datos para crear una cuenta
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-4 sm:px-6 pb-4">
             {error && (
               <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
                 {error}
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre Completo *</Label>
+                <Label htmlFor="nombre" className="text-sm sm:text-base">Nombre Completo *</Label>
                 <Input
                   id="nombre"
                   name="nombre"
                   value={formData.nombre}
                   onChange={handleChange}
                   required
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dni">DNI</Label>
+                <Label htmlFor="dni" className="text-sm sm:text-base">DNI</Label>
                 <Input
                   id="dni"
                   name="dni"
                   value={formData.dni}
                   onChange={handleChange}
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email" className="text-sm sm:text-base">Email *</Label>
                 <Input
                   id="email"
                   name="email"
@@ -124,48 +126,53 @@ export default function RegisterPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="telefono">Teléfono</Label>
+                <Label htmlFor="telefono" className="text-sm sm:text-base">Teléfono</Label>
                 <Input
                   id="telefono"
                   name="telefono"
                   type="tel"
                   value={formData.telefono}
                   onChange={handleChange}
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fechaNacimiento">Fecha de Nacimiento</Label>
+                <Label htmlFor="fechaNacimiento" className="text-sm sm:text-base">Fecha de Nacimiento</Label>
                 <Input
                   id="fechaNacimiento"
                   name="fechaNacimiento"
                   type="date"
                   value={formData.fechaNacimiento}
                   onChange={handleChange}
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="obraSocial">Obra Social</Label>
+                <Label htmlFor="obraSocial" className="text-sm sm:text-base">Obra Social</Label>
                 <Input
                   id="obraSocial"
                   name="obraSocial"
                   value={formData.obraSocial}
                   onChange={handleChange}
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="direccion">Dirección</Label>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="direccion" className="text-sm sm:text-base">Dirección</Label>
                 <Input
                   id="direccion"
                   name="direccion"
                   value={formData.direccion}
                   onChange={handleChange}
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña *</Label>
+                <Label htmlFor="password" className="text-sm sm:text-base">Contraseña *</Label>
                 <Input
                   id="password"
                   name="password"
@@ -174,10 +181,11 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   required
                   minLength={6}
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Contraseña *</Label>
+                <Label htmlFor="confirmPassword" className="text-sm sm:text-base">Confirmar Contraseña *</Label>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -186,21 +194,22 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   required
                   minLength={6}
+                  className="text-base sm:text-sm h-11 sm:h-10"
                 />
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading}>
+          <CardFooter className="flex flex-col space-y-4 px-4 pb-6 sm:px-6 sm:pb-8 pt-0">
+            <Button type="submit" className="w-full h-11 sm:h-10 text-sm sm:text-base" disabled={loading}>
               {loading ? "Registrando..." : "Registrarse"}
             </Button>
-            <div className="text-sm text-center text-muted-foreground">
+            <div className="text-xs sm:text-sm text-center text-muted-foreground">
               ¿Ya tiene una cuenta?{" "}
               <Link href="/auth/login" className="text-primary hover:underline">
                 Inicie sesión aquí
               </Link>
             </div>
-            <Link href="/" className="text-sm text-primary hover:underline">
+            <Link href="/" className="text-xs sm:text-sm text-primary hover:underline">
               Volver al inicio
             </Link>
           </CardFooter>
